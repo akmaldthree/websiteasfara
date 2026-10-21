@@ -1,0 +1,27 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Page;
+use App\Models\Role;
+use App\Models\Setting;
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    /**
+     * Seed the application's database.
+     */
+    public function run(): void
+    {
+        foreach (config('commerce.roles') as $name => $permissions) {
+            Role::firstOrCreate(['name' => $name], ['permissions' => $permissions]);
+        }
+        foreach (['brand_name' => 'Dthree', 'tagline' => 'Dari Tasikmalaya, untuk setiap cerita Anda.', 'hero_title' => 'Indah dalam setiap cerita.', 'hero_text' => 'Pilihan busana yang terasa dekat dengan diri Anda. Nyaman untuk keseharian, istimewa untuk kebersamaan.', 'checkout_enabled' => false, 'cod_enabled' => false, 'cod_min' => 0, 'cod_max' => 1000000, 'cod_fee' => 0, 'cod_percent' => 0, 'cod_fee_max' => 100000, 'payment_hours' => 24, 'cod_hours' => 24, 'bank_accounts' => [], 'whatsapp' => '', 'demo_mode' => false] as $key => $value) {
+            Setting::firstOrCreate(['key' => $key], ['value' => $value]);
+        }
+        foreach (['syarat-ketentuan' => 'Syarat dan ketentuan', 'privasi' => 'Kebijakan privasi', 'pengiriman' => 'Pengiriman', 'retur-garansi' => 'Retur dan garansi', 'tentang' => 'Tentang Dthree'] as $slug => $title) {
+            Page::firstOrCreate(['slug' => $slug], ['title' => $title, 'body' => 'Isi kebijakan resmi Dthree melalui dashboard sebelum membuka checkout.', 'active' => false]);
+        }
+    }
+}

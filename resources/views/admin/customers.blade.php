@@ -1,0 +1,2 @@
+@extends('layouts.admin') @section('title','Pelanggan')
+@section('content')<h1 class="mb-4">Pelanggan</h1><div class="table-panel"><div class="table-responsive"><table class="table"><thead><tr><th>Nama</th><th>Email</th><th>Telepon</th><th>Pesanan</th><th>Bergabung</th></tr></thead><tbody>@foreach($users as $u)<tr><td>{{ $u->name }}</td><td>{{ $u->email }}</td><td>{{ $u->phone }}</td><td>{{ $u->orders_count }}</td><td>{{ $u->created_at->format('d M Y') }}</td></tr>@endforeach</tbody></table></div>{{ $users->links() }}</div>@endsection

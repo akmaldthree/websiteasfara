@@ -1,0 +1,71 @@
+<?php
+
+use App\Http\Controllers\AccountController as Account;
+use App\Http\Controllers\AdminController as Admin;
+use App\Http\Controllers\ImportController as Import;
+use App\Http\Controllers\StoreController as Store;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', [Store::class, 'home'])->name('home');
+Route::get('/koleksi', [Store::class, 'catalog'])->name('catalog');
+Route::get('/koleksi/{slug}', [Store::class, 'product'])->name('product');
+Route::get('/halaman/{slug}', [Store::class, 'page'])->name('page');
+Route::get('/keranjang', [Store::class, 'cart'])->name('cart');
+Route::post('/keranjang', [Store::class, 'add'])->middleware('throttle:30,1')->name('cart.add');
+Route::post('/keranjang/ubah', [Store::class, 'updateCart'])->name('cart.update');
+Route::get('/checkout', [Store::class, 'checkout'])->name('checkout');
+Route::post('/checkout/tinjau', [Store::class, 'review'])->middleware('throttle:20,1')->name('checkout.review');
+Route::post('/checkout', [Store::class, 'place'])->middleware('throttle:10,1')->name('checkout.place');
+Route::get('/lacak-pesanan', fn () => view('store.track'))->name('track');
+Route::post('/lacak-pesanan', [Store::class, 'track'])->middleware('throttle:5,1')->name('track.find');
+Route::middleware('signed')->group(function () {
+    Route::get('/pesanan/{order}', [Store::class, 'order'])->name('orders.show');
+    Route::post('/pesanan/{order}/bukti', [Store::class, 'proof'])->middleware('throttle:5,1')->name('orders.proof');
+    Route::post('/pesanan/{order}/bantuan', [Store::class, 'serviceCase'])->middleware('throttle:5,1')->name('orders.case');
+});
+Route::middleware('guest')->group(function () {
+    Route::get('/masuk', fn () => view('store.auth', ['mode' => 'login']))->name('login');
+    Route::post('/masuk', [Account::class, 'login'])->middleware('throttle:5,1')->name('login.submit');
+    Route::get('/daftar', fn () => view('store.auth', ['mode' => 'register']))->name('register');
+    Route::post('/daftar', [Account::class, 'register'])->middleware('throttle:5,1')->name('register.submit');
+    Route::get('/lupa-kata-sandi', fn () => view('store.auth', ['mode' => 'forgot']))->name('password.request');
+    Route::post('/lupa-kata-sandi', [Account::class, 'forgot'])->middleware('throttle:3,1')->name('password.email');
+    Route::get('/reset-password/{token}', fn () => view('store.auth', ['mode' => 'reset']))->name('password.reset');
+    Route::post('/reset-password', [Account::class, 'reset'])->middleware('throttle:5,1')->name('password.update');
+});
+Route::middleware('auth')->group(function () {
+    Route::get('/akun', [Account::class, 'account'])->name('account');
+    Route::post('/keluar', [Account::class, 'logout'])->name('logout');
+    Route::post('/akun/alamat', [Account::class, 'address'])->name('address.store');
+    Route::delete('/akun/alamat/{id}', [Account::class, 'deleteAddress'])->name('address.delete');
+});
+Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
+    Route::get('/', [Admin::class, 'dashboard'])->middleware('permission:dashboard')->name('dashboard');
+    Route::get('/pesanan', [Admin::class, 'orders'])->middleware('permission:orders.read')->name('orders');
+    Route::get('/pesanan/{order}', [Admin::class, 'order'])->middleware('permission:orders.read')->name('order');
+    Route::post('/pesanan/{order}', [Admin::class, 'action'])->middleware('permission:orders.read')->name('order.action');
+    Route::get('/bukti/{proof}', [Admin::class, 'proof'])->middleware('permission:payments.read')->name('proof');
+    Route::get('/inventori', [Admin::class, 'inventory'])->middleware('permission:inventory.read')->name('inventory');
+    Route::post('/inventori/{variant}', [Admin::class, 'adjust'])->middleware('permission:inventory.write')->name('inventory.adjust');
+    Route::get('/pengaturan', [Admin::class, 'settings'])->middleware('permission:settings.write')->name('settings');
+    Route::post('/pengaturan', [Admin::class, 'saveSettings'])->middleware('permission:settings.write')->name('settings.save');
+    Route::get('/audit', [Admin::class, 'audit'])->middleware('permission:audit.read')->name('audit');
+    Route::get('/pelanggan', [Admin::class, 'customers'])->middleware('permission:customers.read')->name('customers');
+    Route::get('/layanan', [Admin::class, 'cases'])->middleware('permission:cases.write')->name('cases');
+    Route::post('/layanan/{case}', [Admin::class, 'caseUpdate'])->middleware('permission:cases.write')->name('case.update');
+    Route::get('/tim', [Admin::class, 'team'])->middleware('permission:users.write')->name('team');
+    Route::post('/tim', [Admin::class, 'teamSave'])->middleware('permission:users.write')->name('team.save');
+    Route::post('/peran/{role}', [Admin::class, 'roleSave'])->middleware('permission:users.write')->name('role.save');
+    Route::get('/laporan', [Admin::class, 'reports'])->middleware('permission:reports.read')->name('reports');
+    Route::middleware('permission:catalog.write')->group(function () {
+        Route::get('/import', [Import::class, 'index'])->name('import');
+        Route::get('/import/template', [Import::class, 'template'])->name('import.template');
+        Route::post('/import/preview', [Import::class, 'preview'])->name('import.preview');
+        Route::post('/import/commit', [Import::class, 'commit'])->name('import.commit');
+    });
+    Route::get('/master/{resource}', [Admin::class, 'resources'])->name('resources');
+    Route::get('/master/{resource}/baru', [Admin::class, 'form'])->name('create');
+    Route::get('/master/{resource}/{id}/ubah', [Admin::class, 'form'])->whereNumber('id')->name('edit');
+    Route::post('/master/{resource}',[Admin::class, 'save'])->name('store');
+    Route::post('/master/{resource}/{id}',[Admin::class, 'save'])->whereNumber('id')->name('update');
+});
