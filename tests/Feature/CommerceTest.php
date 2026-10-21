@@ -193,7 +193,7 @@ class CommerceTest extends TestCase
         $this->post(route('admin.store', 'variants'), $fields)->assertSessionHasErrors('sku');
         $fields['sku'] = 'NEW-SKU';
         $this->post(route('admin.store', 'variants'), $fields)->assertSessionHasNoErrors();
-        $s = Series::create(['name' => 'Arcelia', 'slug' => 'arcelia', 'category_id' => 1, 'uses_product_type' => true]);
+        $s = Series::create(['name' => 'Arcelia', 'slug' => 'arcelia', 'category_id' => $this->variant->series->category_id, 'uses_product_type' => true]);
         $fields['series_id'] = $s->id;
         $fields['sku'] = 'ARC-1';
         $this->post(route('admin.store', 'variants'), $fields)->assertSessionHasErrors('product_type');
@@ -266,9 +266,9 @@ class CommerceTest extends TestCase
         $this->post('/checkout/tinjau', $this->input)->assertOk();
         $this->variant->update(['price' => 400000]);
 
-        $this->post('/checkout',['checkout_key' => $key])->assertSessionHasErrors('checkout');
+        $this->post('/checkout', ['checkout_key' => $key])->assertSessionHasErrors('checkout');
 
-        $this->assertDatabaseCount('orders',0);
-        $this->assertEquals(0,$this->variant->fresh()->reserved);
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertEquals(0, $this->variant->fresh()->reserved);
     }
 }
