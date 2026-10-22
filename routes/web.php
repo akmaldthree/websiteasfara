@@ -11,6 +11,7 @@ Route::get('/', [Store::class, 'home'])->name('home');
 Route::get('/koleksi', [Store::class, 'catalog'])->name('catalog');
 Route::get('/koleksi/{slug}', [Store::class, 'product'])->name('product');
 Route::get('/halaman/{slug}', [Store::class, 'page'])->name('page');
+Route::get('/konten/{type}/{slug}', [Store::class, 'content'])->name('content.show');
 Route::get('/keranjang', [Store::class, 'cart'])->name('cart');
 Route::post('/keranjang', [Store::class, 'add'])->middleware('throttle:30,1')->name('cart.add');
 Route::post('/keranjang/ubah', [Store::class, 'updateCart'])->name('cart.update');
@@ -56,6 +57,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/penawaran-custom', [Admin::class, 'customQuotes'])->middleware('permission:catalog.write')->name('custom-quotes');
     Route::post('/penawaran-custom/{customQuote}', [Admin::class, 'customQuoteAction'])->middleware('permission:catalog.write')->name('custom-quotes.update');
     Route::get('/ulasan', [Admin::class, 'reviews'])->middleware('permission:content.write')->name('reviews');
+    Route::get('/konten/{contentEntry}/preview', [Admin::class, 'contentPreview'])->middleware('permission:content.write')->name('content.preview');
     Route::post('/ulasan/{review}', [Admin::class, 'reviewAction'])->middleware('permission:content.write')->name('reviews.update');
     Route::get('/bukti/{proof}', [Admin::class, 'proof'])->middleware('permission:payments.read')->name('proof');
     Route::get('/inventori', [Admin::class, 'inventory'])->middleware('permission:inventory.read')->name('inventory');

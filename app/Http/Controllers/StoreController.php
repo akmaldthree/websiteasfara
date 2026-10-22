@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ContentEntry;
 use App\Models\CustomQuote;
 use App\Models\Order;
 use App\Models\Page;
@@ -25,7 +26,7 @@ class StoreController extends Controller
 {
     public function home()
     {
-        return view('store.home', ['collections' => Series::published()->with('category')->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price')->orderByDesc('featured')->latest()->take(4)->get()]);
+        return view('store.home', ['collections' => Series::published()->with('category')->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price')->orderByDesc('featured')->latest()->take(4)->get(), 'contentEntries' => ContentEntry::published()->whereIn('type', ['banner', 'home_section'])->orderBy('sort_order')->get()]);
     }
 
     public function catalog(Request $r)
@@ -266,6 +267,13 @@ class StoreController extends Controller
 
     public function page(string $slug)
     {
-        return view('store.page', ['page' => Page::where('slug', $slug)->where('active', true)->firstOrFail()]);
+        return view('store.page', ['page' => Page::published()->where('slug', $slug)->firstOrFail()]);
+    }
+
+    public function content(string $type, string $slug)
+    {
+        abort_unless(in_array($type, ['faq', 'journal', 'campaign']), 404);
+
+        return view('store.content', ['entry' => ContentEntry::published()->where('type', $type)->where('slug', $slug)->firstOrFail()]);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\BundleComponent;
 use App\Models\BusinessAccount;
+use App\Models\ContentEntry;
 use App\Models\CustomQuote;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -72,6 +73,11 @@ class AdminController extends Controller
         }
 
         return view('admin.custom-quotes', ['quotes' => $query->latest()->paginate(20)->withQueryString()]);
+    }
+
+    public function contentPreview(ContentEntry $contentEntry)
+    {
+        return view('store.content', ['entry' => $contentEntry, 'preview' => true]);
     }
 
     public function reviews(Request $request)

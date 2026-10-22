@@ -17,7 +17,7 @@
                 @endif
             </td>
         @endforeach
-        <td><a href="{{ route('admin.edit',[$resource,$row->id]) }}">Kelola ↗</a></td>
+        <td>@if($resource==='content')<a href="{{ route('admin.content.preview',$row) }}" target="_blank">Preview ↗</a> · @endif<a href="{{ route('admin.edit',[$resource,$row->id]) }}">Kelola ↗</a></td>
     </tr>@empty<tr><td colspan="{{ count($schema['columns'])+1 }}" class="text-center py-5">Belum ada data. Tambahkan data pertama Anda.</td></tr>@endforelse</tbody>
 </table></div>{{ $rows->links() }}</div>
 @endsection

@@ -2,6 +2,7 @@
 
 use App\Models\BundleComponent;
 use App\Models\Category;
+use App\Models\ContentEntry;
 use App\Models\Coupon;
 use App\Models\MeasurementTemplate;
 use App\Models\Page;
@@ -13,6 +14,12 @@ use App\Models\VariantPrice;
 
 // field: label, input type, validation, optional select options.
 return [
+    'content' => ['model' => ContentEntry::class, 'title' => 'Konten terjadwal', 'permission' => 'content.write', 'columns' => ['type' => 'Tipe', 'title' => 'Judul', 'slug' => 'Slug', 'sort_order' => 'Urutan', 'starts_at' => 'Mulai', 'active' => 'Terbit'], 'fields' => [
+        'type' => ['Tipe konten', 'select', 'required|in:banner,home_section,menu,faq,journal,campaign', ['banner' => 'Banner', 'home_section' => 'Section beranda', 'menu' => 'Menu', 'faq' => 'FAQ', 'journal' => 'Journal', 'campaign' => 'Campaign']],
+        'title' => ['Judul', 'text', 'required|string|max:200'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:180'], 'summary' => ['Ringkasan', 'textarea', 'nullable|string|max:2000'], 'body' => ['Isi', 'textarea', 'nullable|string|max:50000'],
+        'image' => ['Gambar', 'file', 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072'], 'link_url' => ['Tautan', 'text', 'nullable|string|max:500'], 'link_label' => ['Label tautan', 'text', 'nullable|string|max:100'],
+        'seo_title' => ['Judul SEO', 'text', 'nullable|string|max:200'], 'seo_description' => ['Deskripsi SEO', 'textarea', 'nullable|string|max:300'], 'sort_order' => ['Urutan', 'number', 'required|integer|min:0|max:10000'],
+        'starts_at' => ['Mulai tayang', 'datetime-local', 'nullable|date'], 'ends_at' => ['Selesai tayang', 'datetime-local', 'nullable|date|after:starts_at'], 'active' => ['Terbitkan', 'checkbox', 'boolean']]],
     'bundle-components' => ['model' => BundleComponent::class, 'title' => 'Komponen bundling', 'permission' => 'catalog.write', 'columns' => ['bundle_variant_id' => 'SKU bundle ID', 'component_variant_id' => 'SKU komponen ID', 'quantity' => 'Jumlah komponen'], 'fields' => [
         'bundle_variant_id' => ['SKU bundle', 'variant', 'required|exists:variants,id'], 'component_variant_id' => ['SKU komponen', 'variant', 'required|exists:variants,id'],
         'quantity' => ['Jumlah komponen per bundle', 'number', 'required|integer|min:1|max:1000']]],
@@ -56,5 +63,5 @@ return [
         'maximum' => ['Maksimum subsidi (Rupiah)', 'number', 'nullable|integer|min:0|max:100000000'], 'usage_limit' => ['Kuota pemakaian', 'number', 'required|integer|min:1|max:1000000'],
         'starts_at' => ['Mulai (WIB)', 'datetime-local', 'required|date'], 'ends_at' => ['Selesai (WIB)', 'datetime-local', 'required|date|after:starts_at'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'pages' => ['model' => Page::class, 'title' => 'Halaman & kebijakan', 'permission' => 'content.write', 'columns' => ['title' => 'Judul', 'slug' => 'Slug', 'active' => 'Terbit'], 'fields' => [
-        'title' => ['Judul', 'text', 'required|string|max:150'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:150'], 'body' => ['Isi halaman (teks)', 'textarea', 'required|string|max:50000'], 'active' => ['Terbitkan', 'checkbox', 'boolean']]],
+        'title' => ['Judul', 'text', 'required|string|max:150'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:150'], 'body' => ['Isi halaman (teks)', 'textarea', 'required|string|max:50000'], 'seo_title' => ['Judul SEO', 'text', 'nullable|string|max:200'], 'seo_description' => ['Deskripsi SEO', 'textarea', 'nullable|string|max:300'], 'starts_at' => ['Mulai tayang', 'datetime-local', 'nullable|date'], 'ends_at' => ['Selesai tayang', 'datetime-local', 'nullable|date|after:starts_at'], 'active' => ['Terbitkan', 'checkbox', 'boolean']]],
 ];

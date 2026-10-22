@@ -21,7 +21,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 | B2B | Pengajuan reseller/dropshipper/grosir, peninjauan admin, grup harga privat, minimum pesanan, tier harga per SKU, snapshot checkout | Belum dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal |
 | Akun | Registrasi email, login, reset password, buku alamat dengan alamat utama, riwayat akun, invoice cetak | Belum login telepon, konversi tamu terverifikasi, pesan ulang |
 | Admin | Lima peran, permission tindakan, aktif/nonaktif dan perubahan peran staf, konfigurasi toko, daftar pesanan, inventori, audit | Belum 2FA dan tindakan massal |
-| Konten | Teks beranda dan halaman teks admin | Belum section reorder/schedule, banner upload, menu dinamis, journal, preview konten |
+| Konten | Halaman, banner, section beranda, menu, FAQ, journal, campaign; upload gambar, urutan, jadwal tayang, metadata SEO, preview admin | Editor masih berbasis teks; belum rich-text block editor dan revision history |
 | Import | CSV template, preview, validasi seluruh baris, konfirmasi atomic, audit | Maks. 200 baris; create-only, tanpa XLSX/upsert/generator kombinasi |
 | Notifikasi | Outbox email transaksi, histori, deduplikasi event, retry terbatas, status tidak pasti setelah worker terhenti, dan tindak lanjut manual | SMTP harus dikonfigurasi dan diuji di staging; WhatsApp otomatis belum tersedia |
 | Fulfillment | Status packing/kirim/terima, resi, riwayat pelanggan, picking list, packing slip, label, invoice | Tracking kurir tetap manual |
@@ -35,7 +35,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 2. Adapter penyedia tarif POS/JNE dan tracking, retry/cache/fallback otomatis. Tarif manual tetap dapat digunakan.
 3. Otomasi ongkir retur, approval refund berjenjang, adjustment loyalty, dan rekonsiliasi bank. Refund saat ini dicatat setelah Keuangan benar-benar mengirim dana.
 4. Fitur pertumbuhan lanjutan: tier/member loyalty, kampanye bonus poin, pertanyaan produk, helpful voting, serta kelanjutan B2B berupa dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal.
-5. CMS lanjutan, galeri dan foto per warna, SEO metadata per halaman/produk, structured data, analytics events dan persetujuan pemasaran.
+5. CMS lanjutan berupa rich-text block editor/revision history, galeri dan foto per warna, SEO metadata produk, structured data, analytics events dan persetujuan pemasaran.
 6. Hardening produksi: 2FA staf, audit sensitif dengan redaksi berdasarkan peran, SLA bukti transfer, retensi data, monitoring, simulasi koneksi eksternal, beban serta konkurensi MySQL dan backup restore.
 7. Integrasi sumber stok/dashboard produksi dua arah. Tidak ada data aplikasi lain yang disalin ke e-commerce.
 

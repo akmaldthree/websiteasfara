@@ -1,2 +1,2 @@
-@extends('layouts.store') @section('title',$page->title.' — Dthree')
+@extends('layouts.store') @section('title',($page->seo_title ?: $page->title).' — Dthree') @section('description',$page->seo_description ?: \Illuminate\Support\Str::limit($page->body,160))
 @section('content')<article class="container-xxl section page-narrow"><span class="eyebrow">INFORMASI DTHREE</span><h1 class="my-4">{{ $page->title }}</h1><div class="preserve-lines">{{ $page->body }}</div></article>@endsection
