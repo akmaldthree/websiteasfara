@@ -23,6 +23,8 @@
                         'measurement_template'=>[''=>'— Pilih template —']+\App\Models\MeasurementTemplate::orderBy('name')->pluck('name','id')->all(),
                         default=>$field[3],
                     })
+                    @php($options=is_object($options)?$options->all():$options)
+                    @php($options=str_contains($field[2],'nullable')&&!array_key_exists('',$options)?[''=>'— Semua / tidak dibatasi —']+$options:$options)
                     <select id="{{ $key }}" name="{{ $key }}" class="form-select">
                         @foreach($options as $k=>$label)<option value="{{ $k }}" @selected((string)$value===(string)$k)>{{ $label }}</option>@endforeach
                     </select>

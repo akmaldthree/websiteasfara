@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\BundleComponent;
 use App\Models\Coupon;
+use App\Models\CouponRedemption;
 use App\Models\CustomQuote;
 use App\Models\Order;
 use App\Models\Setting;
@@ -125,23 +126,58 @@ class CheckoutService
         }
         $discount = 0;
         $shippingDiscount = 0;
-        $coupon = null;
+        $coupons = collect();
+        $couponBenefits = [];
+        $remainingByVariant = collect($lines)->mapWithKeys(fn ($line) => [$line['variant']->id => $line['total']])->all();
         if (! empty($input['coupon'])) {
-            $query = Coupon::where('code', strtoupper(trim($input['coupon'])));
+            $codes = collect(preg_split('/[,\s]+/', strtoupper(trim($input['coupon']))))->filter()->unique()->values();
+            $this->check($codes->count() <= 5, 'Maksimal lima voucher dapat digunakan sekaligus.');
+            $query = Coupon::whereIn('code', $codes)->orderByDesc('priority')->orderBy('id');
             if ($lock) {
                 $query->lockForUpdate();
             }
-            $coupon = $query->first();
-            $this->check($coupon && $coupon->active && now()->between($coupon->starts_at, $coupon->ends_at), 'Voucher tidak ditemukan atau di luar masa berlaku.');
-            $this->check($merchandiseTotal >= $coupon->minimum && $coupon->used < $coupon->usage_limit, 'Minimum belanja atau kuota voucher tidak terpenuhi.');
-            $benefit = $coupon->type === 'percent' ? (int) floor($merchandiseTotal * $coupon->value / 100) : $coupon->value;
-            if ($coupon->maximum !== null) {
-                $benefit = min($benefit, $coupon->maximum);
-            }
-            if ($coupon->type === 'shipping') {
-                $shippingDiscount = min($shipping, $benefit);
-            } else {
-                $discount = min($merchandiseTotal, $benefit);
+            $coupons = $query->get();
+            $this->check($coupons->count() === $codes->count(), 'Satu atau lebih voucher tidak ditemukan.');
+            $this->check($coupons->count() <= 1 || $coupons->every->combinable, 'Voucher ini tidak dapat digabungkan.');
+            foreach ($coupons as $coupon) {
+                $this->check($coupon->active && now()->between($coupon->starts_at, $coupon->ends_at) && $coupon->used < $coupon->usage_limit, "Voucher {$coupon->code} tidak aktif atau kuotanya habis.");
+                $segmentAllowed = $coupon->segment === 'all' || ($coupon->segment === 'guest' && ! $customer) || ($coupon->segment === 'customer' && $customer && ! $group) || ($coupon->segment === 'business' && $group);
+                $this->check($segmentAllowed && (! $coupon->price_group_id || $group?->id === $coupon->price_group_id), "Voucher {$coupon->code} tidak berlaku untuk akun ini.");
+                if ($coupon->per_user_limit) {
+                    $this->check($customer && CouponRedemption::where('coupon_id', $coupon->id)->where('user_id', $customer->id)->count() < $coupon->per_user_limit, "Batas pemakaian voucher {$coupon->code} sudah tercapai.");
+                }
+                $eligibleLines = array_filter($lines, function ($line) use ($coupon) {
+                    $variant = $line['variant'];
+
+                    return $coupon->target_type === 'all'
+                        || ($coupon->target_type === 'variant' && $variant->id === $coupon->target_id)
+                        || ($coupon->target_type === 'series' && $variant->series_id === $coupon->target_id)
+                        || ($coupon->target_type === 'category' && $variant->series->category_id === $coupon->target_id);
+                });
+                $eligible = array_sum(array_map(fn ($line) => $remainingByVariant[$line['variant']->id], $eligibleLines));
+                $this->check($eligible >= $coupon->minimum && $eligible > 0, "Minimum belanja atau target voucher {$coupon->code} tidak terpenuhi.");
+                $benefit = $coupon->type === 'percent' ? (int) floor($eligible * $coupon->value / 100) : $coupon->value;
+                if ($coupon->maximum !== null) {
+                    $benefit = min($benefit, $coupon->maximum);
+                }
+                if ($coupon->type === 'shipping') {
+                    $applied = min($shipping - $shippingDiscount, $benefit);
+                    $shippingDiscount += $applied;
+                } else {
+                    $applied = min($eligible, $benefit);
+                    $discount = min($merchandiseTotal, $discount + $applied);
+                    $left = $applied;
+                    foreach ($eligibleLines as $line) {
+                        $variantId = $line['variant']->id;
+                        $lineDiscount = min($remainingByVariant[$variantId], $left);
+                        $remainingByVariant[$variantId] -= $lineDiscount;
+                        $left -= $lineDiscount;
+                        if ($left === 0) {
+                            break;
+                        }
+                    }
+                }
+                $couponBenefits[$coupon->id] = $applied;
             }
         }
 
@@ -152,7 +188,7 @@ class CheckoutService
             $loyalty = $this->loyalty->redemption($customer, $requestedPoints, max(0, $merchandiseTotal - $discount));
         }
 
-        return ['lines' => $lines, 'price_group' => $group, 'subtotal' => $subtotal, 'custom_cost' => $customCost, 'weight' => $weight, 'rate' => $rate, 'shipping_cost' => $shipping, 'discount' => $discount, 'shipping_discount' => $shippingDiscount, 'cod_fee' => $fee, 'loyalty_points' => $loyalty['points'], 'loyalty_discount' => $loyalty['discount'], 'total' => $merchandiseTotal + $shipping + $fee - $discount - $shippingDiscount - $loyalty['discount'], 'coupon' => $coupon];
+        return ['lines' => $lines, 'price_group' => $group, 'subtotal' => $subtotal, 'custom_cost' => $customCost, 'weight' => $weight, 'rate' => $rate, 'shipping_cost' => $shipping, 'discount' => $discount, 'shipping_discount' => $shippingDiscount, 'cod_fee' => $fee, 'loyalty_points' => $loyalty['points'], 'loyalty_discount' => $loyalty['discount'], 'total' => $merchandiseTotal + $shipping + $fee - $discount - $shippingDiscount - $loyalty['discount'], 'coupons' => $coupons, 'coupon_benefits' => $couponBenefits];
     }
 
     public function fingerprint(array $quote): string
@@ -161,6 +197,7 @@ class CheckoutService
             'items' => array_map(fn ($line) => [$line['variant']->id, $line['variant']->sku, $line['quantity'], $line['unit_price'], $line['price_tier_minimum'], $line['custom_cost'], $line['customization'], $line['bundle'], $line['unit_weight'], $line['variant']->fulfillment, $line['variant']->lead_time], $quote['lines']),
             'price_group' => $quote['price_group'] ? [$quote['price_group']->id, $quote['price_group']->name, $quote['price_group']->business_type, $quote['price_group']->minimum_order_quantity, $quote['price_group']->minimum_order_amount] : null,
             'shipping' => [$quote['rate']->id, $quote['rate']->courier, $quote['rate']->service, $quote['rate']->estimate],
+            'coupons' => $quote['coupons']->map(fn ($coupon) => [$coupon->id, $coupon->code, $coupon->type, $coupon->value, $coupon->maximum, $coupon->target_type, $coupon->target_id, $coupon->segment, $coupon->price_group_id, $coupon->per_user_limit, $coupon->combinable, $coupon->priority, $quote['coupon_benefits'][$coupon->id]])->values()->all(),
             'amounts' => array_intersect_key($quote, array_flip(['subtotal', 'custom_cost', 'shipping_cost', 'discount', 'shipping_discount', 'cod_fee', 'loyalty_points', 'loyalty_discount', 'total'])),
         ], JSON_THROW_ON_ERROR));
     }
@@ -189,7 +226,8 @@ class CheckoutService
                 'payment_method' => $input['payment_method'], 'subtotal' => $q['subtotal'], 'custom_cost' => $q['custom_cost'], 'shipping_cost' => $q['shipping_cost'],
                 'discount' => $q['discount'], 'loyalty_points_redeemed' => $q['loyalty_points'], 'loyalty_discount' => $q['loyalty_discount'], 'shipping_discount' => $q['shipping_discount'], 'cod_fee' => $q['cod_fee'], 'total' => $q['total'],
                 'shipping' => ['courier' => $q['rate']->courier, 'service' => $q['rate']->service, 'estimate' => $q['rate']->estimate, 'source' => 'manual', 'origin' => 'Tasikmalaya', 'weight' => $q['weight']],
-                'bank_accounts' => Setting::get('bank_accounts', []), 'coupon_id' => $q['coupon']?->id, 'coupon_code' => $q['coupon']?->code,
+                'bank_accounts' => Setting::get('bank_accounts', []), 'coupon_id' => $q['coupons']->first()?->id, 'coupon_code' => $q['coupons']->isEmpty() ? null : $q['coupons']->pluck('code')->implode(','),
+                'coupon_snapshot' => $q['coupons']->map(fn ($coupon) => ['id' => $coupon->id, 'code' => $coupon->code, 'type' => $coupon->type, 'value' => $coupon->value, 'benefit' => $q['coupon_benefits'][$coupon->id], 'target_type' => $coupon->target_type, 'target_id' => $coupon->target_id])->values()->all(),
                 'notes' => $input['notes'] ?? null, 'expires_at' => now()->addHours((int) Setting::get($input['payment_method'] === 'cod' ? 'cod_hours' : 'payment_hours', 24)),
             ]);
             $this->loyalty->redeem($order);
@@ -220,7 +258,10 @@ class CheckoutService
                     StockMovement::create(['variant_id' => $v->id, 'order_id' => $order->id, 'user_id' => $userId, 'stock_delta' => 0, 'reserved_delta' => $qty, 'reason' => 'Reservasi checkout']);
                 }
             }
-            $q['coupon']?->increment('used');
+            foreach ($q['coupons'] as $coupon) {
+                $coupon->increment('used');
+                CouponRedemption::create(['coupon_id' => $coupon->id, 'order_id' => $order->id, 'user_id' => $userId, 'discount' => $q['coupon_benefits'][$coupon->id]]);
+            }
             Audit::record('order.created', 'order:'.$order->id, null, ['number' => $order->number, 'total' => $order->total]);
             OrderCommunication::record($order, 'created', 'created', 'Pesanan berhasil dibuat. Silakan lihat instruksi pembayaran dan batas waktunya pada halaman pesanan.');
 

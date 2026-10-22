@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\BundleComponent;
 use App\Models\BusinessAccount;
+use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\CustomQuote;
 use App\Models\Order;
@@ -14,6 +15,7 @@ use App\Models\PriceGroup;
 use App\Models\Refund;
 use App\Models\Review;
 use App\Models\Role;
+use App\Models\Series;
 use App\Models\ServiceCase;
 use App\Models\Setting;
 use App\Models\StockMovement;
@@ -226,6 +228,20 @@ class AdminController extends Controller
         }
         if ($resource === 'coupons' && $data['type'] === 'percent' && $data['value'] > 100) {
             throw ValidationException::withMessages(['value' => 'Persentase maksimal 100.']);
+        }
+        if ($resource === 'coupons') {
+            if ($data['target_type'] !== 'all' && empty($data['target_id'])) {
+                throw ValidationException::withMessages(['target_id' => 'ID target wajib diisi untuk aturan item ini.']);
+            }
+            $targetModel = match ($data['target_type']) {
+                'category' => Category::class, 'series' => Series::class, 'variant' => Variant::class, default => null,
+            };
+            if ($targetModel && ! $targetModel::whereKey($data['target_id'])->exists()) {
+                throw ValidationException::withMessages(['target_id' => 'Target voucher tidak ditemukan.']);
+            }
+            if ($data['target_type'] === 'all') {
+                $data['target_id'] = null;
+            }
         }
         if ($resource === 'series' && $record->exists && $record->variants()->exists() && (bool) $data['uses_product_type'] !== $record->uses_product_type) {
             throw ValidationException::withMessages(['uses_product_type' => 'Struktur series dengan varian tidak dapat diubah.']);
