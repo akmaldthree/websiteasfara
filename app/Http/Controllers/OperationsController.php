@@ -141,7 +141,7 @@ class OperationsController extends Controller
 
     public function invoice(Order $order): View
     {
-        return view('store.document', ['order' => $order->load('items', 'refunds'), 'kind' => 'invoice']);
+        return view('store.document', ['order' => $order->load('items.components', 'refunds'), 'kind' => 'invoice']);
     }
 
     public function document(Request $request, Order $order, string $kind): View
@@ -151,6 +151,6 @@ class OperationsController extends Controller
             abort_unless($request->user()->allowed('shipping.write'), 403);
         }
 
-        return view('store.document', ['order' => $order->load('items', 'refunds'), 'kind' => $kind]);
+        return view('store.document', ['order' => $order->load('items.components', 'refunds'), 'kind' => $kind]);
     }
 }

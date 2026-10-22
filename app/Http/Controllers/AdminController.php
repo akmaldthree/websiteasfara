@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\BundleComponent;
 use App\Models\BusinessAccount;
 use App\Models\CustomQuote;
 use App\Models\Order;
@@ -57,7 +58,7 @@ class AdminController extends Controller
 
     public function order(Order $order)
     {
-        $order->load('items.productionMilestones', 'proofs', 'refunds', 'cases', 'events');
+        $order->load('items.productionMilestones', 'items.components', 'proofs', 'refunds', 'cases', 'events');
 
         return view('admin.order', compact('order'));
     }
@@ -151,6 +152,16 @@ class AdminController extends Controller
         }
         if ($resource === 'variants') {
             $r->merge(['sku' => strtoupper(trim($r->input('sku', ''))), 'product_type' => trim($r->input('product_type', ''))]);
+        }
+        if ($resource === 'bundle-components') {
+            $bundle = Variant::findOrFail($data['bundle_variant_id']);
+            $component = Variant::findOrFail($data['component_variant_id']);
+            if ($bundle->id === $component->id || $bundle->fulfillment !== 'bundle' || $component->fulfillment === 'bundle') {
+                throw ValidationException::withMessages(['component_variant_id' => 'Pilih SKU bundle dan SKU komponen non-bundle yang berbeda.']);
+            }
+            if (BundleComponent::where('bundle_variant_id', $bundle->id)->where('component_variant_id', $component->id)->when($id, fn ($query) => $query->whereKeyNot($id))->exists()) {
+                throw ValidationException::withMessages(['component_variant_id' => 'Komponen ini sudah ada pada bundle.']);
+            }
         }
         if ($resource === 'coupons') {
             $r->merge(['code' => strtoupper(trim($r->input('code', '')))]);

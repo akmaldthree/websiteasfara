@@ -6,7 +6,7 @@
     @if($quote['price_group'])<div class="alert alert-success">Harga akun <strong>{{ $quote['price_group']->name }}</strong> sudah diterapkan dan akan disimpan pada pesanan.</div>@endif
     <div class="panel"><h2>Pastikan pilihan Anda</h2>
         @foreach($quote['lines'] as $line)
-            <div class="summary-row"><span>{{ $line['variant']->series->name }}<br><small>{{ $line['variant']->label }} × {{ $line['quantity'] }} · @rupiah($line['unit_price'])/item @if($line['price_tier_minimum'])· tier {{ $line['price_tier_minimum'] }}+@endif</small></span><span>@rupiah($line['total'])</span></div>
+            <div class="summary-row"><span>{{ $line['variant']->series->name }}<br><small>{{ $line['variant']->label }} × {{ $line['quantity'] }} · @rupiah($line['unit_price'])/item @if($line['price_tier_minimum'])· tier {{ $line['price_tier_minimum'] }}+@endif @if($line['bundle'])<br>Isi: @foreach($line['bundle'] as $component){{ $component['sku'] }} × {{ $component['quantity'] }}{{ !$loop->last?' · ':'' }}@endforeach @endif</small></span><span>@rupiah($line['total'])</span></div>
         @endforeach
         <p class="mt-4"><strong>{{ $data['name'] }}</strong> · {{ $data['phone'] }}<br>{{ $data['detail'] }}<br>{{ $data['district'] }}, {{ $data['city'] }}, {{ $data['province'] }} {{ $data['postal_code'] }}</p>
         <p>{{ $quote['rate']->courier }} {{ $quote['rate']->service }} · {{ $quote['rate']->estimate }}<br>Pembayaran: {{ $data['payment_method']==='cod'?'COD':'Transfer bank' }}</p>

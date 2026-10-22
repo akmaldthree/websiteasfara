@@ -62,7 +62,7 @@ class StoreController extends Controller
 
     public function product(Request $r, string $slug, PricingService $pricing)
     {
-        $series = Series::published()->where('slug', $slug)->with(['category', 'variants' => fn ($q) => $q->where('active', true)->with('measurementTemplate')->orderBy('id')])->firstOrFail();
+        $series = Series::published()->where('slug', $slug)->with(['category', 'variants' => fn ($q) => $q->where('active', true)->with(['measurementTemplate', 'bundleComponents.componentVariant'])->orderBy('id')])->firstOrFail();
         $priceGroup = $pricing->groupFor($r->user());
         $businessTiers = $series->variants->mapWithKeys(fn (Variant $variant) => [$variant->id => $pricing->tiersFor($variant, $r->user())]);
 
@@ -198,7 +198,7 @@ class StoreController extends Controller
 
     public function order(Order $order)
     {
-        $order->load('items', 'proofs', 'cases.items.item', 'refunds', 'events');
+        $order->load('items.components', 'proofs', 'cases.items.item', 'refunds', 'events');
 
         return view('store.order', compact('order'));
     }

@@ -17,4 +17,9 @@ class OrderItem extends Model
     {
         return $this->hasMany(ProductionMilestone::class)->orderBy('id');
     }
+
+    public function components()
+    {
+        return $this->hasMany(OrderItemComponent::class)->orderBy('id');
+    }
 }

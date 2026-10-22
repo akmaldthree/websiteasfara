@@ -14,6 +14,7 @@ Website e-commerce Dthree dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. 
 - Outbox email transaksi dengan deduplikasi, retry terbatas, histori status, serta fallback tindak lanjut manual oleh Customer Service.
 - Program mitra reseller, dropshipper, dan grosir dengan persetujuan admin, grup harga privat, minimum pesanan, tier harga per SKU, dan snapshot harga pada pesanan.
 - Produk ukuran custom dengan template field dinamis, validasi dan persetujuan ukuran, biaya tetap atau penawaran admin, snapshot checkout, serta milestone produksi sampai siap kirim.
+- Bundle SKU dengan komposisi yang dikelola admin, ketersediaan dan berat turunan, reservasi stok komponen atomik, serta snapshot isi bundle pada pesanan.
 
 ## Instalasi hosting
 

@@ -113,17 +113,28 @@ class OrderWorkflow
         if ($action === 'release' && $o->inventory_state === 'released') {
             return;
         }
-        foreach ($o->items()->orderBy('variant_id')->get() as $item) {
-            $v = Variant::whereKey($item->variant_id)->lockForUpdate()->firstOrFail();
+        $targets = [];
+        foreach ($o->items()->with('components')->get() as $item) {
+            if ($item->components->isNotEmpty()) {
+                foreach ($item->components as $component) {
+                    $targets[$component->variant_id] = ($targets[$component->variant_id] ?? 0) + $component->quantity;
+                }
+            } else {
+                $targets[$item->variant_id] = ($targets[$item->variant_id] ?? 0) + $item->quantity;
+            }
+        }
+        ksort($targets);
+        foreach ($targets as $variantId => $quantity) {
+            $v = Variant::whereKey($variantId)->lockForUpdate()->firstOrFail();
             $stock = 0;
             $reserved = 0;
             if ($action === 'commit') {
-                $stock = -$item->quantity;
-                $reserved = -$item->quantity;
+                $stock = -$quantity;
+                $reserved = -$quantity;
             } elseif ($o->inventory_state === 'reserved') {
-                $reserved = -$item->quantity;
+                $reserved = -$quantity;
             } elseif ($o->inventory_state === 'committed') {
-                $stock = $item->quantity;
+                $stock = $quantity;
             }
             $this->check($v->stock + $stock >= 0 && $v->reserved + $reserved >= 0, 'Saldo inventori tidak konsisten.');
             $v->update(['stock' => $v->stock + $stock, 'reserved' => $v->reserved + $reserved]);

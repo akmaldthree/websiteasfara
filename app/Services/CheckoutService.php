@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BundleComponent;
 use App\Models\Coupon;
 use App\Models\CustomQuote;
 use App\Models\Order;
@@ -23,7 +24,7 @@ class CheckoutService
         $this->check(count($cart) > 0 && count($cart) <= 50, 'Keranjang kosong atau terlalu banyak varian.');
         $group = $this->pricing->groupFor($customer);
         $query = Variant::with([
-            'series.category', 'measurementTemplate',
+            'series.category', 'measurementTemplate', 'bundleComponents.componentVariant.series',
             'prices' => fn ($query) => $query->when($group, fn ($query) => $query->where('price_group_id', $group->id))->where('active', true),
         ])->whereIn('id', array_keys($cart))->orderBy('id');
         if ($lock) {
@@ -36,7 +37,20 @@ class CheckoutService
             $qty = filter_var($cart[$v->id], FILTER_VALIDATE_INT);
             $this->check($qty !== false && $qty >= 1 && $qty <= 100, 'Jumlah harus antara 1 dan 100.');
             $this->check($v->active && $v->series->active && $v->series->category->active, "{$v->sku} tidak aktif.");
-            $this->check(in_array($v->fulfillment, ['ready_stock', 'pre_order', 'custom_made']), 'Metode pemenuhan tidak tersedia.');
+            $this->check(in_array($v->fulfillment, ['ready_stock', 'pre_order', 'custom_made', 'bundle']), 'Metode pemenuhan tidak tersedia.');
+            $bundle = [];
+            $unitWeight = $v->weight;
+            $codEligible = $v->fulfillment === 'ready_stock';
+            if ($v->fulfillment === 'bundle') {
+                $this->check($v->bundleComponents->isNotEmpty(), "Komponen bundle {$v->sku} belum dikonfigurasi.");
+                foreach ($v->bundleComponents as $component) {
+                    $componentVariant = $component->componentVariant;
+                    $this->check($componentVariant->active && $componentVariant->series->active && $componentVariant->fulfillment !== 'bundle', "Komponen {$componentVariant->sku} tidak tersedia.");
+                    $bundle[] = ['variant_id' => $componentVariant->id, 'sku' => $componentVariant->sku, 'name' => $componentVariant->series->name, 'quantity' => $component->quantity];
+                }
+                $unitWeight = $v->bundleComponents->sum(fn ($component) => $component->componentVariant->weight * $component->quantity);
+                $codEligible = $v->bundleComponents->every(fn ($component) => $component->componentVariant->fulfillment === 'ready_stock');
+            }
             $customization = null;
             if ($v->fulfillment === 'custom_made') {
                 $this->check($qty === 1, 'Setiap ukuran custom harus dibuat sebagai item terpisah.');
@@ -67,6 +81,9 @@ class CheckoutService
                 'price_group' => $group,
                 'customization' => $customization,
                 'custom_cost' => $customCost,
+                'bundle' => $bundle,
+                'unit_weight' => $unitWeight,
+                'cod_eligible' => $codEligible,
                 'base_total' => $qty * $price['price'],
                 'total' => $qty * $price['price'] + $customCost,
             ];
@@ -87,7 +104,7 @@ class CheckoutService
             $this->check($quantity >= $group->minimum_order_quantity, "Minimum grup {$group->name} adalah {$group->minimum_order_quantity} item per pesanan.");
             $this->check($merchandiseTotal >= $group->minimum_order_amount, "Minimum nilai pesanan grup {$group->name} adalah Rp ".number_format($group->minimum_order_amount, 0, ',', '.').'.');
         }
-        $weight = array_sum(array_map(fn ($l) => $l['variant']->weight * $l['quantity'], $lines));
+        $weight = array_sum(array_map(fn ($l) => $l['unit_weight'] * $l['quantity'], $lines));
         $rate = ShippingRate::where('active', true)->find($input['shipping_rate_id'] ?? 0);
         $this->check($rate !== null, 'Pilih layanan pengiriman yang tersedia.');
         foreach (['province', 'city'] as $field) {
@@ -99,7 +116,7 @@ class CheckoutService
             $this->check(Setting::get('cod_enabled', false) && $rate->cod, 'COD belum tersedia untuk layanan ini.');
             $this->check($merchandiseTotal >= (int) Setting::get('cod_min', 0) && $merchandiseTotal <= (int) Setting::get('cod_max', 1000000), 'Nilai pesanan di luar batas COD.');
             foreach ($lines as $l) {
-                $this->check($l['variant']->fulfillment === 'ready_stock', 'COD hanya untuk ready stock.');
+                $this->check($l['cod_eligible'], 'COD hanya untuk ready stock.');
             }
             $fee = min((int) Setting::get('cod_fee_max', 100000), (int) Setting::get('cod_fee', 0) + (int) ceil($merchandiseTotal * (int) Setting::get('cod_percent', 0) / 100));
         } else {
@@ -134,7 +151,7 @@ class CheckoutService
     public function fingerprint(array $quote): string
     {
         return hash('sha256', json_encode([
-            'items' => array_map(fn ($line) => [$line['variant']->id, $line['variant']->sku, $line['quantity'], $line['unit_price'], $line['price_tier_minimum'], $line['custom_cost'], $line['customization'], $line['variant']->weight, $line['variant']->fulfillment, $line['variant']->lead_time], $quote['lines']),
+            'items' => array_map(fn ($line) => [$line['variant']->id, $line['variant']->sku, $line['quantity'], $line['unit_price'], $line['price_tier_minimum'], $line['custom_cost'], $line['customization'], $line['bundle'], $line['unit_weight'], $line['variant']->fulfillment, $line['variant']->lead_time], $quote['lines']),
             'price_group' => $quote['price_group'] ? [$quote['price_group']->id, $quote['price_group']->name, $quote['price_group']->business_type, $quote['price_group']->minimum_order_quantity, $quote['price_group']->minimum_order_amount] : null,
             'shipping' => [$quote['rate']->id, $quote['rate']->courier, $quote['rate']->service, $quote['rate']->estimate],
             'amounts' => array_intersect_key($quote, array_flip(['subtotal', 'custom_cost', 'shipping_cost', 'discount', 'shipping_discount', 'cod_fee', 'total'])),
@@ -145,7 +162,10 @@ class CheckoutService
     {
         return DB::transaction(function () use ($cart, $input, $key, $userId, $expectedQuote, $customizations) {
             // Serialize retries on the same cart before checking the unique checkout key.
-            Variant::whereIn('id', array_keys($cart))->orderBy('id')->lockForUpdate()->get();
+            $componentIds = BundleComponent::whereIn('bundle_variant_id', array_keys($cart))->pluck('component_variant_id')->all();
+            $lockIds = array_values(array_unique(array_merge(array_keys($cart), $componentIds)));
+            sort($lockIds);
+            Variant::whereIn('id', $lockIds)->orderBy('id')->lockForUpdate()->get();
             if ($existing = Order::where('checkout_key', $key)->first()) {
                 return $existing;
             }
@@ -168,16 +188,29 @@ class CheckoutService
             foreach ($q['lines'] as $l) {
                 $v = $l['variant'];
                 $qty = $l['quantity'];
-                $updated = Variant::whereKey($v->id)->whereRaw('stock - reserved >= ?', [$qty])->increment('reserved', $qty);
-                $this->check($updated === 1, "Stok {$v->sku} sudah terambil. Perbarui keranjang.");
-                $item = $order->items()->create(['variant_id' => $v->id, 'sku' => $v->sku, 'name' => $v->series->name, 'attributes' => ['type' => $v->product_type, 'color' => $v->color, 'size' => $v->size, 'price_group' => $q['price_group']?->name, 'price_tier_minimum' => $l['price_tier_minimum'], 'custom' => $l['customization']], 'fulfillment' => $v->fulfillment, 'lead_time' => $l['customization']['lead_time'] ?? $v->lead_time, 'weight' => $v->weight, 'price' => $l['unit_price'], 'custom_cost' => $l['custom_cost'], 'production_status' => $v->fulfillment === 'custom_made' ? 'reviewing' : null, 'quantity' => $qty, 'total' => $l['total']]);
+                if ($v->fulfillment !== 'bundle') {
+                    $updated = Variant::whereKey($v->id)->whereRaw('stock - reserved >= ?', [$qty])->increment('reserved', $qty);
+                    $this->check($updated === 1, "Stok {$v->sku} sudah terambil. Perbarui keranjang.");
+                }
+                $item = $order->items()->create(['variant_id' => $v->id, 'sku' => $v->sku, 'name' => $v->series->name, 'attributes' => ['type' => $v->product_type, 'color' => $v->color, 'size' => $v->size, 'price_group' => $q['price_group']?->name, 'price_tier_minimum' => $l['price_tier_minimum'], 'custom' => $l['customization']], 'fulfillment' => $v->fulfillment, 'lead_time' => $l['customization']['lead_time'] ?? $v->lead_time, 'weight' => $l['unit_weight'], 'price' => $l['unit_price'], 'custom_cost' => $l['custom_cost'], 'production_status' => $v->fulfillment === 'custom_made' ? 'reviewing' : null, 'quantity' => $qty, 'total' => $l['total']]);
+                if ($v->fulfillment === 'bundle') {
+                    foreach ($l['bundle'] as $component) {
+                        $required = $component['quantity'] * $qty;
+                        $updated = Variant::whereKey($component['variant_id'])->whereRaw('stock - reserved >= ?', [$required])->increment('reserved', $required);
+                        $this->check($updated === 1, "Stok komponen {$component['sku']} sudah terambil. Perbarui keranjang.");
+                        $item->components()->create(array_merge($component, ['quantity' => $required]));
+                        StockMovement::create(['variant_id' => $component['variant_id'], 'order_id' => $order->id, 'user_id' => $userId, 'stock_delta' => 0, 'reserved_delta' => $required, 'reason' => 'Reservasi komponen bundle '.$v->sku]);
+                    }
+                }
                 if ($v->fulfillment === 'custom_made') {
                     $item->productionMilestones()->create(['status' => 'reviewing', 'note' => 'Ukuran disetujui pelanggan saat checkout.']);
                     if ($quoteId = $l['customization']['quote_id'] ?? null) {
                         CustomQuote::whereKey($quoteId)->update(['status' => 'ordered', 'order_id' => $order->id]);
                     }
                 }
-                StockMovement::create(['variant_id' => $v->id, 'order_id' => $order->id, 'user_id' => $userId, 'stock_delta' => 0, 'reserved_delta' => $qty, 'reason' => 'Reservasi checkout']);
+                if ($v->fulfillment !== 'bundle') {
+                    StockMovement::create(['variant_id' => $v->id, 'order_id' => $order->id, 'user_id' => $userId, 'stock_delta' => 0, 'reserved_delta' => $qty, 'reason' => 'Reservasi checkout']);
+                }
             }
             $q['coupon']?->increment('used');
             Audit::record('order.created', 'order:'.$order->id, null, ['number' => $order->number, 'total' => $order->total]);

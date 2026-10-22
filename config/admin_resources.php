@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\BundleComponent;
 use App\Models\Category;
 use App\Models\Coupon;
 use App\Models\MeasurementTemplate;
@@ -12,6 +13,9 @@ use App\Models\VariantPrice;
 
 // field: label, input type, validation, optional select options.
 return [
+    'bundle-components' => ['model' => BundleComponent::class, 'title' => 'Komponen bundling', 'permission' => 'catalog.write', 'columns' => ['bundle_variant_id' => 'SKU bundle ID', 'component_variant_id' => 'SKU komponen ID', 'quantity' => 'Jumlah komponen'], 'fields' => [
+        'bundle_variant_id' => ['SKU bundle', 'variant', 'required|exists:variants,id'], 'component_variant_id' => ['SKU komponen', 'variant', 'required|exists:variants,id'],
+        'quantity' => ['Jumlah komponen per bundle', 'number', 'required|integer|min:1|max:1000']]],
     'measurement-templates' => ['model' => MeasurementTemplate::class, 'title' => 'Template ukuran custom', 'permission' => 'catalog.write', 'columns' => ['name' => 'Template', 'product_type' => 'Jenis produk', 'pricing_mode' => 'Harga', 'surcharge' => 'Biaya custom', 'lead_time' => 'Estimasi', 'active' => 'Aktif'], 'fields' => [
         'name' => ['Nama template', 'text', 'required|string|max:150'], 'product_type' => ['Jenis produk (opsional)', 'text', 'nullable|string|max:100'],
         'pricing_mode' => ['Mekanisme harga', 'select', 'required|in:fixed,quote', ['fixed' => 'Biaya tetap', 'quote' => 'Penawaran admin']],
@@ -38,7 +42,7 @@ return [
         'series_id' => ['Series', 'series', 'required|exists:series,id'], 'sku' => ['SKU manual', 'text', 'required|regex:/^[A-Za-z0-9._-]+$/|max:80'], 'product_type' => ['Jenis produk (kosong untuk Abaya)', 'text', 'nullable|string|max:100'],
         'color' => ['Warna', 'text', 'required|string|max:80'], 'size' => ['Ukuran', 'text', 'required|string|max:40'], 'price' => ['Harga (Rupiah)', 'number', 'required|integer|min:1|max:100000000'],
         'weight' => ['Berat (gram)', 'number', 'required|integer|min:1|max:100000'], 'low_stock' => ['Peringatan stok minimum', 'number', 'required|integer|min:0|max:100000'],
-        'fulfillment' => ['Metode pemenuhan', 'select', 'required|in:ready_stock,pre_order,custom_made', ['ready_stock' => 'Ready stock', 'pre_order' => 'Pre-order', 'custom_made' => 'Ukuran custom']],
+        'fulfillment' => ['Metode pemenuhan', 'select', 'required|in:ready_stock,pre_order,custom_made,bundle', ['ready_stock' => 'Ready stock', 'pre_order' => 'Pre-order', 'custom_made' => 'Ukuran custom', 'bundle' => 'Bundle SKU']],
         'measurement_template_id' => ['Template ukuran (wajib untuk custom)', 'measurement_template', 'nullable|exists:measurement_templates,id'],
         'lead_time' => ['Estimasi pemenuhan', 'text', 'nullable|string|max:150'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'shipping-rates' => ['model' => ShippingRate::class, 'title' => 'Tarif pengiriman', 'permission' => 'settings.write', 'columns' => ['courier' => 'Kurir', 'service' => 'Layanan', 'province' => 'Provinsi', 'city' => 'Kota', 'first_kg' => 'Kg pertama', 'cod' => 'COD'], 'fields' => [

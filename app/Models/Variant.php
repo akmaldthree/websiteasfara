@@ -47,8 +47,19 @@ class Variant extends Model
         return $this->belongsTo(MeasurementTemplate::class);
     }
 
+    public function bundleComponents()
+    {
+        return $this->hasMany(BundleComponent::class, 'bundle_variant_id')->orderBy('component_variant_id');
+    }
+
     public function getAvailableAttribute(): int
     {
+        if ($this->fulfillment === 'bundle') {
+            $components = $this->relationLoaded('bundleComponents') ? $this->bundleComponents : $this->bundleComponents()->with('componentVariant')->get();
+
+            return $components->isEmpty() ? 0 : (int) $components->min(fn (BundleComponent $component) => intdiv($component->componentVariant->available, $component->quantity));
+        }
+
         return max(0, $this->stock - $this->reserved);
     }
 
