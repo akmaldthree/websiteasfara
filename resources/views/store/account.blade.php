@@ -9,7 +9,7 @@
     <div class="row g-4">
         <div class="col-lg-7"><div class="panel"><h2>Riwayat pesanan</h2>
             @forelse($orders as $order)
-                <a class="summary-row" href="{{ $order->customerUrl() }}"><span>{{ $order->number }}<br><small>{{ $order->created_at->format('d M Y') }} · {{ __('status.'.$order->status) }}</small></span><span>@rupiah($order->total) ↗</span></a>
+                <div class="summary-row"><span><a href="{{ $order->customerUrl() }}">{{ $order->number }}</a><br><small>{{ $order->created_at->format('d M Y') }} · {{ __('status.'.$order->status) }}</small></span><span class="text-end">@rupiah($order->total)<form method="post" action="{{ route('orders.reorder',$order) }}">@csrf<button class="btn btn-link btn-sm">Pesan ulang</button></form></span></div>
             @empty
                 <p>Belum ada pesanan. <a href="{{ route('catalog') }}">Temukan koleksi Anda ↗</a></p>
             @endforelse
@@ -36,6 +36,7 @@
             </details>
         </div></div>
     </div>
+    <div class="panel mt-4"><h2>Preferensi komunikasi</h2><p class="small">Persetujuan ini dapat diubah kapan saja dan terpisah dari email transaksi pesanan.</p><form method="post" action="{{ route('account.communication') }}">@csrf<label class="d-block mb-2"><input type="checkbox" name="marketing_email" value="1" @checked(auth()->user()->marketing_email)> Promo melalui email</label><label class="d-block mb-3"><input type="checkbox" name="marketing_whatsapp" value="1" @checked(auth()->user()->marketing_whatsapp)> Promo melalui WhatsApp</label><button class="btn btn-outline-dark btn-sm">Simpan preferensi</button></form></div>
     <div class="panel mt-4"><span class="eyebrow">DTHREE LOYALTY</span><h2 class="mt-3">{{ number_format($loyaltyBalance,0,',','.') }} poin tersedia</h2><p>Poin dapat digunakan saat checkout setelah program diaktifkan oleh admin.</p>@if($loyaltyTransactions->isNotEmpty())<div class="table-responsive"><table class="table"><thead><tr><th>Tanggal</th><th>Aktivitas</th><th>Poin</th></tr></thead><tbody>@foreach($loyaltyTransactions as $transaction)<tr><td>{{ $transaction->created_at->format('d M Y') }}</td><td>{{ str_replace('_',' ',$transaction->type) }}</td><td>{{ $transaction->points>0?'+':'' }}{{ $transaction->points }}</td></tr>@endforeach</tbody></table></div>@endif</div>
     @if($customQuotes->isNotEmpty())
     <div class="panel mt-4"><span class="eyebrow">UKURAN CUSTOM</span><h2 class="mt-3">Penawaran saya</h2>

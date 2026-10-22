@@ -47,7 +47,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/akun/penawaran/{customQuote}/terima', [Store::class, 'acceptCustomQuote'])->name('custom.accept');
     Route::post('/akun/wishlist/{variant}', [Account::class, 'wishlist'])->name('wishlist.toggle');
     Route::post('/akun/ulasan/{item}', [Account::class, 'review'])->name('review.store');
+    Route::post('/akun/preferensi-komunikasi', [Account::class, 'communicationPreferences'])->name('account.communication');
+    Route::post('/akun/pesanan/{order}/pesan-ulang', [Account::class, 'reorder'])->name('orders.reorder');
 });
+Route::post('/pesanan/{order}/klaim', [Account::class, 'claimOrder'])->middleware(['auth', 'signed'])->name('orders.claim');
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/', [Admin::class, 'dashboard'])->middleware('permission:dashboard')->name('dashboard');
     Route::get('/pesanan', [Admin::class, 'orders'])->middleware('permission:orders.read')->name('orders');

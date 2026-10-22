@@ -9,7 +9,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 | Katalog | Kategori, series, jenis opsional, warna, ukuran, SKU manual unik tanpa beda kapital, harga, berat, arsip | Satu foto per series; warna/ukuran berupa nilai per SKU |
 | Storefront | Beranda, pencarian nama/jenis/SKU, filter, sorting, pagination, detail, selector SKU, panduan ukuran | Logo tipografi dan ilustrasi contoh; belum aset brand/foto asli |
 | Stok | Saldo/kuota dan reservasi, transaksi DB, lock, conditional update, movement ledger, expiry | Satu gudang; pre-order memakai kuota yang dikelola manual; concurrency staging tetap wajib |
-| Checkout | Tamu, alamat Indonesia, pilihan tarif dan metode, review akhir, kalkulasi server, idempotensi, snapshot | Alamat berupa input teks, belum kode wilayah resmi; tidak ada penggabungan cart antarperangkat |
+| Checkout | Tamu, alamat Indonesia, pilihan tarif dan metode, review akhir, kalkulasi server, idempotensi, snapshot, keranjang akun lintas perangkat dan merge setelah login | Alamat berupa input teks, belum kode wilayah resmi |
 | Pembayaran | Rekening admin, bukti JPG/PNG/PDF privat, setujui/tolak/upload ulang, refund parsial/penuh dengan referensi dan bukti privat, audit | Verifikasi dan transfer refund tetap manual; tidak ada payment gateway atau mutasi bank otomatis |
 | COD | Aktif/nonaktif, wilayah tarif, ready stock, min/max subtotal, biaya tetap/persen/cap, konfirmasi CS | Belum blacklist pelanggan dan aturan kelompok/kategori/kurir lanjutan |
 | Ongkir | Tarif manual POS/JNE menurut provinsi/kota, berat kg pertama/tambahan, estimasi, resi | Belum adapter tarif dan tracking otomatis; belum override ongkir order |
@@ -19,7 +19,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 | Engagement | Wishlist akun; ulasan berbintang hanya untuk item diterima, hingga tiga foto, moderasi approve/reject, label pembelian terverifikasi | Belum pertanyaan produk dan helpful voting |
 | Loyalty | Ledger poin, konfigurasi earn/value/minimum/expiry, saldo akun, redeem checkout, earn setelah selesai, restore pembatalan, adjustment refund proporsional | Belum tier/member level dan kampanye bonus poin |
 | B2B | Pengajuan reseller/dropshipper/grosir, peninjauan admin, grup harga privat, minimum pesanan, tier harga per SKU, snapshot checkout | Belum dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal |
-| Akun | Registrasi email, login, reset password, buku alamat dengan alamat utama, riwayat akun, invoice cetak | Belum login telepon, konversi tamu terverifikasi, pesan ulang |
+| Akun | Registrasi, login email/telepon, reset password, buku alamat, riwayat, invoice, klaim pesanan tamu melalui tautan bertanda tangan, pesan ulang, dan persetujuan promo email/WhatsApp | Verifikasi klaim bergantung pada kepemilikan tautan pesanan dan kecocokan email/telepon |
 | Admin | Lima peran, permission tindakan, aktif/nonaktif dan perubahan peran staf, konfigurasi toko, daftar pesanan, inventori, audit | Belum 2FA dan tindakan massal |
 | Konten | Halaman, banner, section beranda, menu, FAQ, journal, campaign; upload gambar, urutan, jadwal tayang, metadata SEO, preview admin | Editor masih berbasis teks; belum rich-text block editor dan revision history |
 | Import | CSV template, preview, validasi seluruh baris, konfirmasi atomic, audit | Maks. 200 baris; create-only, tanpa XLSX/upsert/generator kombinasi |

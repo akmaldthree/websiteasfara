@@ -12,6 +12,7 @@ use App\Models\ShippingRate;
 use App\Models\Variant;
 use App\Services\AfterSalesService;
 use App\Services\Audit;
+use App\Services\CartService;
 use App\Services\CheckoutService;
 use App\Services\CustomProductService;
 use App\Services\OrderCommunication;
@@ -81,7 +82,7 @@ class StoreController extends Controller
         return view('store.cart', compact('cart', 'lines'));
     }
 
-    public function add(Request $r, CheckoutService $service)
+    public function add(Request $r, CheckoutService $service, CartService $cartService)
     {
         $d = $r->validate(['variant_id' => 'required|integer|exists:variants,id', 'quantity' => 'required|integer|min:1|max:100']);
         $variant = Variant::findOrFail($d['variant_id']);
@@ -92,12 +93,15 @@ class StoreController extends Controller
         $cart[$d['variant_id']] = ($cart[$d['variant_id']] ?? 0) + $d['quantity'];
         $service->lines($cart, false, $r->user(), $r->session()->get('cart_customizations', []));
         $r->session()->put('cart', $cart);
+        if ($r->user()) {
+            $cartService->sync($r->user(), $cart, $r->session()->get('cart_customizations', []));
+        }
         $r->session()->forget('checkout_key');
 
         return redirect()->route('cart')->with('success', 'Pilihan Anda sudah ditambahkan.');
     }
 
-    public function updateCart(Request $r)
+    public function updateCart(Request $r, CartService $cartService)
     {
         $d = $r->validate(['variant_id' => 'required|integer', 'quantity' => 'required|integer|min:0|max:100']);
         $cart = $r->session()->get('cart', []);
@@ -110,6 +114,9 @@ class StoreController extends Controller
             $cart[$d['variant_id']] = $d['quantity'];
         }
         $r->session()->put('cart', $cart);
+        if ($r->user()) {
+            $cartService->sync($r->user(), $cart, $r->session()->get('cart_customizations', []));
+        }
         $r->session()->forget('checkout_key');
 
         return back();
@@ -149,7 +156,7 @@ class StoreController extends Controller
         return view('store.review', compact('data', 'quote'));
     }
 
-    public function place(Request $r, CheckoutService $service)
+    public function place(Request $r, CheckoutService $service, CartService $cartService)
     {
         $r->validate(['checkout_key' => 'required|string|size:64']);
         abort_unless(hash_equals($r->session()->get('checkout_key', ''), $r->input('checkout_key')), 419);
@@ -161,11 +168,14 @@ class StoreController extends Controller
         abort_unless($r->session()->has('checkout_quote'), 419);
         $o = $service->place($r->session()->get('cart', []), $data, $r->input('checkout_key'), $r->user()?->id, $r->session()->get('checkout_quote'), $r->session()->get('cart_customizations', []));
         $r->session()->forget(['cart', 'cart_customizations', 'checkout_data', 'checkout_quote']);
+        if ($r->user()) {
+            $cartService->sync($r->user(), []);
+        }
 
         return redirect($o->customerUrl())->with('success', 'Pesanan berhasil dibuat. Simpan tautan halaman ini.');
     }
 
-    public function customize(Request $r, Variant $variant, CustomProductService $service)
+    public function customize(Request $r, Variant $variant, CustomProductService $service, CartService $cartService)
     {
         $data = $r->validate(['request_key' => 'required|uuid', 'measurements' => 'required|array', 'measurement_approval' => 'accepted']);
         if ($variant->measurementTemplate?->pricing_mode === 'quote') {
@@ -182,12 +192,15 @@ class StoreController extends Controller
         $cart[$variant->id] = 1;
         $customizations[$variant->id] = $customization;
         $r->session()->put(['cart' => $cart, 'cart_customizations' => $customizations]);
+        if ($r->user()) {
+            $cartService->sync($r->user(), $cart, $customizations);
+        }
         $r->session()->forget('checkout_key');
 
         return redirect()->route('cart')->with('success', 'Ukuran custom disetujui dan ditambahkan ke keranjang.');
     }
 
-    public function acceptCustomQuote(Request $r, CustomQuote $customQuote, CustomProductService $service)
+    public function acceptCustomQuote(Request $r, CustomQuote $customQuote, CustomProductService $service, CartService $cartService)
     {
         $customization = $service->accept($customQuote, $r->user());
         $cart = $r->session()->get('cart', []);
@@ -195,6 +208,7 @@ class StoreController extends Controller
         $cart[$customQuote->variant_id] = 1;
         $customizations[$customQuote->variant_id] = $customization;
         $r->session()->put(['cart' => $cart, 'cart_customizations' => $customizations]);
+        $cartService->sync($r->user(), $cart, $customizations);
         $r->session()->forget('checkout_key');
 
         return redirect()->route('cart')->with('success', 'Penawaran diterima dan produk custom ditambahkan ke keranjang.');

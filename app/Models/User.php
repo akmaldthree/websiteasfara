@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'phone', 'password'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'marketing_email', 'marketing_whatsapp', 'consent_updated_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -30,6 +30,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'active' => 'boolean',
+            'marketing_email' => 'boolean',
+            'marketing_whatsapp' => 'boolean',
+            'consent_updated_at' => 'datetime',
         ];
     }
 
@@ -76,5 +79,10 @@ class User extends Authenticatable
     public function loyaltyTransactions()
     {
         return $this->hasMany(LoyaltyTransaction::class);
+    }
+
+    public function cartItems()
+    {
+        return $this->hasMany(UserCartItem::class);
     }
 }

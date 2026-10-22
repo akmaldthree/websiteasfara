@@ -19,6 +19,7 @@ Website e-commerce Dthree dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. 
 - Loyalty berbasis ledger dengan aturan nilai/perolehan/masa berlaku dari admin, redeem atomik saat checkout, pemberian poin idempoten setelah pesanan selesai, pemulihan saat batal, dan penyesuaian proporsional saat refund.
 - CMS terjadwal untuk banner, section beranda, menu, FAQ, journal, dan campaign; mendukung gambar, urutan, periode tayang, metadata SEO, dan preview admin untuk konten belum terbit.
 - Promosi bertarget kategori, series, atau SKU dengan segmentasi pelanggan/B2B, batas per pengguna, prioritas, stacking terkendali, ledger pemakaian, dan snapshot voucher pada pesanan.
+- Akun pelanggan dapat masuk memakai email atau telepon, menyimpan keranjang lintas perangkat, mengklaim pesanan tamu melalui tautan pesanan bertanda tangan, pesan ulang, dan mengatur persetujuan promo per saluran.
 
 ## Instalasi hosting
 

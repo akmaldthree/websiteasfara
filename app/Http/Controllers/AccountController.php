@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\BusinessAccount;
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Review;
 use App\Models\User;
 use App\Models\Variant;
 use App\Services\Audit;
+use App\Services\CartService;
 use App\Services\LoyaltyService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
@@ -22,25 +24,29 @@ use Illuminate\Validation\ValidationException;
 
 class AccountController extends Controller
 {
-    public function login(Request $r)
+    public function login(Request $r, CartService $cartService)
     {
-        $r->merge(['email' => strtolower(trim($r->input('email', '')))]);
-        $d = $r->validate(['email' => 'required|email', 'password' => 'required|string']);
-        if (! Auth::attempt($d + ['active' => true], $r->boolean('remember'))) {
-            throw ValidationException::withMessages(['email' => 'Email atau kata sandi tidak sesuai.']);
+        $r->merge(['login' => strtolower(trim($r->input('login', '')))]);
+        $d = $r->validate(['login' => 'required|string|max:150', 'password' => 'required|string']);
+        $field = filter_var($d['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+        if (! Auth::attempt([$field => $d['login'], 'password' => $d['password'], 'active' => true], $r->boolean('remember'))) {
+            throw ValidationException::withMessages(['login' => 'Email, nomor telepon, atau kata sandi tidak sesuai.']);
         }
         $r->session()->regenerate();
+        $merged = $cartService->merge($r->user(), $r->session()->get('cart', []), $r->session()->get('cart_customizations', []));
+        $r->session()->put(['cart' => $merged['cart'], 'cart_customizations' => $merged['customizations']]);
 
         return redirect()->intended($r->user()->role === 'customer' ? route('account') : route('admin.dashboard'));
     }
 
-    public function register(Request $r)
+    public function register(Request $r, CartService $cartService)
     {
         $r->merge(['email' => strtolower(trim($r->input('email', '')))]);
-        $d = $r->validate(['name' => 'required|string|max:100', 'email' => 'required|email|max:150|unique:users', 'phone' => ['required', 'regex:/^\+?[0-9]{9,15}$/'], 'password' => ['required', 'confirmed', PasswordRule::min(12)->letters()->numbers()], 'terms' => 'accepted']);
-        $u = User::create($d);
+        $d = $r->validate(['name' => 'required|string|max:100', 'email' => 'required|email|max:150|unique:users', 'phone' => ['required', 'regex:/^\+?[0-9]{9,15}$/', 'unique:users'], 'password' => ['required', 'confirmed', PasswordRule::min(12)->letters()->numbers()], 'terms' => 'accepted', 'marketing_email' => 'nullable|boolean', 'marketing_whatsapp' => 'nullable|boolean']);
+        $u = User::create($d + ['marketing_email' => $r->boolean('marketing_email'), 'marketing_whatsapp' => $r->boolean('marketing_whatsapp'), 'consent_updated_at' => now()]);
         Auth::login($u);
         $r->session()->regenerate();
+        $cartService->sync($u, $r->session()->get('cart', []), $r->session()->get('cart_customizations', []));
 
         return redirect()->route('account');
     }
@@ -81,6 +87,43 @@ class AccountController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    public function communicationPreferences(Request $request)
+    {
+        $request->user()->update(['marketing_email' => $request->boolean('marketing_email'), 'marketing_whatsapp' => $request->boolean('marketing_whatsapp'), 'consent_updated_at' => now()]);
+        Audit::record('customer.communication_preferences', 'user:'.$request->user()->id, null, $request->user()->only('marketing_email', 'marketing_whatsapp'));
+
+        return back()->with('success', 'Preferensi komunikasi diperbarui.');
+    }
+
+    public function claimOrder(Request $request, Order $order)
+    {
+        abort_unless($order->user_id === null, 422);
+        $matches = ($order->email && mb_strtolower($order->email) === mb_strtolower($request->user()->email)) || trim($order->phone) === trim((string) $request->user()->phone);
+        abort_unless($matches, 403);
+        $order->update(['user_id' => $request->user()->id, 'claimed_at' => now()]);
+        Audit::record('order.claimed', 'order:'.$order->id, ['user_id' => null], ['user_id' => $request->user()->id]);
+
+        return redirect($order->customerUrl())->with('success', 'Pesanan telah ditambahkan ke riwayat akun.');
+    }
+
+    public function reorder(Request $request, Order $order, CartService $cartService)
+    {
+        abort_unless($order->user_id === $request->user()->id, 403);
+        $order->load('items');
+        $available = Variant::whereIn('id', $order->items->pluck('variant_id'))->where('active', true)->where('fulfillment', '!=', 'custom_made')->pluck('id')->all();
+        $cart = $request->session()->get('cart', []);
+        foreach ($order->items->whereIn('variant_id', $available) as $item) {
+            $cart[$item->variant_id] = min(100, (int) ($cart[$item->variant_id] ?? 0) + $item->quantity);
+        }
+        $cart = array_slice($cart, 0, 50, true);
+        $request->session()->put('cart', $cart);
+        $request->session()->forget('checkout_key');
+        $cartService->sync($request->user(), $cart, $request->session()->get('cart_customizations', []));
+        $added = $order->items->whereIn('variant_id', $available)->count();
+
+        return redirect()->route('cart')->with('success', $added.' item tersedia ditambahkan kembali. Produk custom perlu diukur ulang.');
     }
 
     public function review(Request $request, OrderItem $item)
