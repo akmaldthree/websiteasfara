@@ -71,4 +71,33 @@ class ContentManagementTest extends TestCase
         $this->assertDatabaseHas('content_revisions', ['content_type' => 'pages', 'content_id' => $page->id]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'pages.restored', 'subject' => 'pages:'.$page->id]);
     }
+
+    public function test_admin_can_build_safe_structured_page_content(): void
+    {
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $page = Page::create(['title' => 'Cerita', 'slug' => 'cerita-block', 'body' => 'Teks cadangan.', 'active' => false]);
+        $blocks = [
+            ['type' => 'heading', 'text' => 'Kisah Dthree'],
+            ['type' => 'paragraph', 'text' => '<script>alert("x")</script> Tetap aman.'],
+            ['type' => 'button', 'url' => '/koleksi', 'label' => 'Lihat koleksi'],
+        ];
+
+        $this->actingAs($admin)->post(route('admin.update', ['pages', $page->id]), [
+            'title' => $page->title, 'slug' => $page->slug, 'body' => $page->body, 'blocks' => json_encode($blocks),
+            'seo_title' => '', 'seo_description' => '', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertIsArray($page->fresh()->blocks);
+        $this->get(route('page', $page->slug))->assertOk()
+            ->assertSee('Kisah Dthree')
+            ->assertSee('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; Tetap aman.', false)
+            ->assertSee('href="/koleksi"', false);
+
+        $blocks[2]['url'] = 'javascript:alert(1)';
+        $this->actingAs($admin)->post(route('admin.update', ['pages', $page->id]), [
+            'title' => $page->title, 'slug' => $page->slug, 'body' => $page->body, 'blocks' => json_encode($blocks),
+            'seo_title' => '', 'seo_description' => '', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
+        ])->assertSessionHasErrors('blocks');
+    }
 }

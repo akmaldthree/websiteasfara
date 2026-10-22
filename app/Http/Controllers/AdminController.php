@@ -237,6 +237,9 @@ class AdminController extends Controller
                 $data['color'] = $data['color'] ?: $variant->color;
             }
         }
+        if (in_array($resource, ['pages', 'content'], true)) {
+            $data['blocks'] = $this->validatedContentBlocks($data['blocks'] ?? null);
+        }
         if ($resource === 'measurement-templates') {
             try {
                 $fields = json_decode($data['fields'], true, 512, JSON_THROW_ON_ERROR);
@@ -335,6 +338,50 @@ class AdminController extends Controller
         });
 
         return redirect()->route('admin.resources', $resource)->with('success', 'Data berhasil disimpan.');
+    }
+
+    private function validatedContentBlocks(?string $json): ?array
+    {
+        if (! $json) {
+            return null;
+        }
+        try {
+            $blocks = json_decode($json, true, 64, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw ValidationException::withMessages(['blocks' => 'Susunan blok konten tidak valid. Muat ulang halaman dan coba kembali.']);
+        }
+        if (! is_array($blocks) || count($blocks) > 50) {
+            throw ValidationException::withMessages(['blocks' => 'Konten dibatasi maksimal 50 blok.']);
+        }
+        $allowed = ['heading', 'paragraph', 'quote', 'button', 'image'];
+        foreach ($blocks as $index => &$block) {
+            if (! is_array($block) || ! in_array($block['type'] ?? '', $allowed, true)) {
+                throw ValidationException::withMessages(['blocks' => 'Tipe blok ke-'.($index + 1).' tidak didukung.']);
+            }
+            $block = array_map(fn ($value) => is_string($value) ? trim($value) : $value, $block);
+            if (in_array($block['type'], ['heading', 'paragraph', 'quote'], true) && empty($block['text'])) {
+                throw ValidationException::withMessages(['blocks' => 'Isi teks blok ke-'.($index + 1).' wajib diisi.']);
+            }
+            if (isset($block['text']) && mb_strlen($block['text']) > 10000) {
+                throw ValidationException::withMessages(['blocks' => 'Isi salah satu blok terlalu panjang.']);
+            }
+            if (in_array($block['type'], ['button', 'image'], true)) {
+                if (empty($block['url']) || ! $this->safeContentUrl($block['url'])) {
+                    throw ValidationException::withMessages(['blocks' => 'Tautan blok ke-'.($index + 1).' harus berupa URL https atau path internal.']);
+                }
+                if (empty($block['label']) || mb_strlen($block['label']) > 200) {
+                    throw ValidationException::withMessages(['blocks' => 'Label atau alt text blok ke-'.($index + 1).' wajib diisi dan maksimal 200 karakter.']);
+                }
+            }
+            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label']));
+        }
+
+        return array_values($blocks);
+    }
+
+    private function safeContentUrl(string $url): bool
+    {
+        return str_starts_with($url, '/') || str_starts_with($url, '#') || filter_var($url, FILTER_VALIDATE_URL) && in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true);
     }
 
     public function contentHistory(string $resource, int $id)
