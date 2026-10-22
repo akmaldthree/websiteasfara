@@ -11,6 +11,7 @@ use App\Services\AfterSalesService;
 use App\Services\Audit;
 use App\Services\CheckoutService;
 use App\Services\OrderCommunication;
+use App\Services\PricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -57,19 +58,21 @@ class StoreController extends Controller
         return view('store.catalog', ['collections' => $q->paginate(12)->withQueryString()]);
     }
 
-    public function product(string $slug)
+    public function product(Request $r, string $slug, PricingService $pricing)
     {
         $series = Series::published()->where('slug', $slug)->with(['category', 'variants' => fn ($q) => $q->where('active', true)->orderBy('id')])->firstOrFail();
+        $priceGroup = $pricing->groupFor($r->user());
+        $businessTiers = $series->variants->mapWithKeys(fn (Variant $variant) => [$variant->id => $pricing->tiersFor($variant, $r->user())]);
 
-        return view('store.product', compact('series'));
+        return view('store.product', compact('series', 'priceGroup', 'businessTiers'));
     }
 
-    public function cart(Request $r)
+    public function cart(Request $r, CheckoutService $service)
     {
         $cart = $r->session()->get('cart', []);
-        $variants = Variant::with('series')->whereIn('id', array_keys($cart))->get();
+        $lines = $cart ? $service->lines($cart, false, $r->user()) : [];
 
-        return view('store.cart', compact('cart', 'variants'));
+        return view('store.cart', compact('cart', 'lines'));
     }
 
     public function add(Request $r, CheckoutService $service)
@@ -77,7 +80,7 @@ class StoreController extends Controller
         $d = $r->validate(['variant_id' => 'required|integer|exists:variants,id', 'quantity' => 'required|integer|min:1|max:100']);
         $cart = $r->session()->get('cart', []);
         $cart[$d['variant_id']] = ($cart[$d['variant_id']] ?? 0) + $d['quantity'];
-        $service->lines($cart);
+        $service->lines($cart, false, $r->user());
         $r->session()->put('cart', $cart);
         $r->session()->forget('checkout_key');
 
@@ -107,7 +110,7 @@ class StoreController extends Controller
         if (! $r->session()->has('checkout_key')) {
             $r->session()->put('checkout_key', Str::random(64));
         }
-        $lines = $service->lines($r->session()->get('cart'));
+        $lines = $service->lines($r->session()->get('cart'), false, $r->user());
         $rates = ShippingRate::where('active', true)->get();
 
         return view('store.checkout', compact('lines', 'rates'));
@@ -126,7 +129,7 @@ class StoreController extends Controller
     public function review(Request $r, CheckoutService $service)
     {
         $data = $this->checkoutData($r);
-        $quote = $service->quote($r->session()->get('cart', []), $data);
+        $quote = $service->quote($r->session()->get('cart', []), $data, false, $r->user());
         $r->session()->put('checkout_data', $data);
         $r->session()->put('checkout_quote', $service->fingerprint($quote));
 

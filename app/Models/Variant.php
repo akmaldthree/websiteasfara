@@ -37,6 +37,11 @@ class Variant extends Model
         return $this->belongsTo(Series::class);
     }
 
+    public function prices()
+    {
+        return $this->hasMany(VariantPrice::class)->orderBy('minimum_quantity');
+    }
+
     public function getAvailableAttribute(): int
     {
         return max(0, $this->stock - $this->reserved);

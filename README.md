@@ -12,6 +12,7 @@ Website e-commerce Dthree dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. 
 - Dashboard Admin, Management, Keuangan, Gudang, dan CS; hak akses per tindakan, lifecycle staf, inventori dengan alasan perubahan, audit, rekening, tarif manual POS/JNE, voucher, halaman kebijakan, import CSV dengan preview, serta laporan penjualan/produk/pelanggan/pengiriman.
 - Akun pelanggan, reset password melalui konfigurasi email Laravel, alamat utama, riwayat pesanan, invoice, retur/garansi per item, pemeriksaan barang kembali, dan refund manual yang dapat diaudit.
 - Outbox email transaksi dengan deduplikasi, retry terbatas, histori status, serta fallback tindak lanjut manual oleh Customer Service.
+- Program mitra reseller, dropshipper, dan grosir dengan persetujuan admin, grup harga privat, minimum pesanan, tier harga per SKU, dan snapshot harga pada pesanan.
 
 ## Instalasi hosting
 

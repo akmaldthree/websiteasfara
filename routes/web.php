@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/akun/alamat', [Account::class, 'address'])->name('address.store');
     Route::post('/akun/alamat/{id}/utama', [Account::class, 'defaultAddress'])->name('address.default');
     Route::delete('/akun/alamat/{id}', [Account::class, 'deleteAddress'])->name('address.delete');
+    Route::post('/akun/bisnis', [Account::class, 'businessApplication'])->middleware('throttle:5,1')->name('business.apply');
 });
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/', [Admin::class, 'dashboard'])->middleware('permission:dashboard')->name('dashboard');
@@ -54,6 +55,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/pengaturan', [Admin::class, 'saveSettings'])->middleware('permission:settings.write')->name('settings.save');
     Route::get('/audit', [Admin::class, 'audit'])->middleware('permission:audit.read')->name('audit');
     Route::get('/pelanggan', [Admin::class, 'customers'])->middleware('permission:customers.read')->name('customers');
+    Route::post('/pelanggan/bisnis/{businessAccount}', [Admin::class, 'reviewBusinessAccount'])->middleware('permission:users.write')->name('business.review');
     Route::get('/layanan', [Operations::class, 'cases'])->middleware('permission:orders.read')->name('cases');
     Route::get('/layanan/{case}', [Operations::class, 'caseDetail'])->middleware('permission:orders.read')->name('case');
     Route::get('/layanan/{case}/bukti', [Operations::class, 'caseEvidence'])->middleware('permission:orders.read')->name('case.evidence');

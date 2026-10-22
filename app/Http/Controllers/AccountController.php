@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BusinessAccount;
 use App\Models\User;
+use App\Services\Audit;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -49,7 +51,37 @@ class AccountController extends Controller
 
     public function account(Request $r)
     {
-        return view('store.account', ['orders' => $r->user()->orders()->latest()->paginate(10), 'addresses' => $r->user()->addresses]);
+        return view('store.account', [
+            'orders' => $r->user()->orders()->latest()->paginate(10),
+            'addresses' => $r->user()->addresses,
+            'businessAccount' => $r->user()->businessAccount()->with('priceGroup')->first(),
+        ]);
+    }
+
+    public function businessApplication(Request $r)
+    {
+        abort_unless($r->user()->role === 'customer', 403);
+        $data = $r->validate([
+            'business_type' => 'required|in:reseller,dropshipper,wholesale',
+            'business_name' => 'required|string|max:150',
+            'sales_channel' => 'required|string|max:150',
+            'notes' => 'nullable|string|max:2000',
+        ]);
+        $existing = $r->user()->businessAccount;
+        if ($existing?->status === 'approved') {
+            throw ValidationException::withMessages(['business_type' => 'Akun bisnis yang sudah disetujui tidak dapat diajukan ulang. Hubungi Dthree untuk perubahan grup.']);
+        }
+
+        DB::transaction(function () use ($r, $data, $existing) {
+            $before = $existing?->toArray();
+            $account = BusinessAccount::updateOrCreate(['user_id' => $r->user()->id], $data + [
+                'status' => 'pending', 'price_group_id' => null, 'reviewed_by' => null,
+                'review_notes' => null, 'submitted_at' => now(), 'reviewed_at' => null,
+            ]);
+            Audit::record('business.application_submitted', 'business_account:'.$account->id, $before, $account->toArray());
+        });
+
+        return back()->with('success', 'Pengajuan akun bisnis dikirim dan menunggu peninjauan Dthree.');
     }
 
     public function address(Request $r)

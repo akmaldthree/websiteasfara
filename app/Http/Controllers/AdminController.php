@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\BusinessAccount;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentProof;
+use App\Models\PriceGroup;
 use App\Models\Refund;
 use App\Models\Role;
 use App\Models\ServiceCase;
@@ -13,6 +15,7 @@ use App\Models\Setting;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Variant;
+use App\Models\VariantPrice;
 use App\Services\AfterSalesService;
 use App\Services\Audit;
 use App\Services\OrderWorkflow;
@@ -86,8 +89,12 @@ class AdminController extends Controller
     public function resources(Request $r, string $resource)
     {
         $schema = $this->resource($resource);
+        $query = $schema['model']::latest();
+        if ($resource === 'variant-prices') {
+            $query->with('variant', 'priceGroup');
+        }
 
-        return view('admin.resources', ['resource' => $resource, 'schema' => $schema, 'rows' => $schema['model']::latest()->paginate(20)]);
+        return view('admin.resources', ['resource' => $resource, 'schema' => $schema, 'rows' => $query->paginate(20)]);
     }
 
     public function form(string $resource, ?int $id = null)
@@ -114,6 +121,9 @@ class AdminController extends Controller
         if ($resource === 'coupons') {
             $r->merge(['code' => strtoupper(trim($r->input('code', '')))]);
         }
+        if ($resource === 'price-groups') {
+            $r->merge(['slug' => strtolower(trim($r->input('slug', '')))]);
+        }
         foreach (['slug', 'sku', 'code'] as $key) {
             if (isset($rules[$key])) {
                 $rules[$key] = array_merge(explode('|', $rules[$key]), [Rule::unique($record->getTable(), $key)->ignore($record->id)]);
@@ -137,6 +147,27 @@ class AdminController extends Controller
             $hash = hash('sha256', mb_strtolower(implode('|', [$data['series_id'], trim($data['product_type']), trim($data['color']), trim($data['size'])])));
             if (Variant::where('combination_key', $hash)->when($id, fn ($q) => $q->where('id', '!=', $id))->exists()) {
                 throw ValidationException::withMessages(['sku' => 'Kombinasi atribut ini sudah ada.']);
+            }
+        }
+        if ($resource === 'variant-prices') {
+            $duplicate = VariantPrice::where('variant_id', $data['variant_id'])
+                ->where('price_group_id', $data['price_group_id'])
+                ->where('minimum_quantity', $data['minimum_quantity'])
+                ->when($id, fn ($query) => $query->whereKeyNot($id))
+                ->exists();
+            if ($duplicate) {
+                throw ValidationException::withMessages(['minimum_quantity' => 'Tier untuk SKU, grup, dan jumlah minimum ini sudah ada.']);
+            }
+            $retailPrice = Variant::findOrFail($data['variant_id'])->price;
+            if ($data['price'] > $retailPrice) {
+                throw ValidationException::withMessages(['price' => 'Harga grup tidak boleh lebih tinggi dari harga retail SKU.']);
+            }
+            $otherTiers = VariantPrice::where('variant_id', $data['variant_id'])
+                ->where('price_group_id', $data['price_group_id'])
+                ->when($id, fn ($query) => $query->whereKeyNot($id));
+            if ((clone $otherTiers)->where('minimum_quantity', '<', $data['minimum_quantity'])->where('price', '<', $data['price'])->exists()
+                || (clone $otherTiers)->where('minimum_quantity', '>', $data['minimum_quantity'])->where('price', '>', $data['price'])->exists()) {
+                throw ValidationException::withMessages(['price' => 'Harga per item harus tetap atau turun ketika jumlah minimum bertambah.']);
             }
         }
         if ($r->hasFile('image')) {
@@ -224,7 +255,38 @@ class AdminController extends Controller
 
     public function customers()
     {
-        return view('admin.customers', ['users' => User::where('role', 'customer')->withCount('orders')->latest()->paginate(20)]);
+        return view('admin.customers', [
+            'users' => User::where('role', 'customer')->with(['businessAccount.priceGroup'])->withCount('orders')->latest()->paginate(20),
+            'priceGroups' => PriceGroup::where('active', true)->orderBy('name')->get(),
+        ]);
+    }
+
+    public function reviewBusinessAccount(Request $r, BusinessAccount $businessAccount)
+    {
+        $data = $r->validate([
+            'status' => 'required|in:approved,rejected',
+            'price_group_id' => 'nullable|required_if:status,approved|exists:price_groups,id',
+            'review_notes' => 'nullable|required_if:status,rejected|string|max:2000',
+        ]);
+        $group = isset($data['price_group_id']) ? PriceGroup::findOrFail($data['price_group_id']) : null;
+        if ($data['status'] === 'approved' && (! $group?->active || $group->business_type !== $businessAccount->business_type)) {
+            throw ValidationException::withMessages(['price_group_id' => 'Pilih grup aktif yang sesuai dengan jenis bisnis pelanggan.']);
+        }
+
+        DB::transaction(function () use ($r, $data, $group, $businessAccount) {
+            $account = BusinessAccount::whereKey($businessAccount->id)->lockForUpdate()->firstOrFail();
+            $before = $account->toArray();
+            $account->update([
+                'status' => $data['status'],
+                'price_group_id' => $data['status'] === 'approved' ? $group->id : null,
+                'reviewed_by' => $r->user()->id,
+                'review_notes' => $data['review_notes'] ?? null,
+                'reviewed_at' => now(),
+            ]);
+            Audit::record('business.application_reviewed', 'business_account:'.$account->id, $before, $account->toArray());
+        });
+
+        return back()->with('success', 'Pengajuan akun bisnis diperbarui.');
     }
 
     public function cases()

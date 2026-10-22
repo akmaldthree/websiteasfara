@@ -1,2 +1,19 @@
-@extends('layouts.store') @section('title','Tinjau pesanan — Dthree')
-@section('content')<section class="container-xxl section page-narrow"><span class="eyebrow">02 TINJAU PESANAN</span><h1 class="my-4">Satu langkah lagi.</h1><div class="panel"><h2>Pastikan pilihan Anda</h2>@foreach($quote['lines'] as $l)<div class="summary-row"><span>{{ $l['variant']->series->name }}<br><small>{{ $l['variant']->label }} × {{ $l['quantity'] }}</small></span><span>@rupiah($l['total'])</span></div>@endforeach<p class="mt-4"><strong>{{ $data['name'] }}</strong> · {{ $data['phone'] }}<br>{{ $data['detail'] }}<br>{{ $data['district'] }}, {{ $data['city'] }}, {{ $data['province'] }} {{ $data['postal_code'] }}</p><p>{{ $quote['rate']->courier }} {{ $quote['rate']->service }} · {{ $quote['rate']->estimate }}<br>Pembayaran: {{ $data['payment_method']==='cod'?'COD':'Transfer bank' }}</p>@foreach(['subtotal'=>'Subtotal','shipping_cost'=>'Ongkir','discount'=>'Diskon voucher','shipping_discount'=>'Subsidi ongkir','cod_fee'=>'Biaya COD'] as $key=>$label)<div class="summary-row"><span>{{ $label }}</span><span>{{ in_array($key,['discount','shipping_discount'])?'− ':'' }}@rupiah($quote[$key])</span></div>@endforeach<div class="summary-row total"><span>Total</span><span>@rupiah($quote['total'])</span></div><form action="{{ route('checkout.place') }}" method="post">@csrf<input type="hidden" name="checkout_key" value="{{ session('checkout_key') }}"><button class="btn btn-dark w-100">Buat pesanan · @rupiah($quote['total'])</button></form><a class="d-block text-center mt-3 small" href="{{ route('checkout') }}">Ubah alamat atau pengiriman</a></div></section>@endsection
+@extends('layouts.store')
+@section('title','Tinjau pesanan — Dthree')
+@section('content')
+<section class="container-xxl section page-narrow">
+    <span class="eyebrow">02 TINJAU PESANAN</span><h1 class="my-4">Satu langkah lagi.</h1>
+    @if($quote['price_group'])<div class="alert alert-success">Harga akun <strong>{{ $quote['price_group']->name }}</strong> sudah diterapkan dan akan disimpan pada pesanan.</div>@endif
+    <div class="panel"><h2>Pastikan pilihan Anda</h2>
+        @foreach($quote['lines'] as $line)
+            <div class="summary-row"><span>{{ $line['variant']->series->name }}<br><small>{{ $line['variant']->label }} × {{ $line['quantity'] }} · @rupiah($line['unit_price'])/item @if($line['price_tier_minimum'])· tier {{ $line['price_tier_minimum'] }}+@endif</small></span><span>@rupiah($line['total'])</span></div>
+        @endforeach
+        <p class="mt-4"><strong>{{ $data['name'] }}</strong> · {{ $data['phone'] }}<br>{{ $data['detail'] }}<br>{{ $data['district'] }}, {{ $data['city'] }}, {{ $data['province'] }} {{ $data['postal_code'] }}</p>
+        <p>{{ $quote['rate']->courier }} {{ $quote['rate']->service }} · {{ $quote['rate']->estimate }}<br>Pembayaran: {{ $data['payment_method']==='cod'?'COD':'Transfer bank' }}</p>
+        @foreach(['subtotal'=>'Subtotal','shipping_cost'=>'Ongkir','discount'=>'Diskon voucher','shipping_discount'=>'Subsidi ongkir','cod_fee'=>'Biaya COD'] as $key=>$label)<div class="summary-row"><span>{{ $label }}</span><span>{{ in_array($key,['discount','shipping_discount'])?'− ':'' }}@rupiah($quote[$key])</span></div>@endforeach
+        <div class="summary-row total"><span>Total</span><span>@rupiah($quote['total'])</span></div>
+        <form action="{{ route('checkout.place') }}" method="post">@csrf<input type="hidden" name="checkout_key" value="{{ session('checkout_key') }}"><button class="btn btn-dark w-100">Buat pesanan · @rupiah($quote['total'])</button></form>
+        <a class="d-block text-center mt-3 small" href="{{ route('checkout') }}">Ubah alamat atau pengiriman</a>
+    </div>
+</section>
+@endsection

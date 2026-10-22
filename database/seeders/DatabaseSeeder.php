@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Page;
+use App\Models\PriceGroup;
 use App\Models\Role;
 use App\Models\Setting;
 use Illuminate\Database\Seeder;
@@ -22,6 +23,13 @@ class DatabaseSeeder extends Seeder
         }
         foreach (['syarat-ketentuan' => 'Syarat dan ketentuan', 'privasi' => 'Kebijakan privasi', 'pengiriman' => 'Pengiriman', 'retur-garansi' => 'Retur dan garansi', 'tentang' => 'Tentang Dthree'] as $slug => $title) {
             Page::firstOrCreate(['slug' => $slug], ['title' => $title, 'body' => 'Isi kebijakan resmi Dthree melalui dashboard sebelum membuka checkout.', 'active' => false]);
+        }
+        foreach ([
+            ['name' => 'Reseller', 'slug' => 'reseller', 'business_type' => 'reseller', 'minimum_order_quantity' => 3],
+            ['name' => 'Dropshipper', 'slug' => 'dropshipper', 'business_type' => 'dropshipper', 'minimum_order_quantity' => 1],
+            ['name' => 'Grosir', 'slug' => 'grosir', 'business_type' => 'wholesale', 'minimum_order_quantity' => 12],
+        ] as $group) {
+            PriceGroup::firstOrCreate(['slug' => $group['slug']], $group + ['minimum_order_amount' => 0, 'active' => true]);
         }
     }
 }

@@ -3,12 +3,24 @@
 use App\Models\Category;
 use App\Models\Coupon;
 use App\Models\Page;
+use App\Models\PriceGroup;
 use App\Models\Series;
 use App\Models\ShippingRate;
 use App\Models\Variant;
+use App\Models\VariantPrice;
 
 // field: label, input type, validation, optional select options.
 return [
+    'price-groups' => ['model' => PriceGroup::class, 'title' => 'Grup harga bisnis', 'permission' => 'catalog.write', 'columns' => ['name' => 'Grup', 'business_type' => 'Jenis bisnis', 'minimum_order_quantity' => 'Min. item', 'minimum_order_amount' => 'Min. nilai', 'active' => 'Aktif'], 'fields' => [
+        'name' => ['Nama grup', 'text', 'required|string|max:100'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:100'],
+        'business_type' => ['Jenis bisnis', 'select', 'required|in:reseller,dropshipper,wholesale', ['reseller' => 'Reseller', 'dropshipper' => 'Dropshipper', 'wholesale' => 'Grosir']],
+        'minimum_order_quantity' => ['Minimum total item per pesanan', 'number', 'required|integer|min:1|max:10000'],
+        'minimum_order_amount' => ['Minimum nilai pesanan (Rupiah)', 'number', 'required|integer|min:0|max:1000000000'],
+        'active' => ['Aktif', 'checkbox', 'boolean']]],
+    'variant-prices' => ['model' => VariantPrice::class, 'title' => 'Harga bertingkat bisnis', 'permission' => 'catalog.write', 'columns' => ['variant_id' => 'SKU ID', 'price_group_id' => 'Grup ID', 'minimum_quantity' => 'Mulai jumlah', 'price' => 'Harga/item', 'active' => 'Aktif'], 'fields' => [
+        'variant_id' => ['SKU', 'variant', 'required|exists:variants,id'], 'price_group_id' => ['Grup harga', 'price_group', 'required|exists:price_groups,id'],
+        'minimum_quantity' => ['Mulai jumlah item SKU', 'number', 'required|integer|min:1|max:10000'],
+        'price' => ['Harga per item (Rupiah)', 'number', 'required|integer|min:1|max:100000000'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'categories' => ['model' => Category::class, 'title' => 'Kategori', 'permission' => 'catalog.write', 'columns' => ['name' => 'Kategori', 'slug' => 'Slug', 'active' => 'Aktif'], 'fields' => [
         'name' => ['Nama', 'text', 'required|string|max:100'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:100'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'series' => ['model' => Series::class, 'title' => 'Series', 'permission' => 'catalog.write', 'columns' => ['name' => 'Series', 'slug' => 'Slug', 'active' => 'Aktif'], 'fields' => [

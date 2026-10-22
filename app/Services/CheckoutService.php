@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Setting;
 use App\Models\ShippingRate;
 use App\Models\StockMovement;
+use App\Models\User;
 use App\Models\Variant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -14,10 +15,16 @@ use Illuminate\Validation\ValidationException;
 
 class CheckoutService
 {
-    public function lines(array $cart, bool $lock = false): array
+    public function __construct(private PricingService $pricing) {}
+
+    public function lines(array $cart, bool $lock = false, ?User $customer = null): array
     {
         $this->check(count($cart) > 0 && count($cart) <= 50, 'Keranjang kosong atau terlalu banyak varian.');
-        $query = Variant::with('series.category')->whereIn('id', array_keys($cart))->orderBy('id');
+        $group = $this->pricing->groupFor($customer);
+        $query = Variant::with([
+            'series.category',
+            'prices' => fn ($query) => $query->when($group, fn ($query) => $query->where('price_group_id', $group->id))->where('active', true),
+        ])->whereIn('id', array_keys($cart))->orderBy('id');
         if ($lock) {
             $query->lockForUpdate();
         }
@@ -30,16 +37,30 @@ class CheckoutService
             $this->check($v->active && $v->series->active && $v->series->category->active, "{$v->sku} tidak aktif.");
             $this->check(in_array($v->fulfillment, ['ready_stock', 'pre_order']), 'Custom-made belum tersedia di checkout.');
             $this->check($v->available >= $qty, "Stok / kuota {$v->sku} tidak mencukupi.");
-            $lines[] = ['variant' => $v, 'quantity' => $qty, 'total' => $qty * $v->price];
+            $price = $this->pricing->resolveForGroup($v, $qty, $group);
+            $lines[] = [
+                'variant' => $v,
+                'quantity' => $qty,
+                'unit_price' => $price['price'],
+                'price_tier_minimum' => $price['minimum_quantity'],
+                'price_group' => $group,
+                'total' => $qty * $price['price'],
+            ];
         }
 
         return $lines;
     }
 
-    public function quote(array $cart, array $input, bool $lock = false): array
+    public function quote(array $cart, array $input, bool $lock = false, ?User $customer = null): array
     {
-        $lines = $this->lines($cart, $lock);
+        $lines = $this->lines($cart, $lock, $customer);
         $subtotal = array_sum(array_column($lines, 'total'));
+        $group = $lines[0]['price_group'];
+        if ($group) {
+            $quantity = array_sum(array_column($lines, 'quantity'));
+            $this->check($quantity >= $group->minimum_order_quantity, "Minimum grup {$group->name} adalah {$group->minimum_order_quantity} item per pesanan.");
+            $this->check($subtotal >= $group->minimum_order_amount, "Minimum nilai pesanan grup {$group->name} adalah Rp ".number_format($group->minimum_order_amount, 0, ',', '.').'.');
+        }
         $weight = array_sum(array_map(fn ($l) => $l['variant']->weight * $l['quantity'], $lines));
         $rate = ShippingRate::where('active', true)->find($input['shipping_rate_id'] ?? 0);
         $this->check($rate !== null, 'Pilih layanan pengiriman yang tersedia.');
@@ -81,13 +102,14 @@ class CheckoutService
             }
         }
 
-        return ['lines' => $lines, 'subtotal' => $subtotal, 'weight' => $weight, 'rate' => $rate, 'shipping_cost' => $shipping, 'discount' => $discount, 'shipping_discount' => $shippingDiscount, 'cod_fee' => $fee, 'total' => $subtotal + $shipping + $fee - $discount - $shippingDiscount, 'coupon' => $coupon];
+        return ['lines' => $lines, 'price_group' => $group, 'subtotal' => $subtotal, 'weight' => $weight, 'rate' => $rate, 'shipping_cost' => $shipping, 'discount' => $discount, 'shipping_discount' => $shippingDiscount, 'cod_fee' => $fee, 'total' => $subtotal + $shipping + $fee - $discount - $shippingDiscount, 'coupon' => $coupon];
     }
 
     public function fingerprint(array $quote): string
     {
         return hash('sha256', json_encode([
-            'items' => array_map(fn ($line) => [$line['variant']->id, $line['variant']->sku, $line['quantity'], $line['variant']->price, $line['variant']->weight, $line['variant']->fulfillment, $line['variant']->lead_time], $quote['lines']),
+            'items' => array_map(fn ($line) => [$line['variant']->id, $line['variant']->sku, $line['quantity'], $line['unit_price'], $line['price_tier_minimum'], $line['variant']->weight, $line['variant']->fulfillment, $line['variant']->lead_time], $quote['lines']),
+            'price_group' => $quote['price_group'] ? [$quote['price_group']->id, $quote['price_group']->name, $quote['price_group']->business_type, $quote['price_group']->minimum_order_quantity, $quote['price_group']->minimum_order_amount] : null,
             'shipping' => [$quote['rate']->id, $quote['rate']->courier, $quote['rate']->service, $quote['rate']->estimate],
             'amounts' => array_intersect_key($quote, array_flip(['subtotal', 'shipping_cost', 'discount', 'shipping_discount', 'cod_fee', 'total'])),
         ], JSON_THROW_ON_ERROR));
@@ -102,10 +124,13 @@ class CheckoutService
                 return $existing;
             }
             $this->check(Setting::get('checkout_enabled', false), 'Checkout belum dibuka. Silakan hubungi Dthree.');
-            $q = $this->quote($cart, $input, true);
+            $customer = $userId ? User::find($userId) : null;
+            $q = $this->quote($cart, $input, true, $customer);
             $this->check($expectedQuote === null || hash_equals($expectedQuote, $this->fingerprint($q)), 'Harga atau pengiriman berubah. Kembali ke checkout untuk meninjau total terbaru sebelum memesan.');
             $order = Order::create([
                 'number' => 'D3-'.now()->format('ymd').'-'.strtoupper(Str::random(8)), 'checkout_key' => $key, 'user_id' => $userId,
+                'price_group_id' => $q['price_group']?->id,
+                'business_snapshot' => $q['price_group'] ? ['name' => $q['price_group']->name, 'slug' => $q['price_group']->slug, 'business_type' => $q['price_group']->business_type, 'minimum_order_quantity' => $q['price_group']->minimum_order_quantity, 'minimum_order_amount' => $q['price_group']->minimum_order_amount] : null,
                 'name' => $input['name'], 'phone' => $input['phone'], 'email' => $input['email'] ?? null,
                 'address' => array_intersect_key($input, array_flip(['province', 'city', 'district', 'postal_code', 'detail'])),
                 'payment_method' => $input['payment_method'], 'subtotal' => $q['subtotal'], 'shipping_cost' => $q['shipping_cost'],
@@ -119,7 +144,7 @@ class CheckoutService
                 $qty = $l['quantity'];
                 $updated = Variant::whereKey($v->id)->whereRaw('stock - reserved >= ?', [$qty])->increment('reserved', $qty);
                 $this->check($updated === 1, "Stok {$v->sku} sudah terambil. Perbarui keranjang.");
-                $order->items()->create(['variant_id' => $v->id, 'sku' => $v->sku, 'name' => $v->series->name, 'attributes' => ['type' => $v->product_type, 'color' => $v->color, 'size' => $v->size], 'fulfillment' => $v->fulfillment, 'lead_time' => $v->lead_time, 'weight' => $v->weight, 'price' => $v->price, 'quantity' => $qty, 'total' => $l['total']]);
+                $order->items()->create(['variant_id' => $v->id, 'sku' => $v->sku, 'name' => $v->series->name, 'attributes' => ['type' => $v->product_type, 'color' => $v->color, 'size' => $v->size, 'price_group' => $q['price_group']?->name, 'price_tier_minimum' => $l['price_tier_minimum']], 'fulfillment' => $v->fulfillment, 'lead_time' => $v->lead_time, 'weight' => $v->weight, 'price' => $l['unit_price'], 'quantity' => $qty, 'total' => $l['total']]);
                 StockMovement::create(['variant_id' => $v->id, 'order_id' => $order->id, 'user_id' => $userId, 'stock_delta' => 0, 'reserved_delta' => $qty, 'reason' => 'Reservasi checkout']);
             }
             $q['coupon']?->increment('used');
