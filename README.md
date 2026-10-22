@@ -21,6 +21,7 @@ Website e-commerce Dthree dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. 
 - Promosi bertarget kategori, series, atau SKU dengan segmentasi pelanggan/B2B, batas per pengguna, prioritas, stacking terkendali, ledger pemakaian, dan snapshot voucher pada pesanan.
 - Akun pelanggan dapat masuk memakai email atau telepon, menyimpan keranjang lintas perangkat, mengklaim pesanan tamu melalui tautan pesanan bertanda tangan, pesan ulang, dan mengatur persetujuan promo per saluran.
 - B2B mendukung masa aktif/suspend, diskon dasar grup, tier per SKU, minimum pembelian per kategori/series/SKU, dan identitas pengirim dropship pada dokumen paket.
+- Import katalog menerima CSV/XLSX dengan pratinjau atomik, mode buat/upsert beserta ledger stok, dan generator kombinasi jenis produk, warna, serta ukuran.
 
 ## Instalasi hosting
 

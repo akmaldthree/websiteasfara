@@ -22,7 +22,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 | Akun | Registrasi, login email/telepon, reset password, buku alamat, riwayat, invoice, klaim pesanan tamu melalui tautan bertanda tangan, pesan ulang, dan persetujuan promo email/WhatsApp | Verifikasi klaim bergantung pada kepemilikan tautan pesanan dan kecocokan email/telepon |
 | Admin | Lima peran, permission tindakan, aktif/nonaktif dan perubahan peran staf, konfigurasi toko, daftar pesanan, inventori, audit | Belum 2FA dan tindakan massal |
 | Konten | Halaman, banner, section beranda, menu, FAQ, journal, campaign; upload gambar, urutan, jadwal tayang, metadata SEO, preview admin | Editor masih berbasis teks; belum rich-text block editor dan revision history |
-| Import | CSV template, preview, validasi seluruh baris, konfirmasi atomic, audit | Maks. 200 baris; create-only, tanpa XLSX/upsert/generator kombinasi |
+| Import | CSV/XLSX, template, preview, validasi seluruh baris, create/upsert atomik, audit dan ledger perubahan stok, generator kombinasi jenis/warna/ukuran | Maks. 200 baris; XLSX membaca worksheet pertama sesuai kolom template |
 | Notifikasi | Outbox email transaksi, histori, deduplikasi event, retry terbatas, status tidak pasti setelah worker terhenti, dan tindak lanjut manual | SMTP harus dikonfigurasi dan diuji di staging; WhatsApp otomatis belum tersedia |
 | Fulfillment | Status packing/kirim/terima, resi, riwayat pelanggan, picking list, packing slip, label, invoice | Tracking kurir tetap manual |
 | Laporan | Omzet bruto/bersih, refund, AOV, pelanggan berulang, produk, ongkir, stok rendah, dan export CSV | Belum margin, cohort, grafik, serta segmentasi promo lanjutan |

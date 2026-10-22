@@ -92,6 +92,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('/import', [Import::class, 'index'])->name('import');
         Route::get('/import/template', [Import::class, 'template'])->name('import.template');
         Route::post('/import/preview', [Import::class, 'preview'])->name('import.preview');
+        Route::post('/import/generate', [Import::class, 'generate'])->name('import.generate');
         Route::post('/import/commit', [Import::class, 'commit'])->name('import.commit');
     });
     Route::get('/master/{resource}', [Admin::class, 'resources'])->name('resources');
