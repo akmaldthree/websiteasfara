@@ -159,6 +159,9 @@ class AdminController extends Controller
         if ($resource === 'variant-prices') {
             $query->with('variant', 'priceGroup');
         }
+        if ($resource === 'product-media') {
+            $query->with('series', 'variant');
+        }
 
         return view('admin.resources', ['resource' => $resource, 'schema' => $schema, 'rows' => $query->paginate(20)]);
     }
@@ -184,16 +187,6 @@ class AdminController extends Controller
         if ($resource === 'variants') {
             $r->merge(['sku' => strtoupper(trim($r->input('sku', ''))), 'product_type' => trim($r->input('product_type', ''))]);
         }
-        if ($resource === 'bundle-components') {
-            $bundle = Variant::findOrFail($data['bundle_variant_id']);
-            $component = Variant::findOrFail($data['component_variant_id']);
-            if ($bundle->id === $component->id || $bundle->fulfillment !== 'bundle' || $component->fulfillment === 'bundle') {
-                throw ValidationException::withMessages(['component_variant_id' => 'Pilih SKU bundle dan SKU komponen non-bundle yang berbeda.']);
-            }
-            if (BundleComponent::where('bundle_variant_id', $bundle->id)->where('component_variant_id', $component->id)->when($id, fn ($query) => $query->whereKeyNot($id))->exists()) {
-                throw ValidationException::withMessages(['component_variant_id' => 'Komponen ini sudah ada pada bundle.']);
-            }
-        }
         if ($resource === 'coupons') {
             $r->merge(['code' => strtoupper(trim($r->input('code', '')))]);
         }
@@ -203,6 +196,17 @@ class AdminController extends Controller
         foreach (['slug', 'sku', 'code'] as $key) {
             if (isset($rules[$key])) {
                 $rules[$key] = array_merge(explode('|', $rules[$key]), [Rule::unique($record->getTable(), $key)->ignore($record->id)]);
+            }
+        }
+        $data = $r->validate($rules);
+        if ($resource === 'bundle-components') {
+            $bundle = Variant::findOrFail($data['bundle_variant_id']);
+            $component = Variant::findOrFail($data['component_variant_id']);
+            if ($bundle->id === $component->id || $bundle->fulfillment !== 'bundle' || $component->fulfillment === 'bundle') {
+                throw ValidationException::withMessages(['component_variant_id' => 'Pilih SKU bundle dan SKU komponen non-bundle yang berbeda.']);
+            }
+            if (BundleComponent::where('bundle_variant_id', $bundle->id)->where('component_variant_id', $component->id)->when($id, fn ($query) => $query->whereKeyNot($id))->exists()) {
+                throw ValidationException::withMessages(['component_variant_id' => 'Komponen ini sudah ada pada bundle.']);
             }
         }
         if ($resource === 'business-order-rules') {
@@ -219,7 +223,19 @@ class AdminController extends Controller
                 throw ValidationException::withMessages(['minimum_quantity' => 'Isi minimum item atau minimum nilai.']);
             }
         }
-        $data = $r->validate($rules);
+        if ($resource === 'product-media') {
+            $series = Series::findOrFail($data['series_id']);
+            if (! $record->exists && ! $r->hasFile('image')) {
+                throw ValidationException::withMessages(['image' => 'Gambar wajib diunggah untuk foto galeri baru.']);
+            }
+            if (! empty($data['variant_id'])) {
+                $variant = Variant::findOrFail($data['variant_id']);
+                if ($variant->series_id !== $series->id) {
+                    throw ValidationException::withMessages(['variant_id' => 'SKU harus berasal dari series yang dipilih.']);
+                }
+                $data['color'] = $data['color'] ?: $variant->color;
+            }
+        }
         if ($resource === 'measurement-templates') {
             try {
                 $fields = json_decode($data['fields'], true, 512, JSON_THROW_ON_ERROR);
@@ -303,7 +319,8 @@ class AdminController extends Controller
             }
         }
         if ($r->hasFile('image')) {
-            $data['image'] = $r->file('image')->store('products', 'public');
+            $directory = $resource === 'product-media' ? 'product-gallery' : 'products';
+            $data['image'] = $r->file('image')->store($directory, 'public');
         } else {
             unset($data['image']);
         }

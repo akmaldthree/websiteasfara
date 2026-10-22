@@ -25,6 +25,11 @@ class Series extends Model
         return $this->hasMany(Variant::class);
     }
 
+    public function media()
+    {
+        return $this->hasMany(ProductMedia::class)->orderBy('sort_order')->orderBy('id');
+    }
+
     public function scopePublished($q)
     {
         return $q->where('active', true)->whereHas('category', fn ($c) => $c->where('active', true));

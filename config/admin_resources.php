@@ -8,6 +8,7 @@ use App\Models\Coupon;
 use App\Models\MeasurementTemplate;
 use App\Models\Page;
 use App\Models\PriceGroup;
+use App\Models\ProductMedia;
 use App\Models\Series;
 use App\Models\ShippingRate;
 use App\Models\Variant;
@@ -15,6 +16,9 @@ use App\Models\VariantPrice;
 
 // field: label, input type, validation, optional select options.
 return [
+    'product-media' => ['model' => ProductMedia::class, 'title' => 'Galeri & foto warna', 'permission' => 'catalog.write', 'columns' => ['series_id' => 'Series ID', 'variant_id' => 'SKU ID', 'color' => 'Warna', 'alt_text' => 'Alt text', 'sort_order' => 'Urutan', 'active' => 'Aktif'], 'fields' => [
+        'series_id' => ['Series', 'series', 'required|exists:series,id'], 'variant_id' => ['SKU khusus (opsional)', 'variant', 'nullable|exists:variants,id'], 'color' => ['Warna khusus (opsional)', 'text', 'nullable|string|max:80'],
+        'image' => ['Gambar', 'file', 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072'], 'alt_text' => ['Alt text', 'text', 'required|string|max:200'], 'sort_order' => ['Urutan', 'number', 'required|integer|min:0|max:10000'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'content' => ['model' => ContentEntry::class, 'title' => 'Konten terjadwal', 'permission' => 'content.write', 'columns' => ['type' => 'Tipe', 'title' => 'Judul', 'slug' => 'Slug', 'sort_order' => 'Urutan', 'starts_at' => 'Mulai', 'active' => 'Terbit'], 'fields' => [
         'type' => ['Tipe konten', 'select', 'required|in:banner,home_section,menu,faq,journal,campaign', ['banner' => 'Banner', 'home_section' => 'Section beranda', 'menu' => 'Menu', 'faq' => 'FAQ', 'journal' => 'Journal', 'campaign' => 'Campaign']],
         'title' => ['Judul', 'text', 'required|string|max:200'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:180'], 'summary' => ['Ringkasan', 'textarea', 'nullable|string|max:2000'], 'body' => ['Isi', 'textarea', 'nullable|string|max:50000'],
@@ -48,6 +52,7 @@ return [
     'series' => ['model' => Series::class, 'title' => 'Series', 'permission' => 'catalog.write', 'columns' => ['name' => 'Series', 'slug' => 'Slug', 'active' => 'Aktif'], 'fields' => [
         'category_id' => ['Kategori', 'category', 'required|exists:categories,id'], 'name' => ['Nama series', 'text', 'required|string|max:150'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:150'],
         'description' => ['Deskripsi', 'textarea', 'nullable|string|max:10000'], 'material' => ['Bahan', 'textarea', 'nullable|string|max:2000'], 'care' => ['Perawatan', 'textarea', 'nullable|string|max:2000'],
+        'seo_title' => ['Judul SEO', 'text', 'nullable|string|max:200'], 'seo_description' => ['Deskripsi SEO', 'textarea', 'nullable|string|max:300'],
         'size_guide' => ['Panduan ukuran', 'textarea', 'nullable|string|max:5000'], 'image' => ['Foto produk (JPG / PNG / WebP, maks. 3 MB)', 'file', 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072'],
         'uses_product_type' => ['Gunakan jenis produk (Sarimbit)', 'checkbox', 'boolean'], 'featured' => ['Tampilkan di beranda', 'checkbox', 'boolean'], 'active' => ['Terbitkan', 'checkbox', 'boolean']]],
     'variants' => ['model' => Variant::class, 'title' => 'SKU & varian', 'permission' => 'catalog.write', 'columns' => ['sku' => 'SKU manual', 'product_type' => 'Jenis', 'color' => 'Warna', 'size' => 'Ukuran', 'price' => 'Harga', 'stock' => 'Stok / kuota', 'reserved' => 'Reservasi'], 'fields' => [

@@ -1,11 +1,25 @@
 @extends('layouts.store')
-@section('title',$series->name.' — Dthree')
-@section('description',\Illuminate\Support\Str::limit($series->description ?? '',160))
+@section('title',$series->seo_title ?: $series->name.' — '.($shop['brand_name'] ?? 'Dthree'))
+@section('description',$series->seo_description ?: \Illuminate\Support\Str::limit($series->description ?? '',160))
+@php($gallery=$series->media)
+@php($mainImage=$gallery->first()?->image_url ?? $series->image_url)
+@php($productSchema=['@context'=>'https://schema.org','@type'=>'Product','name'=>$series->name,'description'=>$series->seo_description ?: $series->description,'image'=>$gallery->pluck('image_url')->prepend($series->image_url)->unique()->values()->all(),'sku'=>$series->variants->first()?->sku,'brand'=>['@type'=>'Brand','name'=>$shop['brand_name'] ?? 'Dthree'],'offers'=>['@type'=>'AggregateOffer','priceCurrency'=>'IDR','lowPrice'=>(int)$series->variants->min('price'),'highPrice'=>(int)$series->variants->max('price'),'offerCount'=>$series->variants->count(),'availability'=>$series->variants->sum(fn($variant)=>$variant->available)>0?'https://schema.org/InStock':'https://schema.org/OutOfStock']])
+@push('head')
+<script type="application/ld+json">{!! json_encode($productSchema, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
+<style>.product-gallery-main img{width:100%;aspect-ratio:4/5;object-fit:cover}.product-thumbnails{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.65rem;margin-top:.75rem}.product-thumbnail{padding:0;border:2px solid transparent;background:none}.product-thumbnail.active{border-color:#151515}.product-thumbnail img{width:100%;aspect-ratio:1;object-fit:cover}</style>
+@endpush
 @section('content')
 <section class="container-xxl section">
     <nav class="breadcrumb"><a href="{{ route('catalog') }}">Koleksi</a> / {{ $series->category->name }} / {{ $series->name }}</nav>
     <div class="row g-5">
-        <div class="col-lg-6"><div class="detail-image"><img src="{{ $series->image_url }}" alt="{{ $series->name }}"></div>@unless($series->image)<small class="text-muted">Ilustrasi koleksi. Foto produk akan ditambahkan oleh Dthree.</small>@endunless</div>
+        <div class="col-lg-6">
+            <div class="detail-image product-gallery-main"><img id="product-main-image" src="{{ $mainImage }}" alt="{{ $gallery->first()?->alt_text ?? $series->name }}"></div>
+            @if($gallery->isNotEmpty())
+                <div class="product-thumbnails" aria-label="Galeri foto produk">
+                    @foreach($gallery as $media)<button type="button" class="product-thumbnail {{ $loop->first?'active':'' }}" data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text }}" data-variant="{{ $media->variant_id }}" data-color="{{ mb_strtolower($media->color ?? '') }}" aria-label="Tampilkan {{ $media->alt_text }}"><img src="{{ $media->image_url }}" alt="{{ $media->alt_text }}"></button>@endforeach
+                </div>
+            @elseif(!$series->image)<small class="text-muted">Ilustrasi koleksi. Foto produk dapat ditambahkan melalui dashboard admin.</small>@endif
+        </div>
         <div class="col-lg-6">
             <span class="eyebrow">{{ $series->category->name }}</span>
             <h1 class="display-4 mt-3">{{ $series->name }}</h1>
@@ -20,7 +34,7 @@
                     <option value="">Pilih varian Anda</option>
                     @foreach($standardVariants as $v)
                         @php($tiers=$businessTiers[$v->id]->map(fn($tier)=>['minimum'=>$tier->minimum_quantity,'price'=>$tier->price])->values())
-                        <option value="{{ $v->id }}" data-price="{{ $v->price }}" data-tiers="{{ $tiers->toJson() }}" data-stock="{{ $v->available }}" data-sku="{{ $v->sku }}" data-method="{{ $v->fulfillment==='ready_stock'?'Ready stock':($v->fulfillment==='bundle'?'Bundle':'Pre-order') }}" data-estimate="{{ $v->lead_time }}" @disabled($v->available<1) @selected(request('variant')==$v->id)>{{ $v->label }} — @rupiah($v->price) {{ $v->available<1?'(habis)':'' }}</option>
+                        <option value="{{ $v->id }}" data-price="{{ $v->price }}" data-tiers="{{ $tiers->toJson() }}" data-stock="{{ $v->available }}" data-sku="{{ $v->sku }}" data-color="{{ mb_strtolower($v->color) }}" data-method="{{ $v->fulfillment==='ready_stock'?'Ready stock':($v->fulfillment==='bundle'?'Bundle':'Pre-order') }}" data-estimate="{{ $v->lead_time }}" @disabled($v->available<1) @selected(request('variant')==$v->id)>{{ $v->label }} — @rupiah($v->price) {{ $v->available<1?'(habis)':'' }}</option>
                     @endforeach
                 </select>
                 <div class="variant-info" id="variant-info" aria-live="polite">Pilih varian untuk melihat harga dan ketersediaan.</div>
@@ -63,8 +77,10 @@
 @endsection
 @push('scripts')
 <script>
-const select=document.getElementById('variant');const qty=document.getElementById('qty');
-function update(){const o=select.selectedOptions[0];if(!o.value){document.getElementById('variant-info').textContent='Pilih varian untuk melihat harga dan ketersediaan.';return;}const amount=Number(qty.value)||1;let price=Number(o.dataset.price);let applied=null;for(const tier of JSON.parse(o.dataset.tiers||'[]'))if(amount>=tier.minimum){price=tier.price;applied=tier.minimum;}document.getElementById('variant-info').textContent=new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(price)+(applied?' / item · tier '+applied+'+':' / item')+' · '+o.dataset.method+' · Tersedia '+o.dataset.stock+' · SKU '+o.dataset.sku+(o.dataset.estimate?' · '+o.dataset.estimate:'');}
+const select=document.getElementById('variant');const qty=document.getElementById('qty');const mainImage=document.getElementById('product-main-image');const thumbnails=[...document.querySelectorAll('.product-thumbnail')];
+function showImage(button){if(!button||!mainImage)return;mainImage.src=button.dataset.image;mainImage.alt=button.dataset.alt;thumbnails.forEach(item=>item.classList.toggle('active',item===button));}
+function update(){const o=select.selectedOptions[0];if(!o.value){document.getElementById('variant-info').textContent='Pilih varian untuk melihat harga dan ketersediaan.';return;}const amount=Number(qty.value)||1;let price=Number(o.dataset.price);let applied=null;for(const tier of JSON.parse(o.dataset.tiers||'[]'))if(amount>=tier.minimum){price=tier.price;applied=tier.minimum;}document.getElementById('variant-info').textContent=new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(price)+(applied?' / item · tier '+applied+'+':' / item')+' · '+o.dataset.method+' · Tersedia '+o.dataset.stock+' · SKU '+o.dataset.sku+(o.dataset.estimate?' · '+o.dataset.estimate:'');const photo=thumbnails.find(item=>item.dataset.variant===o.value)||thumbnails.find(item=>item.dataset.color&&item.dataset.color===o.dataset.color);if(photo)showImage(photo);}
+thumbnails.forEach(button=>button.addEventListener('click',()=>showImage(button)));
 if(select){select.addEventListener('change',update);qty.addEventListener('input',update);update();}
 </script>
 @endpush
