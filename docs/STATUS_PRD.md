@@ -16,6 +16,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 | Promosi | Satu voucher nominal/persen/subsidi ongkir, periode, minimum, maksimum, kuota | Belum segmentasi kategori/series/grup, stacking, simulasi, approval campaign |
 | Produk custom | Template ukuran dinamis dengan unit/bantuan/batas, biaya tetap atau quotation admin, persetujuan pelanggan, snapshot order, milestone produksi dan gate sebelum packing | Belum upload referensi desain, revisi ukuran dua arah, dan notifikasi khusus per milestone |
 | Bundling | SKU bundle, komposisi dan jumlah per komponen, ketersediaan dari komponen terlangka, berat turunan, reservasi/pengurangan/pembatalan stok komponen, snapshot order | Belum builder bundle di storefront; komposisi ditetapkan admin |
+| Engagement | Wishlist akun; ulasan berbintang hanya untuk item diterima, hingga tiga foto, moderasi approve/reject, label pembelian terverifikasi | Belum pertanyaan produk dan helpful voting |
 | B2B | Pengajuan reseller/dropshipper/grosir, peninjauan admin, grup harga privat, minimum pesanan, tier harga per SKU, snapshot checkout | Belum dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal |
 | Akun | Registrasi email, login, reset password, buku alamat dengan alamat utama, riwayat akun, invoice cetak | Belum login telepon, konversi tamu terverifikasi, pesan ulang |
 | Admin | Lima peran, permission tindakan, aktif/nonaktif dan perubahan peran staf, konfigurasi toko, daftar pesanan, inventori, audit | Belum 2FA dan tindakan massal |
@@ -32,7 +33,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 1. WhatsApp otomatis dan integrasi penyedia pesan. Email transaksi sudah memakai outbox, tetapi SMTP nyata, reputasi domain, dan alert eksternal harus diuji di staging.
 2. Adapter penyedia tarif POS/JNE dan tracking, retry/cache/fallback otomatis. Tarif manual tetap dapat digunakan.
 3. Otomasi ongkir retur, approval refund berjenjang, adjustment loyalty, dan rekonsiliasi bank. Refund saat ini dicatat setelah Keuangan benar-benar mengirim dana.
-4. Fitur pertumbuhan lanjutan: wishlist, review terverifikasi, loyalty, serta kelanjutan B2B berupa dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal.
+4. Fitur pertumbuhan lanjutan: loyalty, pertanyaan produk, helpful voting, serta kelanjutan B2B berupa dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal.
 5. CMS lanjutan, galeri dan foto per warna, SEO metadata per halaman/produk, structured data, analytics events dan persetujuan pemasaran.
 6. Hardening produksi: 2FA staf, audit sensitif dengan redaksi berdasarkan peran, SLA bukti transfer, retensi data, monitoring, simulasi koneksi eksternal, beban serta konkurensi MySQL dan backup restore.
 7. Integrasi sumber stok/dashboard produksi dua arah. Tidak ada data aplikasi lain yang disalin ke e-commerce.

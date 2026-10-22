@@ -11,6 +11,7 @@ use App\Models\OrderItem;
 use App\Models\PaymentProof;
 use App\Models\PriceGroup;
 use App\Models\Refund;
+use App\Models\Review;
 use App\Models\Role;
 use App\Models\ServiceCase;
 use App\Models\Setting;
@@ -71,6 +72,26 @@ class AdminController extends Controller
         }
 
         return view('admin.custom-quotes', ['quotes' => $query->latest()->paginate(20)->withQueryString()]);
+    }
+
+    public function reviews(Request $request)
+    {
+        $query = Review::with(['user', 'variant.series', 'item.order']);
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status')->toString());
+        }
+
+        return view('admin.reviews', ['reviews' => $query->latest()->paginate(20)->withQueryString()]);
+    }
+
+    public function reviewAction(Request $request, Review $review)
+    {
+        $data = $request->validate(['status' => 'required|in:approved,rejected', 'moderation_notes' => 'nullable|required_if:status,rejected|string|max:1000']);
+        $before = $review->only('status', 'moderation_notes');
+        $review->update($data + ['moderated_by' => $request->user()->id, 'moderated_at' => now()]);
+        Audit::record('review.moderated', 'review:'.$review->id, $before, $review->only('status', 'moderation_notes'));
+
+        return back()->with('success', 'Moderasi ulasan disimpan.');
     }
 
     public function customQuoteAction(Request $request, CustomQuote $customQuote, CustomProductService $service)

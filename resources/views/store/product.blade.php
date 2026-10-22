@@ -39,6 +39,7 @@
                 </div>
                 @endif
             @endforeach
+            @auth<div class="mt-4"><p class="small mb-2"><strong>Simpan varian ke wishlist</strong></p><div class="d-flex flex-wrap gap-2">@foreach($series->variants as $v)<form method="post" action="{{ route('wishlist.toggle',$v) }}">@csrf<button class="btn btn-outline-dark btn-sm">{{ in_array($v->id,$wishlistIds)?'♥ Tersimpan':'♡ Simpan' }} · {{ $v->label }}</button></form>@endforeach</div></div>@endauth
             @if($priceGroup && $businessTiers->flatten()->isNotEmpty())
                 <details class="mt-4"><summary>Lihat tier harga akun {{ $priceGroup->name }}</summary>
                     @foreach($series->variants as $v)
@@ -55,6 +56,9 @@
             </div>
         </div>
     </div>
+</section>
+<section class="container-xxl section pt-0"><div class="section-top"><div><span class="eyebrow">PEMBELIAN TERVERIFIKASI</span><h2 class="mt-3">Ulasan pelanggan</h2></div>@if($reviews->isNotEmpty())<strong>{{ number_format($reviews->avg('rating'),1) }} / 5</strong>@endif</div>
+@forelse($reviews as $review)<article class="panel mb-3"><p><strong>{{ str_repeat('★',$review->rating) }}{{ str_repeat('☆',5-$review->rating) }}</strong> · {{ $review->user->name }} <span class="badge">Terverifikasi</span></p><p>{{ $review->body }}</p>@if($review->photos)<div class="d-flex gap-2">@foreach($review->photos as $photo)<img src="{{ asset('storage/'.$photo) }}" alt="Foto ulasan pelanggan" style="width:96px;height:96px;object-fit:cover">@endforeach</div>@endif</article>@empty<p>Belum ada ulasan untuk series ini.</p>@endforelse
 </section>
 @endsection
 @push('scripts')

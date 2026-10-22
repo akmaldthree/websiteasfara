@@ -52,6 +52,11 @@ class Variant extends Model
         return $this->hasMany(BundleComponent::class, 'bundle_variant_id')->orderBy('component_variant_id');
     }
 
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
     public function getAvailableAttribute(): int
     {
         if ($this->fulfillment === 'bundle') {

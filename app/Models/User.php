@@ -62,4 +62,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(CustomQuote::class);
     }
+
+    public function wishlistItems()
+    {
+        return $this->hasMany(WishlistItem::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
 }

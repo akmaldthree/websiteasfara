@@ -44,6 +44,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/akun/alamat/{id}', [Account::class, 'deleteAddress'])->name('address.delete');
     Route::post('/akun/bisnis', [Account::class, 'businessApplication'])->middleware('throttle:5,1')->name('business.apply');
     Route::post('/akun/penawaran/{customQuote}/terima', [Store::class, 'acceptCustomQuote'])->name('custom.accept');
+    Route::post('/akun/wishlist/{variant}', [Account::class, 'wishlist'])->name('wishlist.toggle');
+    Route::post('/akun/ulasan/{item}', [Account::class, 'review'])->name('review.store');
 });
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/', [Admin::class, 'dashboard'])->middleware('permission:dashboard')->name('dashboard');
@@ -53,6 +55,8 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/produksi/{item}', [Admin::class, 'production'])->middleware('permission:shipping.write')->name('production.update');
     Route::get('/penawaran-custom', [Admin::class, 'customQuotes'])->middleware('permission:catalog.write')->name('custom-quotes');
     Route::post('/penawaran-custom/{customQuote}', [Admin::class, 'customQuoteAction'])->middleware('permission:catalog.write')->name('custom-quotes.update');
+    Route::get('/ulasan', [Admin::class, 'reviews'])->middleware('permission:content.write')->name('reviews');
+    Route::post('/ulasan/{review}', [Admin::class, 'reviewAction'])->middleware('permission:content.write')->name('reviews.update');
     Route::get('/bukti/{proof}', [Admin::class, 'proof'])->middleware('permission:payments.read')->name('proof');
     Route::get('/inventori', [Admin::class, 'inventory'])->middleware('permission:inventory.read')->name('inventory');
     Route::post('/inventori/{variant}', [Admin::class, 'adjust'])->middleware('permission:inventory.write')->name('inventory.adjust');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CustomQuote;
 use App\Models\Order;
 use App\Models\Page;
+use App\Models\Review;
 use App\Models\Series;
 use App\Models\ShippingRate;
 use App\Models\Variant;
@@ -65,8 +66,10 @@ class StoreController extends Controller
         $series = Series::published()->where('slug', $slug)->with(['category', 'variants' => fn ($q) => $q->where('active', true)->with(['measurementTemplate', 'bundleComponents.componentVariant'])->orderBy('id')])->firstOrFail();
         $priceGroup = $pricing->groupFor($r->user());
         $businessTiers = $series->variants->mapWithKeys(fn (Variant $variant) => [$variant->id => $pricing->tiersFor($variant, $r->user())]);
+        $reviews = Review::where('status', 'approved')->whereHas('variant', fn ($query) => $query->where('series_id', $series->id))->with('user')->latest()->get();
+        $wishlistIds = $r->user()?->wishlistItems()->whereIn('variant_id', $series->variants->pluck('id'))->pluck('variant_id')->all() ?? [];
 
-        return view('store.product', compact('series', 'priceGroup', 'businessTiers'));
+        return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'reviews', 'wishlistIds'));
     }
 
     public function cart(Request $r, CheckoutService $service)

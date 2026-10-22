@@ -1,0 +1,71 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Category;
+use App\Models\Series;
+use App\Models\Setting;
+use App\Models\ShippingRate;
+use App\Models\User;
+use App\Models\Variant;
+use App\Services\CheckoutService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class CustomerEngagementTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Variant $variant;
+
+    private array $checkout;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed();
+        $category = Category::create(['name' => 'Review', 'slug' => 'review']);
+        $series = Series::create(['category_id' => $category->id, 'name' => 'Dress Review', 'slug' => 'dress-review', 'active' => true]);
+        $this->variant = Variant::create(['series_id' => $series->id, 'sku' => 'REVIEW-DRESS', 'color' => 'Black', 'size' => 'L', 'price' => 300000, 'stock' => 5, 'weight' => 500]);
+        $rate = ShippingRate::create(['courier' => 'JNE', 'service' => 'REG', 'province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'first_kg' => 15000, 'extra_kg' => 10000, 'estimate' => '2–3 hari']);
+        Setting::put('bank_accounts', [['bank' => 'Bank Uji', 'number' => '000', 'owner' => 'Dthree']]);
+        Setting::put('checkout_enabled', true);
+        $this->checkout = ['name' => 'Pelanggan', 'phone' => '081234567890', 'email' => 'test@example.com', 'province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'district' => 'Cihideung', 'postal_code' => '46111', 'detail' => 'Alamat uji', 'payment_method' => 'transfer', 'shipping_rate_id' => $rate->id, 'terms' => '1'];
+    }
+
+    public function test_customer_can_toggle_wishlist(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->post(route('wishlist.toggle', $this->variant))->assertRedirect();
+        $this->assertDatabaseHas('wishlist_items', ['user_id' => $user->id, 'variant_id' => $this->variant->id]);
+        $this->post(route('wishlist.toggle', $this->variant))->assertRedirect();
+        $this->assertDatabaseMissing('wishlist_items', ['user_id' => $user->id, 'variant_id' => $this->variant->id]);
+    }
+
+    public function test_verified_review_requires_received_purchase_and_admin_moderation(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $order = app(CheckoutService::class)->place([$this->variant->id => 1], $this->checkout, hash('sha256', 'review'), $user->id);
+        $order->update(['fulfillment_status' => 'received']);
+        $item = $order->items()->firstOrFail();
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nSIAAAAASUVORK5CYII=');
+        $payload = ['rating' => 5, 'body' => 'Produk ini sangat nyaman dipakai.', 'photos' => [UploadedFile::fake()->createWithContent('review.png', $png)]];
+
+        $this->actingAs($other)->post(route('review.store', $item), $payload)->assertForbidden();
+        $this->actingAs($user)->post(route('review.store', $item), $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $review = $user->reviews()->firstOrFail();
+        $this->assertSame('pending', $review->status);
+        Storage::disk('public')->assertExists($review->photos[0]);
+        $this->get(route('product', 'dress-review'))->assertDontSee('Produk ini sangat nyaman');
+
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $this->actingAs($admin)->post(route('admin.reviews.update', $review), ['status' => 'approved'])->assertRedirect();
+        $this->get(route('product', 'dress-review'))->assertSee('Produk ini sangat nyaman')->assertSee('Terverifikasi');
+        $this->assertDatabaseHas('audit_logs', ['action' => 'review.moderated']);
+    }
+}

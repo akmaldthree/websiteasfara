@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\BusinessAccount;
+use App\Models\OrderItem;
+use App\Models\Review;
 use App\Models\User;
+use App\Models\Variant;
 use App\Services\Audit;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
@@ -11,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Validation\ValidationException;
@@ -56,7 +60,49 @@ class AccountController extends Controller
             'addresses' => $r->user()->addresses,
             'businessAccount' => $r->user()->businessAccount()->with('priceGroup')->first(),
             'customQuotes' => $r->user()->customQuotes()->with('variant.series')->latest()->get(),
+            'wishlist' => $r->user()->wishlistItems()->with('variant.series')->latest()->get(),
+            'reviewableItems' => OrderItem::with('order')->whereHas('order', fn ($query) => $query->where('user_id', $r->user()->id)->whereIn('fulfillment_status', ['received']))->doesntHave('review')->latest()->get(),
+            'myReviews' => $r->user()->reviews()->with('variant.series')->latest()->get(),
         ]);
+    }
+
+    public function wishlist(Request $request, Variant $variant)
+    {
+        $item = $request->user()->wishlistItems()->where('variant_id', $variant->id)->first();
+        if ($item) {
+            $item->delete();
+            $message = 'Produk dihapus dari wishlist.';
+        } else {
+            $request->user()->wishlistItems()->create(['variant_id' => $variant->id]);
+            $message = 'Produk disimpan ke wishlist.';
+        }
+
+        return back()->with('success', $message);
+    }
+
+    public function review(Request $request, OrderItem $item)
+    {
+        $item->load('order');
+        abort_unless($item->order->user_id === $request->user()->id && $item->order->fulfillment_status === 'received', 403);
+        $data = $request->validate(['rating' => 'required|integer|between:1,5', 'body' => 'required|string|min:10|max:3000', 'photos' => 'nullable|array|max:3', 'photos.*' => 'image|mimes:jpg,jpeg,png,webp|max:3072']);
+        if (Review::where('order_item_id', $item->id)->exists()) {
+            throw ValidationException::withMessages(['body' => 'Item pesanan ini sudah memiliki ulasan.']);
+        }
+        $photos = [];
+        foreach ($request->file('photos', []) as $photo) {
+            $photos[] = $photo->store('reviews', 'public');
+        }
+        try {
+            $review = Review::create(['user_id' => $request->user()->id, 'order_item_id' => $item->id, 'variant_id' => $item->variant_id, 'rating' => $data['rating'], 'body' => $data['body'], 'photos' => $photos]);
+            Audit::record('review.submitted', 'review:'.$review->id, null, $review->only('rating', 'variant_id'));
+        } catch (\Throwable $exception) {
+            foreach ($photos as $photo) {
+                Storage::disk('public')->delete($photo);
+            }
+            throw $exception;
+        }
+
+        return back()->with('success', 'Ulasan dikirim dan menunggu moderasi.');
     }
 
     public function businessApplication(Request $r)

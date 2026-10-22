@@ -22,4 +22,14 @@ class OrderItem extends Model
     {
         return $this->hasMany(OrderItemComponent::class)->orderBy('id');
     }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function review()
+    {
+        return $this->hasOne(Review::class);
+    }
 }

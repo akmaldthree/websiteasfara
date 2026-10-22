@@ -1,0 +1,8 @@
+@extends('layouts.admin')
+@section('title','Moderasi ulasan')
+@section('content')
+<div class="admin-heading"><div><span class="eyebrow">PEMBELIAN TERVERIFIKASI</span><h1>Moderasi ulasan</h1></div></div>
+<form class="filter-bar mb-4"><select name="status" class="form-select"><option value="">Semua status</option>@foreach(['pending','approved','rejected'] as $status)<option value="{{ $status }}" @selected(request('status')===$status)>{{ strtoupper($status) }}</option>@endforeach</select><button class="btn btn-outline-dark">Terapkan</button></form>
+@forelse($reviews as $review)<div class="panel mb-3"><div class="summary-row"><span><strong>{{ $review->rating }}/5 · {{ $review->variant->series->name }}</strong><br>{{ $review->user->name }} · {{ $review->item->order->number }}</span><span class="badge">{{ strtoupper($review->status) }}</span></div><p>{{ $review->body }}</p>@if($review->photos)<div class="d-flex gap-2 mb-3">@foreach($review->photos as $photo)<a href="{{ asset('storage/'.$photo) }}" target="_blank"><img src="{{ asset('storage/'.$photo) }}" alt="Foto ulasan" style="width:96px;height:96px;object-fit:cover"></a>@endforeach</div>@endif<form method="post" action="{{ route('admin.reviews.update',$review) }}">@csrf<div class="form-grid"><div><label>Status</label><select name="status" class="form-select"><option value="approved">Setujui</option><option value="rejected">Tolak</option></select></div><div><label>Catatan moderasi</label><input name="moderation_notes" class="form-control" value="{{ $review->moderation_notes }}"></div></div><button class="btn btn-dark btn-sm mt-3">Simpan moderasi</button></form></div>@empty<p>Belum ada ulasan.</p>@endforelse
+{{ $reviews->links() }}
+@endsection
