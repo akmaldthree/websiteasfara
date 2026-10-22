@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Page;
 use App\Models\Series;
-use App\Models\ServiceCase;
 use App\Models\ShippingRate;
 use App\Models\Variant;
+use App\Services\AfterSalesService;
 use App\Services\Audit;
 use App\Services\CheckoutService;
+use App\Services\OrderCommunication;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -150,7 +151,7 @@ class StoreController extends Controller
 
     public function order(Order $order)
     {
-        $order->load('items', 'proofs', 'cases');
+        $order->load('items', 'proofs', 'cases.items.item', 'refunds', 'events');
 
         return view('store.order', compact('order'));
     }
@@ -165,9 +166,10 @@ class StoreController extends Controller
                 if ($o->payment_method !== 'transfer' || $o->status !== 'waiting' || ! in_array($o->payment_status, ['unpaid', 'rejected']) || $o->expires_at->isPast()) {
                     throw ValidationException::withMessages(['proof' => 'Pesanan tidak menerima bukti baru atau sudah kedaluwarsa.']);
                 }
-                $o->proofs()->create(['path' => $path]);
+                $proof = $o->proofs()->create(['path' => $path]);
                 $o->update(['payment_status' => 'review']);
                 Audit::record('payment.uploaded', 'order:'.$o->id);
+                OrderCommunication::record($o, 'proof-'.$proof->id, 'proof_uploaded', 'Bukti transfer diterima dan menunggu verifikasi tim Keuangan.');
             });
         } catch (\Throwable $e) {
             Storage::disk('local')->delete($path);
@@ -188,17 +190,32 @@ class StoreController extends Controller
         return redirect($o->customerUrl());
     }
 
-    public function serviceCase(Request $r, Order $order)
+    public function serviceCase(Request $r, Order $order, AfterSalesService $service)
     {
-        $d = $r->validate(['type' => 'required|in:return,warranty,complaint', 'reason' => 'required|string|min:10|max:2000']);
-        $case = ServiceCase::create($d + ['order_id' => $order->id, 'number' => 'CS-'.strtoupper(Str::random(10))]);
-        Audit::record('case.created', 'case:'.$case->id);
+        $d = $r->validate([
+            'request_key' => 'required|uuid', 'type' => 'required|in:return,warranty,complaint',
+            'reason' => 'required|string|min:10|max:2000', 'reason_code' => 'nullable|string|max:100',
+            'items' => 'nullable|array|max:50', 'items.*' => 'nullable|integer|min:0|max:100',
+            'evidence' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+        ]);
+        $path = $r->file('evidence')?->store('case-evidence', 'local');
+        try {
+            $case = $service->open($order, $d, $path);
+            if ($path && $case->evidence_path !== $path) {
+                Storage::disk('local')->delete($path);
+            }
+        } catch (\Throwable $exception) {
+            if ($path) {
+                Storage::disk('local')->delete($path);
+            }
+            throw $exception;
+        }
 
-        return redirect($order->customerUrl())->with('success','Kasus '.$case->number.' tercatat. Tim kami akan meninjau permintaan Anda.');
+        return redirect($order->customerUrl())->with('success', 'Kasus '.$case->number.' tercatat. Tim kami akan meninjau permintaan Anda.');
     }
 
     public function page(string $slug)
     {
-        return view('store.page',['page' => Page::where('slug',$slug)->where('active',true)->firstOrFail()]);
+        return view('store.page', ['page' => Page::where('slug', $slug)->where('active', true)->firstOrFail()]);
     }
 }

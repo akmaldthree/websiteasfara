@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -54,16 +55,40 @@ class AccountController extends Controller
     public function address(Request $r)
     {
         $d = $r->validate(['name' => 'required|string|max:100', 'phone' => 'required|string|max:30', 'province' => 'required|string|max:100', 'city' => 'required|string|max:100', 'district' => 'required|string|max:100', 'postal_code' => 'required|digits:5', 'detail' => 'required|string|max:1000']);
-        $r->user()->addresses()->create($d);
+        DB::transaction(function () use ($r, $d) {
+            $makeDefault = $r->boolean('is_default') || ! $r->user()->addresses()->exists();
+            if ($makeDefault) {
+                $r->user()->addresses()->update(['is_default' => false]);
+            }
+            $r->user()->addresses()->create($d + ['is_default' => $makeDefault]);
+        });
 
         return back()->with('success', 'Alamat disimpan.');
     }
 
     public function deleteAddress(Request $r, int $id)
     {
-        $r->user()->addresses()->findOrFail($id)->delete();
+        DB::transaction(function () use ($r, $id) {
+            $address = $r->user()->addresses()->findOrFail($id);
+            $wasDefault = $address->is_default;
+            $address->delete();
+            if ($wasDefault) {
+                $r->user()->addresses()->oldest('id')->first()?->update(['is_default' => true]);
+            }
+        });
 
         return back()->with('success', 'Alamat dihapus.');
+    }
+
+    public function defaultAddress(Request $r, int $id)
+    {
+        DB::transaction(function () use ($r, $id) {
+            $address = $r->user()->addresses()->findOrFail($id);
+            $r->user()->addresses()->update(['is_default' => false]);
+            $address->update(['is_default' => true]);
+        });
+
+        return back()->with('success', 'Alamat utama diperbarui.');
     }
 
     public function forgot(Request $r)
@@ -85,6 +110,6 @@ class AccountController extends Controller
             throw ValidationException::withMessages(['email' => __($status)]);
         }
 
-        return redirect()->route('login')->with('success','Kata sandi diperbarui. Silakan masuk.');
+        return redirect()->route('login')->with('success', 'Kata sandi diperbarui. Silakan masuk.');
     }
 }

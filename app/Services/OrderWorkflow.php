@@ -16,6 +16,7 @@ class OrderWorkflow
         DB::transaction(function () use ($order, $action, $reason, $tracking) {
             $o = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             $before = $o->only(['status', 'payment_status', 'fulfillment_status', 'inventory_state']);
+            $eventKey = $action;
             if (in_array($action, ['approve', 'cod_confirm'])) {
                 if ($o->status === 'confirmed') {
                     return;
@@ -36,6 +37,7 @@ class OrderWorkflow
             } elseif ($action === 'reject') {
                 $this->check($o->status === 'waiting' && $o->payment_status === 'review', 'Tidak ada bukti menunggu verifikasi.');
                 $this->check((bool) $reason, 'Alasan penolakan wajib diisi.');
+                $eventKey = 'reject-'.$o->proofs()->where('status', 'pending')->latest('id')->value('id');
                 $o->proofs()->where('status', 'pending')->update(['status' => 'rejected', 'reason' => $reason, 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
                 $o->payment_status = 'rejected';
                 $o->rejection_reason = $reason;
@@ -48,7 +50,7 @@ class OrderWorkflow
                     $this->check($o->status === 'waiting' && $o->expires_at->isPast() && $o->payment_status !== 'review', 'Pesanan ini tidak dapat kedaluwarsa.');
                 } else {
                     $this->check((bool) $reason, 'Alasan pembatalan wajib diisi.');
-                    $this->check($o->payment_status !== 'paid' && in_array($o->status, ['waiting', 'confirmed']) && ! in_array($o->fulfillment_status, ['shipped', 'received']), 'Pesanan dibayar atau dikirim memerlukan proses retur/refund.');
+                    $this->check($o->paid_at === null && in_array($o->status, ['waiting', 'confirmed']) && ! in_array($o->fulfillment_status, ['shipped', 'received']), 'Pesanan dibayar atau dikirim memerlukan proses retur/refund.');
                 }
                 $this->inventory($o, 'release');
                 $o->status = 'cancelled';
@@ -66,13 +68,14 @@ class OrderWorkflow
             } elseif ($action === 'receive') {
                 $this->check($o->fulfillment_status === 'shipped', 'Pesanan belum dikirim.');
                 $o->fulfillment_status = 'received';
-                if ($o->payment_status === 'paid') {
+                $o->received_at = now();
+                if ($o->paid_at !== null) {
                     $o->status = 'completed';
                     $o->completed_at = now();
                 }
             } elseif ($action === 'cod_paid') {
                 $this->check($o->payment_method === 'cod' && $o->status === 'confirmed' && in_array($o->fulfillment_status, ['shipped', 'received']), 'COD belum dikirim.');
-                if ($o->payment_status === 'paid') {
+                if ($o->paid_at !== null) {
                     return;
                 }
                 $o->payment_status = 'paid';
@@ -86,6 +89,18 @@ class OrderWorkflow
             }
             $o->save();
             Audit::record('order.'.$action, 'order:'.$o->id, $before, $o->only(['status', 'payment_status', 'fulfillment_status', 'inventory_state']) + ['reason' => $reason]);
+            $message = match ($action) {
+                'approve' => 'Pembayaran transfer telah disetujui. Pesanan mulai diproses.',
+                'reject' => 'Bukti transfer ditolak: '.$reason.'. Silakan unggah ulang sebelum batas waktu terbaru.',
+                'cod_confirm' => 'Pesanan COD telah dikonfirmasi dan mulai diproses.',
+                'cancel' => 'Pesanan dibatalkan: '.$reason,
+                'expire' => 'Pesanan kedaluwarsa karena melewati batas konfirmasi.',
+                'pack' => 'Pesanan selesai dikemas.',
+                'ship' => 'Pesanan dikirim melalui '.$o->shipping['courier'].'. Nomor resi: '.$tracking,
+                'receive' => 'Paket telah ditandai diterima.',
+                'cod_paid' => 'Pembayaran COD telah direkonsiliasi.',
+            };
+            OrderCommunication::record($o, $eventKey, $action, $message);
         }, 3);
     }
 

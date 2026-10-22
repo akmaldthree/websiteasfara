@@ -1,8 +1,10 @@
 <?php
 
+use App\Models\NotificationDelivery;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\Audit;
+use App\Services\DeliveryService;
 use App\Services\OrderWorkflow;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -45,3 +47,23 @@ Artisan::command('orders:expire', function (OrderWorkflow $workflow) {
     $this->info("{$count} pesanan diperiksa dan kedaluwarsa.");
 });
 Schedule::command('orders:expire')->everyMinute()->withoutOverlapping();
+
+Artisan::command('notifications:send {--limit=50}', function (DeliveryService $service) {
+    $service->recoverStale();
+    if (! config('commerce.email_notifications')) {
+        $this->info('Email transaksi dijeda. Konfigurasikan SMTP dan TRANSACTION_EMAIL_ENABLED.');
+
+        return;
+    }
+    $ids = NotificationDelivery::where('channel', 'email')->whereIn('status', ['pending', 'failed'])
+        ->where('attempts', '<', 5)->where('available_at', '<=', now())->orderBy('id')
+        ->limit(max(1, min(100, (int) $this->option('limit'))))->pluck('id');
+    $sent = 0;
+    foreach ($ids as $id) {
+        if ($service->send($id)) {
+            $sent++;
+        }
+    }
+    $this->info("{$sent} notifikasi dikirim.");
+})->purpose('Mengirim outbox email transaksi dengan retry terbatas');
+Schedule::command('notifications:send')->everyMinute()->withoutOverlapping(15);

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'email_notifications' => env('TRANSACTION_EMAIL_ENABLED', false),
     'permissions' => ['dashboard', 'catalog.read', 'catalog.write', 'inventory.read', 'inventory.write', 'orders.read', 'orders.cancel', 'payments.read', 'payments.verify', 'cod.confirm', 'shipping.write', 'customers.read', 'promotions.write', 'content.write', 'settings.write', 'users.write', 'reports.read', 'cases.write', 'audit.read'],
     'roles' => [
         'admin' => ['*'],

@@ -6,12 +6,14 @@ use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentProof;
+use App\Models\Refund;
 use App\Models\Role;
 use App\Models\ServiceCase;
 use App\Models\Setting;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Variant;
+use App\Services\AfterSalesService;
 use App\Services\Audit;
 use App\Services\OrderWorkflow;
 use Illuminate\Http\Request;
@@ -25,7 +27,8 @@ class AdminController extends Controller
     public function dashboard()
     {
         return view('admin.dashboard', [
-            'revenue' => Order::where('payment_status', 'paid')->whereMonth('paid_at', now()->month)->whereYear('paid_at', now()->year)->sum('subtotal') - Order::where('payment_status', 'paid')->whereMonth('paid_at', now()->month)->whereYear('paid_at', now()->year)->sum('discount'),
+            'revenue' => max(0, Order::whereNotNull('paid_at')->whereMonth('paid_at', now()->month)->whereYear('paid_at', now()->year)->sum('total')
+                - Refund::whereMonth('paid_at', now()->month)->whereYear('paid_at', now()->year)->sum('amount')),
             'waiting' => Order::where('payment_status', 'review')->count(), 'cod' => Order::where('payment_method', 'cod')->where('status', 'waiting')->count(),
             'packing' => Order::where('status', 'confirmed')->where('fulfillment_status', 'processing')->count(),
             'low' => Variant::whereRaw('stock - reserved <= low_stock')->count(), 'recent' => Order::latest()->take(8)->get(),
@@ -49,7 +52,7 @@ class AdminController extends Controller
 
     public function order(Order $order)
     {
-        $order->load('items', 'proofs');
+        $order->load('items', 'proofs', 'refunds', 'cases', 'events');
 
         return view('admin.order', compact('order'));
     }
@@ -229,12 +232,10 @@ class AdminController extends Controller
         return view('admin.cases', ['cases' => ServiceCase::with('order')->latest()->paginate(20)]);
     }
 
-    public function caseUpdate(Request $r, ServiceCase $case)
+    public function caseUpdate(Request $r, ServiceCase $case, AfterSalesService $service)
     {
-        $d = $r->validate(['status' => 'required|in:open,reviewing,resolved,rejected', 'resolution' => 'required|string|max:2000']);
-        $before = $case->toArray();
-        $case->update($d);
-        Audit::record('case.updated', 'case:'.$case->id, $before, $d);
+        $d = $r->validate(['status' => 'required|in:reviewing,approved,resolved,rejected', 'resolution' => 'required|string|min:5|max:2000']);
+        $service->update($case, $d);
 
         return back()->with('success', 'Kasus diperbarui.');
     }
@@ -254,6 +255,25 @@ class AdminController extends Controller
         return back()->with('success', 'Pengguna ditambahkan.');
     }
 
+    public function teamUpdate(Request $r, User $user)
+    {
+        abort_if($user->role === 'customer', 404);
+        $d = $r->validate(['role' => ['required', Rule::in(array_keys(config('commerce.roles')))], 'active' => 'nullable|boolean']);
+        $active = $r->boolean('active');
+        if ($user->is($r->user()) && (! $active || $d['role'] !== 'admin')) {
+            throw ValidationException::withMessages(['active' => 'Admin yang sedang masuk tidak dapat menurunkan akses atau menonaktifkan dirinya sendiri.']);
+        }
+        if ($user->role === 'admin' && ($d['role'] !== 'admin' || ! $active)
+            && User::where('role', 'admin')->where('active', true)->count() <= 1) {
+            throw ValidationException::withMessages(['active' => 'Minimal satu admin aktif harus dipertahankan.']);
+        }
+        $before = $user->only('role', 'active');
+        $user->forceFill(['role' => $d['role'], 'active' => $active])->save();
+        Audit::record('user.updated', 'user:'.$user->id, $before, $user->only('role', 'active'));
+
+        return back()->with('success', 'Akses pengguna diperbarui.');
+    }
+
     public function roleSave(Request $r, Role $role)
     {
         abort_if($role->name === 'admin', 422, 'Peran admin utama dipertahankan.');
@@ -270,17 +290,38 @@ class AdminController extends Controller
         $d = $r->validate(['from' => 'nullable|date', 'to' => 'nullable|date|after_or_equal:from']);
         $from = $d['from'] ?? now()->startOfMonth()->toDateString();
         $to = $d['to'] ?? now()->toDateString();
-        $q = Order::whereBetween('created_at', [$from.' 00:00:00', $to.' 23:59:59']);
+        $range = [$from.' 00:00:00', $to.' 23:59:59'];
+        $q = Order::whereBetween('created_at', $range);
         if ($r->input('format') === 'csv') {
             return response()->streamDownload(function () use ($q) {
                 $f = fopen('php://output', 'w');
-                fputcsv($f, ['Nomor', 'Tanggal', 'Status', 'Pembayaran', 'Subtotal', 'Diskon', 'Ongkir', 'Subsidi ongkir', 'Biaya COD', 'Total'], ',', '"', '');
-                foreach ($q->orderBy('id')->cursor() as $o) {
-                    fputcsv($f, [$o->number, $o->created_at, $o->status, $o->payment_status, $o->subtotal, $o->discount, $o->shipping_cost, $o->shipping_discount, $o->cod_fee, $o->total], ',', '"', '');
-                } fclose($f);
+                fputcsv($f, ['Nomor', 'Tanggal', 'Status', 'Pembayaran', 'Metode', 'Subtotal', 'Diskon', 'Ongkir', 'Subsidi ongkir', 'Biaya COD', 'Total', 'Refund', 'Nilai bersih'], ',', '"', '');
+                foreach ($q->withSum('refunds', 'amount')->orderBy('id')->cursor() as $o) {
+                    fputcsv($f, [$o->number, $o->created_at, $o->status, $o->payment_status, $o->payment_method, $o->subtotal, $o->discount, $o->shipping_cost, $o->shipping_discount, $o->cod_fee, $o->total, $o->refunds_sum_amount ?? 0, $o->total - ($o->refunds_sum_amount ?? 0)], ',', '"', '');
+                }
+                fclose($f);
             }, 'penjualan.csv', ['Content-Type' => 'text/csv']);
         }
 
-        return view('admin.reports',['from' => $from, 'to' => $to, 'count' => (clone $q)->count(), 'paid' => (clone $q)->where('payment_status','paid')->sum('total'), 'orders' => $q->latest()->paginate(20)->withQueryString()]);
+        $paid = Order::whereBetween('paid_at', $range);
+        $gross = (clone $paid)->sum('total');
+        $refunds = Refund::whereBetween('paid_at', $range)->sum('amount');
+        $paidCustomers = (clone $paid)->get(['user_id', 'phone'])->groupBy(fn (Order $order) => $order->user_id ? 'user:'.$order->user_id : 'phone:'.$order->phone);
+        $topProducts = OrderItem::join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->whereBetween('orders.paid_at', $range)
+            ->select('order_items.sku', 'order_items.name', DB::raw('SUM(order_items.quantity) AS quantity'), DB::raw('SUM(order_items.total) AS revenue'))
+            ->groupBy('order_items.sku', 'order_items.name')->orderByDesc('quantity')->limit(8)->get();
+        $shipping = (clone $paid)->get()->groupBy(fn (Order $order) => ($order->shipping['courier'] ?? 'Tanpa kurir').' '.($order->shipping['service'] ?? ''))
+            ->map(fn ($orders) => ['orders' => $orders->count(), 'value' => $orders->sum('shipping_cost')]);
+
+        return view('admin.reports', [
+            'from' => $from, 'to' => $to, 'count' => (clone $q)->count(), 'paidCount' => (clone $paid)->count(),
+            'gross' => $gross, 'refunds' => $refunds, 'net' => max(0, $gross - $refunds),
+            'aov' => (clone $paid)->count() ? (int) round($gross / (clone $paid)->count()) : 0,
+            'customerCount' => $paidCustomers->count(), 'repeatCustomers' => $paidCustomers->filter(fn ($orders) => $orders->count() > 1)->count(),
+            'topProducts' => $topProducts, 'shipping' => $shipping,
+            'lowStock' => Variant::whereRaw('stock - reserved <= low_stock')->count(),
+            'orders' => $q->withSum('refunds', 'amount')->latest()->paginate(20)->withQueryString(),
+        ]);
     }
 }

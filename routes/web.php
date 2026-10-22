@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController as Account;
 use App\Http\Controllers\AdminController as Admin;
 use App\Http\Controllers\ImportController as Import;
+use App\Http\Controllers\OperationsController as Operations;
 use App\Http\Controllers\StoreController as Store;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,7 @@ Route::get('/lacak-pesanan', fn () => view('store.track'))->name('track');
 Route::post('/lacak-pesanan', [Store::class, 'track'])->middleware('throttle:5,1')->name('track.find');
 Route::middleware('signed')->group(function () {
     Route::get('/pesanan/{order}', [Store::class, 'order'])->name('orders.show');
+    Route::get('/pesanan/{order}/invoice', [Operations::class, 'invoice'])->name('orders.invoice');
     Route::post('/pesanan/{order}/bukti', [Store::class, 'proof'])->middleware('throttle:5,1')->name('orders.proof');
     Route::post('/pesanan/{order}/bantuan', [Store::class, 'serviceCase'])->middleware('throttle:5,1')->name('orders.case');
 });
@@ -37,6 +39,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/akun', [Account::class, 'account'])->name('account');
     Route::post('/keluar', [Account::class, 'logout'])->name('logout');
     Route::post('/akun/alamat', [Account::class, 'address'])->name('address.store');
+    Route::post('/akun/alamat/{id}/utama', [Account::class, 'defaultAddress'])->name('address.default');
     Route::delete('/akun/alamat/{id}', [Account::class, 'deleteAddress'])->name('address.delete');
 });
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
@@ -51,10 +54,22 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/pengaturan', [Admin::class, 'saveSettings'])->middleware('permission:settings.write')->name('settings.save');
     Route::get('/audit', [Admin::class, 'audit'])->middleware('permission:audit.read')->name('audit');
     Route::get('/pelanggan', [Admin::class, 'customers'])->middleware('permission:customers.read')->name('customers');
-    Route::get('/layanan', [Admin::class, 'cases'])->middleware('permission:cases.write')->name('cases');
+    Route::get('/layanan', [Operations::class, 'cases'])->middleware('permission:orders.read')->name('cases');
+    Route::get('/layanan/{case}', [Operations::class, 'caseDetail'])->middleware('permission:orders.read')->name('case');
+    Route::get('/layanan/{case}/bukti', [Operations::class, 'caseEvidence'])->middleware('permission:orders.read')->name('case.evidence');
+    Route::post('/retur/{caseItem}/terima', [Operations::class, 'receiveReturn'])->middleware('permission:inventory.write')->name('return.receive');
+    Route::post('/pesanan/{order}/refund', [Operations::class, 'refund'])->middleware('permission:payments.verify')->name('refund');
+    Route::get('/refund/{refund}/bukti', [Operations::class, 'refundProof'])->middleware('permission:payments.read')->name('refund.proof');
+    Route::get('/pesanan/{order}/dokumen/{kind}', [Operations::class, 'document'])->middleware('permission:orders.read')->name('document');
+    Route::get('/notifikasi', [Operations::class, 'notifications'])->middleware('permission:cases.write')->name('notifications');
+    Route::post('/notifikasi/{delivery}/ulang', [Operations::class, 'notificationRetry'])->middleware('permission:cases.write')->name('notification.retry');
+    Route::post('/notifikasi/{delivery}/manual', [Operations::class, 'notificationManual'])->middleware('permission:cases.write')->name('notification.manual');
+    Route::get('/aturan-layanan', [Operations::class, 'policy'])->middleware('permission:settings.write')->name('service.policy');
+    Route::post('/aturan-layanan', [Operations::class, 'savePolicy'])->middleware('permission:settings.write')->name('service.policy.save');
     Route::post('/layanan/{case}', [Admin::class, 'caseUpdate'])->middleware('permission:cases.write')->name('case.update');
     Route::get('/tim', [Admin::class, 'team'])->middleware('permission:users.write')->name('team');
     Route::post('/tim', [Admin::class, 'teamSave'])->middleware('permission:users.write')->name('team.save');
+    Route::post('/tim/{user}', [Admin::class, 'teamUpdate'])->middleware('permission:users.write')->name('team.update');
     Route::post('/peran/{role}', [Admin::class, 'roleSave'])->middleware('permission:users.write')->name('role.save');
     Route::get('/laporan', [Admin::class, 'reports'])->middleware('permission:reports.read')->name('reports');
     Route::middleware('permission:catalog.write')->group(function () {
@@ -66,6 +81,6 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/master/{resource}', [Admin::class, 'resources'])->name('resources');
     Route::get('/master/{resource}/baru', [Admin::class, 'form'])->name('create');
     Route::get('/master/{resource}/{id}/ubah', [Admin::class, 'form'])->whereNumber('id')->name('edit');
-    Route::post('/master/{resource}',[Admin::class, 'save'])->name('store');
-    Route::post('/master/{resource}/{id}',[Admin::class, 'save'])->whereNumber('id')->name('update');
+    Route::post('/master/{resource}', [Admin::class, 'save'])->name('store');
+    Route::post('/master/{resource}/{id}', [Admin::class, 'save'])->whereNumber('id')->name('update');
 });

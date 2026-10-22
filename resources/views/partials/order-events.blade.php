@@ -1,0 +1,1 @@
+<div class="panel mt-4"><h2>Riwayat pesanan</h2>@forelse($order->events as $event)<div class="border-bottom py-3"><small>{{ $event->created_at->format('d M Y H:i') }} WIB</small><p class="mb-0">{{ $event->message }}</p></div>@empty<p>Riwayat terperinci mulai dicatat pada pembaruan operasional ini.</p>@endforelse</div>

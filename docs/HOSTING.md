@@ -42,9 +42,10 @@ MAIL_USERNAME=akun-smtp-anda
 MAIL_PASSWORD="isi_password_smtp"
 MAIL_FROM_ADDRESS=alamat-email-toko-anda
 MAIL_FROM_NAME=Dthree
+TRANSACTION_EMAIL_ENABLED=false
 ```
 
-Sesuaikan SMTP dengan penyedia email. Jangan mengandalkan mailer `log` untuk mengirim reset password. Jika memakai proxy/CDN, konfigurasi trusted proxy sesuai host; jangan mempercayai semua proxy secara otomatis.
+Sesuaikan SMTP dengan penyedia email. Biarkan `TRANSACTION_EMAIL_ENABLED=false` sampai pengiriman SMTP dari staging berhasil diuji, lalu ubah menjadi `true` dan jalankan `php artisan optimize`. Jangan mengandalkan mailer `log` untuk mengirim reset password. Jika memakai proxy/CDN, konfigurasi trusted proxy sesuai host; jangan mempercayai semua proxy secara otomatis.
 
 5. Siapkan aplikasi:
 
@@ -68,7 +69,7 @@ Jalankan `key:generate` hanya pada instalasi pertama. Mengganti `APP_KEY` akan m
 
 Perintah `orders:expire` melepaskan reservasi transfer/COD yang melewati batas. Bukti berstatus menunggu verifikasi menahan reservasi sampai keputusan Keuangan. Pantau umur antrean tersebut setiap hari.
 
-8. Jika memakai job queue, jalankan worker melalui Supervisor/fitur daemon hosting: `php artisan queue:work --tries=3 --timeout=90`. Implementasi alpha belum memiliki notifikasi transaksi otomatis; konfigurasi worker disiapkan untuk pengembangan lanjut. Reset password Laravel saat ini dikirim melalui mailer secara langsung.
+8. Scheduler mengirim outbox email transaksi melalui `notifications:send`, mencatat kegagalan, dan mencoba kembali maksimal lima kali. Periksa menu **Notifikasi transaksi** untuk pesan gagal atau status tidak pasti sebelum mengirim ulang. Uji SMTP dengan pesanan staging; jangan mengaktifkan email transaksi sebelum alamat pengirim dan penerimaan sudah terverifikasi. Reset password Laravel dikirim melalui mailer secara langsung.
 9. Buka `/masuk`, lalu lengkapi kategori, series, SKU, stok, foto asli, rekening, tarif per wilayah, WhatsApp, dan kebijakan. Pastikan halaman `syarat-ketentuan` dan `privasi` diterbitkan. Uji di staging sebelum membuka checkout. Tarif `*` berlaku untuk seluruh wilayah; gunakan hanya bila tarif tersebut benar-benar telah ditetapkan oleh operasional.
 
 ## Memperbarui setelah push GitHub

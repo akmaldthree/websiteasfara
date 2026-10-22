@@ -124,12 +124,13 @@ class CheckoutService
             }
             $q['coupon']?->increment('used');
             Audit::record('order.created', 'order:'.$order->id, null, ['number' => $order->number, 'total' => $order->total]);
+            OrderCommunication::record($order, 'created', 'created', 'Pesanan berhasil dibuat. Silakan lihat instruksi pembayaran dan batas waktunya pada halaman pesanan.');
 
             return $order;
         }, 3);
     }
 
-    private function check(bool $condition,string $message): void
+    private function check(bool $condition, string $message): void
     {
         if (! $condition) {
             throw ValidationException::withMessages(['checkout' => $message]);
