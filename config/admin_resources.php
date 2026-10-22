@@ -48,7 +48,8 @@ return [
         'minimum_quantity' => ['Mulai jumlah item SKU', 'number', 'required|integer|min:1|max:10000'],
         'price' => ['Harga per item (Rupiah)', 'number', 'required|integer|min:1|max:100000000'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'categories' => ['model' => Category::class, 'title' => 'Kategori', 'permission' => 'catalog.write', 'columns' => ['name' => 'Kategori', 'slug' => 'Slug', 'active' => 'Aktif'], 'fields' => [
-        'name' => ['Nama', 'text', 'required|string|max:100'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:100'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
+        'name' => ['Nama', 'text', 'required|string|max:100'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:100'], 'description' => ['Deskripsi kategori', 'textarea', 'nullable|string|max:5000'],
+        'seo_title' => ['Judul SEO', 'text', 'nullable|string|max:200'], 'seo_description' => ['Deskripsi SEO', 'textarea', 'nullable|string|max:300'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'series' => ['model' => Series::class, 'title' => 'Series', 'permission' => 'catalog.write', 'columns' => ['name' => 'Series', 'slug' => 'Slug', 'active' => 'Aktif'], 'fields' => [
         'category_id' => ['Kategori', 'category', 'required|exists:categories,id'], 'name' => ['Nama series', 'text', 'required|string|max:150'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:150'],
         'description' => ['Deskripsi', 'textarea', 'nullable|string|max:10000'], 'material' => ['Bahan', 'textarea', 'nullable|string|max:2000'], 'care' => ['Perawatan', 'textarea', 'nullable|string|max:2000'],

@@ -61,4 +61,19 @@ class ProductMediaTest extends TestCase
         $this->assertSame('Beige', $media->color);
         Storage::disk('public')->assertExists($media->image);
     }
+
+    public function test_category_metadata_and_shareable_variant_are_rendered(): void
+    {
+        $this->seed();
+        $category = Category::create(['name' => 'Abaya', 'slug' => 'abaya-seo', 'description' => 'Koleksi abaya Dthree.', 'seo_title' => 'Abaya Dthree Premium', 'seo_description' => 'Temukan abaya Dthree pilihan.', 'active' => true]);
+        $series = Series::create(['category_id' => $category->id, 'name' => 'Rania', 'slug' => 'rania-share', 'active' => true]);
+        $variant = Variant::create(['series_id' => $series->id, 'sku' => 'RANIA-OLIVE-L', 'color' => 'Olive', 'size' => 'L', 'price' => 320000, 'stock' => 4, 'weight' => 500]);
+
+        $this->get(route('catalog', ['category' => $category->slug]))
+            ->assertOk()->assertSee('Abaya Dthree Premium')->assertSee('Temukan abaya Dthree pilihan.')
+            ->assertSee('CollectionPage')->assertSee('category=abaya-seo', false);
+        $this->get(route('product', ['slug' => $series->slug, 'variant' => $variant->id]))
+            ->assertOk()->assertSee('Bagikan pilihan')->assertSee('history.replaceState', false)
+            ->assertSee('selected', false);
+    }
 }

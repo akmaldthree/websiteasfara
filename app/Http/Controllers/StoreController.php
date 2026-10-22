@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\CustomQuote;
 use App\Models\Order;
@@ -33,6 +34,7 @@ class StoreController extends Controller
     public function catalog(Request $r)
     {
         $q = Series::published()->with('category')->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price');
+        $currentCategory = null;
         if ($r->filled('q')) {
             $q->where(function ($q) use ($r) {
                 $term = '%'.mb_substr($r->string('q'), 0, 100).'%';
@@ -40,7 +42,8 @@ class StoreController extends Controller
             });
         }
         if ($r->filled('category')) {
-            $q->whereHas('category', fn ($c) => $c->where('slug', $r->input('category')));
+            $currentCategory = Category::where('active', true)->where('slug', $r->input('category'))->firstOrFail();
+            $q->where('category_id', $currentCategory->id);
         }
         $q->whereHas('variants', function ($v) use ($r) {
             $v->where('active', true);
@@ -60,7 +63,7 @@ class StoreController extends Controller
             'price_asc' => $q->orderBy('variants_min_price'),'price_desc' => $q->orderByDesc('variants_min_price'),default => $q->latest()
         };
 
-        return view('store.catalog', ['collections' => $q->paginate(12)->withQueryString()]);
+        return view('store.catalog', ['collections' => $q->paginate(12)->withQueryString(), 'currentCategory' => $currentCategory]);
     }
 
     public function product(Request $r, string $slug, PricingService $pricing)
