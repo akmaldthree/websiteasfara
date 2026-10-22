@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\BundleComponent;
+use App\Models\BusinessOrderRule;
 use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\Coupon;
@@ -33,7 +34,11 @@ return [
         'business_type' => ['Jenis bisnis', 'select', 'required|in:reseller,dropshipper,wholesale', ['reseller' => 'Reseller', 'dropshipper' => 'Dropshipper', 'wholesale' => 'Grosir']],
         'minimum_order_quantity' => ['Minimum total item per pesanan', 'number', 'required|integer|min:1|max:10000'],
         'minimum_order_amount' => ['Minimum nilai pesanan (Rupiah)', 'number', 'required|integer|min:0|max:1000000000'],
+        'discount_percent' => ['Diskon dasar dari harga retail (%)', 'number', 'required|integer|min:0|max:100'],
         'active' => ['Aktif', 'checkbox', 'boolean']]],
+    'business-order-rules' => ['model' => BusinessOrderRule::class, 'title' => 'Minimum pembelian bertarget B2B', 'permission' => 'catalog.write', 'columns' => ['price_group_id' => 'Grup ID', 'target_type' => 'Target', 'target_id' => 'ID target', 'minimum_quantity' => 'Min. item', 'minimum_amount' => 'Min. nilai', 'active' => 'Aktif'], 'fields' => [
+        'price_group_id' => ['Grup harga', 'price_group', 'required|exists:price_groups,id'], 'target_type' => ['Jenis target', 'select', 'required|in:category,series,variant', ['category' => 'Kategori', 'series' => 'Series', 'variant' => 'SKU']],
+        'target_id' => ['ID target', 'number', 'required|integer|min:1'], 'minimum_quantity' => ['Minimum item target', 'number', 'required|integer|min:0|max:10000'], 'minimum_amount' => ['Minimum nilai target', 'number', 'required|integer|min:0|max:1000000000'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'variant-prices' => ['model' => VariantPrice::class, 'title' => 'Harga bertingkat bisnis', 'permission' => 'catalog.write', 'columns' => ['variant_id' => 'SKU ID', 'price_group_id' => 'Grup ID', 'minimum_quantity' => 'Mulai jumlah', 'price' => 'Harga/item', 'active' => 'Aktif'], 'fields' => [
         'variant_id' => ['SKU', 'variant', 'required|exists:variants,id'], 'price_group_id' => ['Grup harga', 'price_group', 'required|exists:price_groups,id'],
         'minimum_quantity' => ['Mulai jumlah item SKU', 'number', 'required|integer|min:1|max:10000'],

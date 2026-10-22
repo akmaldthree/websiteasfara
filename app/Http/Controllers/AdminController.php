@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\BundleComponent;
 use App\Models\BusinessAccount;
+use App\Models\BusinessOrderRule;
 use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\CustomQuote;
@@ -203,6 +204,20 @@ class AdminController extends Controller
                 $rules[$key] = array_merge(explode('|', $rules[$key]), [Rule::unique($record->getTable(), $key)->ignore($record->id)]);
             }
         }
+        if ($resource === 'business-order-rules') {
+            $targetModel = match ($data['target_type']) {
+                'category' => Category::class, 'series' => Series::class, 'variant' => Variant::class,
+            };
+            if (! $targetModel::whereKey($data['target_id'])->exists()) {
+                throw ValidationException::withMessages(['target_id' => 'Target minimum B2B tidak ditemukan.']);
+            }
+            if (BusinessOrderRule::where('price_group_id', $data['price_group_id'])->where('target_type', $data['target_type'])->where('target_id', $data['target_id'])->when($id, fn ($query) => $query->whereKeyNot($id))->exists()) {
+                throw ValidationException::withMessages(['target_id' => 'Aturan untuk grup dan target ini sudah tersedia.']);
+            }
+            if ($data['minimum_quantity'] === 0 && $data['minimum_amount'] === 0) {
+                throw ValidationException::withMessages(['minimum_quantity' => 'Isi minimum item atau minimum nilai.']);
+            }
+        }
         $data = $r->validate($rules);
         if ($resource === 'measurement-templates') {
             try {
@@ -381,9 +396,10 @@ class AdminController extends Controller
     public function reviewBusinessAccount(Request $r, BusinessAccount $businessAccount)
     {
         $data = $r->validate([
-            'status' => 'required|in:approved,rejected',
+            'status' => 'required|in:approved,rejected,suspended',
             'price_group_id' => 'nullable|required_if:status,approved|exists:price_groups,id',
             'review_notes' => 'nullable|required_if:status,rejected|string|max:2000',
+            'expires_at' => 'nullable|date|after:today',
         ]);
         $group = isset($data['price_group_id']) ? PriceGroup::findOrFail($data['price_group_id']) : null;
         if ($data['status'] === 'approved' && (! $group?->active || $group->business_type !== $businessAccount->business_type)) {
@@ -399,6 +415,7 @@ class AdminController extends Controller
                 'reviewed_by' => $r->user()->id,
                 'review_notes' => $data['review_notes'] ?? null,
                 'reviewed_at' => now(),
+                'expires_at' => $data['status'] === 'approved' ? ($data['expires_at'] ?? null) : $account->expires_at,
             ]);
             Audit::record('business.application_reviewed', 'business_account:'.$account->id, $before, $account->toArray());
         });

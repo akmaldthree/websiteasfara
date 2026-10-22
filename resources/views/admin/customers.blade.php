@@ -14,8 +14,9 @@
                 @if($business && auth()->user()->allowed('users.write'))
                     <details><summary>Tinjau</summary>
                         <form method="post" action="{{ route('admin.business.review',$business) }}" class="mt-3" style="min-width:280px">@csrf
-                            <label>Status</label><select class="form-select mb-2" name="status"><option value="approved">Setujui</option><option value="rejected">Tolak</option></select>
+                            <label>Status</label><select class="form-select mb-2" name="status"><option value="approved" @selected($business->status==='approved')>Setujui / aktifkan</option><option value="suspended" @selected($business->status==='suspended')>Suspend</option><option value="rejected" @selected($business->status==='rejected')>Tolak</option></select>
                             <label>Grup harga</label><select class="form-select mb-2" name="price_group_id"><option value="">Pilih jika disetujui</option>@foreach($priceGroups as $group)<option value="{{ $group->id }}" @selected($business->price_group_id===$group->id)>{{ $group->name }} · {{ $group->business_type }}</option>@endforeach</select>
+                            <label>Berlaku sampai (opsional)</label><input class="form-control mb-2" type="date" name="expires_at" value="{{ $business->expires_at?->format('Y-m-d') }}">
                             <label>Catatan peninjauan</label><textarea class="form-control mb-2" name="review_notes" rows="2">{{ $business->review_notes }}</textarea>
                             <button class="btn btn-dark btn-sm">Simpan keputusan</button>
                         </form>

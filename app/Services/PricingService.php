@@ -17,7 +17,7 @@ class PricingService
 
         $account = $customer->businessAccount()->with('priceGroup')->first();
 
-        return $account?->status === 'approved' && $account->priceGroup?->active ? $account->priceGroup : null;
+        return $account?->status === 'approved' && (! $account->expires_at || $account->expires_at->isFuture()) && $account->priceGroup?->active ? $account->priceGroup : null;
     }
 
     /** @return array{price: int, minimum_quantity: int|null, group: PriceGroup|null} */
@@ -39,7 +39,9 @@ class PricingService
         $tier = $tiers->where('price_group_id', $group->id)->where('active', true)
             ->where('minimum_quantity', '<=', $quantity)->sortByDesc('minimum_quantity')->first();
 
-        return ['price' => $tier?->price ?? $variant->price, 'minimum_quantity' => $tier?->minimum_quantity, 'group' => $group];
+        $fallback = (int) floor($variant->price * (100 - $group->discount_percent) / 100);
+
+        return ['price' => $tier?->price ?? $fallback, 'minimum_quantity' => $tier?->minimum_quantity, 'group' => $group];
     }
 
     public function tiersFor(Variant $variant, ?User $customer): Collection

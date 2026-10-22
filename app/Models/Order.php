@@ -12,7 +12,7 @@ class Order extends Model
 
     protected function casts(): array
     {
-        return ['address' => 'array', 'shipping' => 'array', 'bank_accounts' => 'array', 'business_snapshot' => 'array', 'coupon_snapshot' => 'array', 'custom_cost' => 'integer', 'loyalty_points_redeemed' => 'integer', 'loyalty_discount' => 'integer', 'expires_at' => 'datetime', 'paid_at' => 'datetime', 'shipped_at' => 'datetime', 'completed_at' => 'datetime', 'received_at' => 'datetime', 'claimed_at' => 'datetime'];
+        return ['address' => 'array', 'shipping' => 'array', 'bank_accounts' => 'array', 'business_snapshot' => 'array', 'dropship_snapshot' => 'array', 'coupon_snapshot' => 'array', 'custom_cost' => 'integer', 'loyalty_points_redeemed' => 'integer', 'loyalty_discount' => 'integer', 'expires_at' => 'datetime', 'paid_at' => 'datetime', 'shipped_at' => 'datetime', 'completed_at' => 'datetime', 'received_at' => 'datetime', 'claimed_at' => 'datetime'];
     }
 
     public function items()

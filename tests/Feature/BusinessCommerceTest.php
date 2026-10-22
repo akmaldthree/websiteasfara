@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\BusinessAccount;
+use App\Models\BusinessOrderRule;
 use App\Models\Category;
 use App\Models\PriceGroup;
 use App\Models\Series;
@@ -141,6 +142,39 @@ class BusinessCommerceTest extends TestCase
 
         $this->expectException(ValidationException::class);
         $service->place([$this->variant->id => 3], $this->checkoutInput(), hash('sha256', 'changed-tier'), $customer->id, $service->fingerprint($quote));
+    }
+
+    public function test_group_discount_targeted_minimum_and_expiry_are_enforced(): void
+    {
+        $customer = User::factory()->create();
+        $account = BusinessAccount::factory()->approved($this->group)->create(['user_id' => $customer->id, 'business_type' => 'reseller']);
+        $this->group->update(['minimum_order_quantity' => 1, 'discount_percent' => 10]);
+        VariantPrice::where('price_group_id', $this->group->id)->delete();
+        BusinessOrderRule::create(['price_group_id' => $this->group->id, 'target_type' => 'variant', 'target_id' => $this->variant->id, 'minimum_quantity' => 2]);
+        $service = app(CheckoutService::class);
+        $quote = $service->quote([$this->variant->id => 2], $this->checkoutInput(), false, $customer);
+        $this->assertSame(270000, $quote['lines'][0]['unit_price']);
+
+        $this->expectException(ValidationException::class);
+        $service->quote([$this->variant->id => 1], $this->checkoutInput(), false, $customer);
+    }
+
+    public function test_expired_business_account_loses_private_price_and_dropship_sender_is_snapshotted(): void
+    {
+        $customer = User::factory()->create();
+        $account = BusinessAccount::factory()->approved($this->group)->create(['user_id' => $customer->id, 'business_type' => 'reseller', 'expires_at' => now()->subDay()]);
+        $service = app(CheckoutService::class);
+        $quote = $service->quote([$this->variant->id => 1], $this->checkoutInput(), false, $customer);
+        $this->assertNull($quote['price_group']);
+        $this->assertSame(300000, $quote['lines'][0]['unit_price']);
+
+        $dropship = PriceGroup::where('business_type', 'dropshipper')->firstOrFail();
+        $account->update(['business_type' => 'dropshipper', 'price_group_id' => $dropship->id, 'expires_at' => now()->addMonth()]);
+        $input = $this->checkoutInput() + ['sender_name' => 'Toko Pelanggan', 'sender_phone' => '081234567899'];
+        $quote = $service->quote([$this->variant->id => 1], $input, false, $customer);
+        $order = $service->place([$this->variant->id => 1], $input, hash('sha256', 'dropship-order'), $customer->id, $service->fingerprint($quote));
+        $this->assertSame('Toko Pelanggan', $order->dropship_snapshot['name']);
+        $this->assertSame('081234567899', $order->dropship_snapshot['phone']);
     }
 
     /** @return array<string, mixed> */

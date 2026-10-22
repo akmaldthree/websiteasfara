@@ -10,6 +10,7 @@
         @endforeach
         <p class="mt-4"><strong>{{ $data['name'] }}</strong> · {{ $data['phone'] }}<br>{{ $data['detail'] }}<br>{{ $data['district'] }}, {{ $data['city'] }}, {{ $data['province'] }} {{ $data['postal_code'] }}</p>
         <p>{{ $quote['rate']->courier }} {{ $quote['rate']->service }} · {{ $quote['rate']->estimate }}<br>Pembayaran: {{ $data['payment_method']==='cod'?'COD':'Transfer bank' }}</p>
+        @if(!empty($data['sender_name']))<p><strong>Pengirim dropship:</strong> {{ $data['sender_name'] }} @if(!empty($data['sender_phone']))· {{ $data['sender_phone'] }}@endif</p>@endif
         @foreach(['subtotal'=>'Subtotal produk','custom_cost'=>'Biaya custom','shipping_cost'=>'Ongkir','discount'=>'Diskon voucher','loyalty_discount'=>'Potongan loyalty','shipping_discount'=>'Subsidi ongkir','cod_fee'=>'Biaya COD'] as $key=>$label)<div class="summary-row"><span>{{ $label }}</span><span>{{ in_array($key,['discount','loyalty_discount','shipping_discount'])?'− ':'' }}@rupiah($quote[$key])</span></div>@endforeach
         <div class="summary-row total"><span>Total</span><span>@rupiah($quote['total'])</span></div>
         <form action="{{ route('checkout.place') }}" method="post">@csrf<input type="hidden" name="checkout_key" value="{{ session('checkout_key') }}"><button class="btn btn-dark w-100">Buat pesanan · @rupiah($quote['total'])</button></form>

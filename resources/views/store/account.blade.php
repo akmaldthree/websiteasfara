@@ -52,9 +52,9 @@
         <span class="eyebrow">PROGRAM MITRA DTHREE</span>
         <h2 class="mt-3">Akun reseller, dropshipper, atau grosir</h2>
         @if($businessAccount)
-            <p>Status pengajuan: <span class="badge">{{ strtoupper($businessAccount->status) }}</span></p>
+            <p>Status pengajuan: <span class="badge">{{ $businessAccount->status==='approved' && $businessAccount->expires_at?->isPast() ? 'EXPIRED' : strtoupper($businessAccount->status) }}</span> @if($businessAccount->expires_at)· berlaku sampai {{ $businessAccount->expires_at->format('d M Y') }}@endif</p>
             <p><strong>{{ $businessAccount->business_name }}</strong> · {{ $businessAccount->business_type==='wholesale'?'Grosir':ucfirst($businessAccount->business_type) }}<br><small>Kanal penjualan: {{ $businessAccount->sales_channel }}</small></p>
-            @if($businessAccount->status==='approved')
+            @if($businessAccount->status==='approved' && (!$businessAccount->expires_at || $businessAccount->expires_at->isFuture()))
                 <p>Grup harga <strong>{{ $businessAccount->priceGroup?->name }}</strong> aktif untuk akun ini. Masuk ke halaman produk untuk melihat tier harga privat.</p>
             @elseif($businessAccount->status==='rejected')
                 <p>{{ $businessAccount->review_notes }}</p>

@@ -15,7 +15,7 @@ class BusinessAccount extends Model
 
     protected function casts(): array
     {
-        return ['submitted_at' => 'datetime', 'reviewed_at' => 'datetime'];
+        return ['submitted_at' => 'datetime', 'reviewed_at' => 'datetime', 'expires_at' => 'datetime'];
     }
 
     public function user()

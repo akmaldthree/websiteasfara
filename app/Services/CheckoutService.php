@@ -104,6 +104,17 @@ class CheckoutService
             $quantity = array_sum(array_column($lines, 'quantity'));
             $this->check($quantity >= $group->minimum_order_quantity, "Minimum grup {$group->name} adalah {$group->minimum_order_quantity} item per pesanan.");
             $this->check($merchandiseTotal >= $group->minimum_order_amount, "Minimum nilai pesanan grup {$group->name} adalah Rp ".number_format($group->minimum_order_amount, 0, ',', '.').'.');
+            foreach ($group->orderRules()->where('active', true)->get() as $rule) {
+                $matched = array_filter($lines, fn ($line) => match ($rule->target_type) {
+                    'category' => $line['variant']->series->category_id === $rule->target_id,
+                    'series' => $line['variant']->series_id === $rule->target_id,
+                    'variant' => $line['variant']->id === $rule->target_id,
+                    default => false,
+                });
+                $quantity = array_sum(array_column($matched, 'quantity'));
+                $amount = array_sum(array_column($matched, 'total'));
+                $this->check($quantity >= $rule->minimum_quantity && $amount >= $rule->minimum_amount, "Minimum pembelian bertarget untuk grup {$group->name} belum terpenuhi.");
+            }
         }
         $weight = array_sum(array_map(fn ($l) => $l['unit_weight'] * $l['quantity'], $lines));
         $rate = ShippingRate::where('active', true)->find($input['shipping_rate_id'] ?? 0);
@@ -195,7 +206,7 @@ class CheckoutService
     {
         return hash('sha256', json_encode([
             'items' => array_map(fn ($line) => [$line['variant']->id, $line['variant']->sku, $line['quantity'], $line['unit_price'], $line['price_tier_minimum'], $line['custom_cost'], $line['customization'], $line['bundle'], $line['unit_weight'], $line['variant']->fulfillment, $line['variant']->lead_time], $quote['lines']),
-            'price_group' => $quote['price_group'] ? [$quote['price_group']->id, $quote['price_group']->name, $quote['price_group']->business_type, $quote['price_group']->minimum_order_quantity, $quote['price_group']->minimum_order_amount] : null,
+            'price_group' => $quote['price_group'] ? [$quote['price_group']->id, $quote['price_group']->name, $quote['price_group']->business_type, $quote['price_group']->minimum_order_quantity, $quote['price_group']->minimum_order_amount, $quote['price_group']->discount_percent] : null,
             'shipping' => [$quote['rate']->id, $quote['rate']->courier, $quote['rate']->service, $quote['rate']->estimate],
             'coupons' => $quote['coupons']->map(fn ($coupon) => [$coupon->id, $coupon->code, $coupon->type, $coupon->value, $coupon->maximum, $coupon->target_type, $coupon->target_id, $coupon->segment, $coupon->price_group_id, $coupon->per_user_limit, $coupon->combinable, $coupon->priority, $quote['coupon_benefits'][$coupon->id]])->values()->all(),
             'amounts' => array_intersect_key($quote, array_flip(['subtotal', 'custom_cost', 'shipping_cost', 'discount', 'shipping_discount', 'cod_fee', 'loyalty_points', 'loyalty_discount', 'total'])),
@@ -220,7 +231,8 @@ class CheckoutService
             $order = Order::create([
                 'number' => 'D3-'.now()->format('ymd').'-'.strtoupper(Str::random(8)), 'checkout_key' => $key, 'user_id' => $userId,
                 'price_group_id' => $q['price_group']?->id,
-                'business_snapshot' => $q['price_group'] ? ['name' => $q['price_group']->name, 'slug' => $q['price_group']->slug, 'business_type' => $q['price_group']->business_type, 'minimum_order_quantity' => $q['price_group']->minimum_order_quantity, 'minimum_order_amount' => $q['price_group']->minimum_order_amount] : null,
+                'business_snapshot' => $q['price_group'] ? ['name' => $q['price_group']->name, 'slug' => $q['price_group']->slug, 'business_type' => $q['price_group']->business_type, 'minimum_order_quantity' => $q['price_group']->minimum_order_quantity, 'minimum_order_amount' => $q['price_group']->minimum_order_amount, 'discount_percent' => $q['price_group']->discount_percent] : null,
+                'dropship_snapshot' => $q['price_group']?->business_type === 'dropshipper' && ! empty($input['sender_name']) ? ['name' => $input['sender_name'], 'phone' => $input['sender_phone'] ?? null] : null,
                 'name' => $input['name'], 'phone' => $input['phone'], 'email' => $input['email'] ?? null,
                 'address' => array_intersect_key($input, array_flip(['province', 'city', 'district', 'postal_code', 'detail'])),
                 'payment_method' => $input['payment_method'], 'subtotal' => $q['subtotal'], 'custom_cost' => $q['custom_cost'], 'shipping_cost' => $q['shipping_cost'],

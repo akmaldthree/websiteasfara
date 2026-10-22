@@ -15,7 +15,7 @@ class PriceGroup extends Model
 
     protected function casts(): array
     {
-        return ['minimum_order_quantity' => 'integer', 'minimum_order_amount' => 'integer', 'active' => 'boolean'];
+        return ['minimum_order_quantity' => 'integer', 'minimum_order_amount' => 'integer', 'discount_percent' => 'integer', 'active' => 'boolean'];
     }
 
     public function prices()
@@ -26,5 +26,10 @@ class PriceGroup extends Model
     public function accounts()
     {
         return $this->hasMany(BusinessAccount::class);
+    }
+
+    public function orderRules()
+    {
+        return $this->hasMany(BusinessOrderRule::class);
     }
 }
