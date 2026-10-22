@@ -21,6 +21,11 @@
     <div class="stat"><span>Pelanggan membeli berulang</span><strong>{{ $repeatCustomers }}</strong></div>
     <div class="stat"><span>SKU stok rendah</span><strong>{{ $lowStock }}</strong></div>
 </div>
+<div class="panel mt-4"><div class="section-top"><div><h2>Funnel storefront</h2><small>{{ $visitors }} pengunjung anonim pada periode ini</small></div></div><div class="row g-3">
+    @foreach(['view_home'=>'Beranda','view_category'=>'Katalog','search'=>'Pencarian','view_item'=>'Detail produk','add_to_cart'=>'Tambah keranjang','begin_checkout'=>'Mulai checkout','shipping_selected'=>'Pilih ongkir','payment_selected'=>'Pilih pembayaran','purchase'=>'Pesanan dibuat'] as $event=>$label)
+        <div class="col-6 col-lg-3"><div class="stat"><span>{{ $label }}</span><strong>{{ $analytics[$event] ?? 0 }}</strong></div></div>
+    @endforeach
+</div><p class="small mt-3 mb-0">Pengunjung disamarkan menggunakan hash sesi. Event tidak menyimpan nama, email, telepon, alamat, atau kata pencarian.</p></div>
 <div class="row g-4 mt-1">
     <div class="col-lg-7"><div class="panel"><h2>Produk terjual</h2><div class="table-responsive"><table class="table">
         <thead><tr><th>SKU / produk</th><th>Unit</th><th>Nilai item</th></tr></thead>

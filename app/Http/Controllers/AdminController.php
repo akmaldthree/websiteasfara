@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AnalyticsEvent;
 use App\Models\AuditLog;
 use App\Models\BundleComponent;
 use App\Models\BusinessAccount;
@@ -489,6 +490,7 @@ class AdminController extends Controller
         $data['bank_accounts'] = $banks;
         $data['cod_enabled'] = $r->boolean('cod_enabled');
         $data['loyalty_enabled'] = $r->boolean('loyalty_enabled');
+        $data['analytics_enabled'] = $r->boolean('analytics_enabled');
         $data['checkout_enabled'] = $r->boolean('checkout_enabled');
         if ($data['checkout_enabled'] && ! count($banks)) {
             throw ValidationException::withMessages(['bank_text' => 'Isi rekening sebelum membuka checkout.']);
@@ -633,13 +635,15 @@ class AdminController extends Controller
             ->groupBy('order_items.sku', 'order_items.name')->orderByDesc('quantity')->limit(8)->get();
         $shipping = (clone $paid)->get()->groupBy(fn (Order $order) => ($order->shipping['courier'] ?? 'Tanpa kurir').' '.($order->shipping['service'] ?? ''))
             ->map(fn ($orders) => ['orders' => $orders->count(), 'value' => $orders->sum('shipping_cost')]);
+        $analytics = AnalyticsEvent::whereBetween('created_at', $range)->select('event', DB::raw('COUNT(*) AS total'))->groupBy('event')->pluck('total', 'event');
+        $visitors = AnalyticsEvent::whereBetween('created_at', $range)->distinct()->count('visitor_hash');
 
         return view('admin.reports', [
             'from' => $from, 'to' => $to, 'count' => (clone $q)->count(), 'paidCount' => (clone $paid)->count(),
             'gross' => $gross, 'refunds' => $refunds, 'net' => max(0, $gross - $refunds),
             'aov' => (clone $paid)->count() ? (int) round($gross / (clone $paid)->count()) : 0,
             'customerCount' => $paidCustomers->count(), 'repeatCustomers' => $paidCustomers->filter(fn ($orders) => $orders->count() > 1)->count(),
-            'topProducts' => $topProducts, 'shipping' => $shipping,
+            'topProducts' => $topProducts, 'shipping' => $shipping, 'analytics' => $analytics, 'visitors' => $visitors,
             'lowStock' => Variant::whereRaw('stock - reserved <= low_stock')->count(),
             'orders' => $q->withSum('refunds', 'amount')->latest()->paginate(20)->withQueryString(),
         ]);

@@ -12,6 +12,7 @@ use App\Models\Series;
 use App\Models\ShippingRate;
 use App\Models\Variant;
 use App\Services\AfterSalesService;
+use App\Services\Analytics;
 use App\Services\Audit;
 use App\Services\CartService;
 use App\Services\CheckoutService;
@@ -26,12 +27,14 @@ use Illuminate\Validation\ValidationException;
 
 class StoreController extends Controller
 {
-    public function home()
+    public function home(Request $request, Analytics $analytics)
     {
+        $analytics->record($request, 'view_home');
+
         return view('store.home', ['collections' => Series::published()->with('category')->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price')->orderByDesc('featured')->latest()->take(4)->get(), 'contentEntries' => ContentEntry::published()->whereIn('type', ['banner', 'home_section'])->orderBy('sort_order')->get()]);
     }
 
-    public function catalog(Request $r)
+    public function catalog(Request $r, Analytics $analytics)
     {
         $q = Series::published()->with('category')->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price');
         $currentCategory = null;
@@ -63,10 +66,17 @@ class StoreController extends Controller
             'price_asc' => $q->orderBy('variants_min_price'),'price_desc' => $q->orderByDesc('variants_min_price'),default => $q->latest()
         };
 
-        return view('store.catalog', ['collections' => $q->paginate(12)->withQueryString(), 'currentCategory' => $currentCategory]);
+        $collections = $q->paginate(12)->withQueryString();
+        if ($r->filled('q')) {
+            $analytics->record($r, 'search', ['results' => $collections->total()]);
+        } else {
+            $analytics->record($r, 'view_category', ['category' => $currentCategory?->slug ?: 'all', 'results' => $collections->total()]);
+        }
+
+        return view('store.catalog', compact('collections', 'currentCategory'));
     }
 
-    public function product(Request $r, string $slug, PricingService $pricing)
+    public function product(Request $r, string $slug, PricingService $pricing, Analytics $analytics)
     {
         $series = Series::published()->where('slug', $slug)->with([
             'category',
@@ -77,6 +87,7 @@ class StoreController extends Controller
         $businessTiers = $series->variants->mapWithKeys(fn (Variant $variant) => [$variant->id => $pricing->tiersFor($variant, $r->user())]);
         $reviews = Review::where('status', 'approved')->whereHas('variant', fn ($query) => $query->where('series_id', $series->id))->with('user')->latest()->get();
         $wishlistIds = $r->user()?->wishlistItems()->whereIn('variant_id', $series->variants->pluck('id'))->pluck('variant_id')->all() ?? [];
+        $analytics->record($r, 'view_item', ['series_id' => $series->id, 'variant_id' => $r->integer('variant') ?: null]);
 
         return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'reviews', 'wishlistIds'));
     }
@@ -89,7 +100,7 @@ class StoreController extends Controller
         return view('store.cart', compact('cart', 'lines'));
     }
 
-    public function add(Request $r, CheckoutService $service, CartService $cartService)
+    public function add(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics)
     {
         $d = $r->validate(['variant_id' => 'required|integer|exists:variants,id', 'quantity' => 'required|integer|min:1|max:100']);
         $variant = Variant::findOrFail($d['variant_id']);
@@ -104,6 +115,7 @@ class StoreController extends Controller
             $cartService->sync($r->user(), $cart, $r->session()->get('cart_customizations', []));
         }
         $r->session()->forget('checkout_key');
+        $analytics->record($r, 'add_to_cart', ['variant_id' => $variant->id, 'sku' => $variant->sku, 'quantity' => $d['quantity'], 'value' => $variant->price * $d['quantity']]);
 
         return redirect()->route('cart')->with('success', 'Pilihan Anda sudah ditambahkan.');
     }
@@ -129,7 +141,7 @@ class StoreController extends Controller
         return back();
     }
 
-    public function checkout(Request $r, CheckoutService $service)
+    public function checkout(Request $r, CheckoutService $service, Analytics $analytics)
     {
         if (! $r->session()->get('cart')) {
             return redirect()->route('cart');
@@ -141,6 +153,7 @@ class StoreController extends Controller
         $rates = ShippingRate::where('active', true)->get();
 
         $businessAccount = $r->user()?->businessAccount;
+        $analytics->record($r, 'begin_checkout', ['items' => array_sum(array_column($lines, 'quantity')), 'value' => array_sum(array_column($lines, 'total'))]);
 
         return view('store.checkout', compact('lines', 'rates', 'businessAccount'));
     }
@@ -156,17 +169,19 @@ class StoreController extends Controller
         ]);
     }
 
-    public function review(Request $r, CheckoutService $service)
+    public function review(Request $r, CheckoutService $service, Analytics $analytics)
     {
         $data = $this->checkoutData($r);
         $quote = $service->quote($r->session()->get('cart', []), $data, false, $r->user(), $r->session()->get('cart_customizations', []));
         $r->session()->put('checkout_data', $data);
         $r->session()->put('checkout_quote', $service->fingerprint($quote));
+        $analytics->record($r, 'shipping_selected', ['courier' => $quote['rate']->courier, 'service' => $quote['rate']->service, 'value' => $quote['shipping_cost']]);
+        $analytics->record($r, 'payment_selected', ['method' => $data['payment_method'], 'value' => $quote['total']]);
 
         return view('store.review', compact('data', 'quote'));
     }
 
-    public function place(Request $r, CheckoutService $service, CartService $cartService)
+    public function place(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics)
     {
         $r->validate(['checkout_key' => 'required|string|size:64']);
         abort_unless(hash_equals($r->session()->get('checkout_key', ''), $r->input('checkout_key')), 419);
@@ -181,6 +196,7 @@ class StoreController extends Controller
         if ($r->user()) {
             $cartService->sync($r->user(), []);
         }
+        $analytics->record($r, 'purchase', ['value' => $o->total, 'items' => $o->items()->sum('quantity'), 'method' => $o->payment_method]);
 
         return redirect($o->customerUrl())->with('success', 'Pesanan berhasil dibuat. Simpan tautan halaman ini.');
     }
