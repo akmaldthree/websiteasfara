@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\BusinessAccount;
+use App\Models\CustomQuote;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentProof;
@@ -18,6 +19,7 @@ use App\Models\Variant;
 use App\Models\VariantPrice;
 use App\Services\AfterSalesService;
 use App\Services\Audit;
+use App\Services\CustomProductService;
 use App\Services\OrderWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -55,9 +57,41 @@ class AdminController extends Controller
 
     public function order(Order $order)
     {
-        $order->load('items', 'proofs', 'refunds', 'cases', 'events');
+        $order->load('items.productionMilestones', 'proofs', 'refunds', 'cases', 'events');
 
         return view('admin.order', compact('order'));
+    }
+
+    public function customQuotes(Request $request)
+    {
+        $query = CustomQuote::with(['user', 'variant.series']);
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status')->toString());
+        }
+
+        return view('admin.custom-quotes', ['quotes' => $query->latest()->paginate(20)->withQueryString()]);
+    }
+
+    public function customQuoteAction(Request $request, CustomQuote $customQuote, CustomProductService $service)
+    {
+        $data = $request->validate([
+            'status' => 'required|in:quoted,rejected',
+            'surcharge' => 'nullable|required_if:status,quoted|integer|min:0|max:100000000',
+            'lead_time' => 'nullable|required_if:status,quoted|string|max:150',
+            'admin_notes' => 'required|string|min:3|max:2000',
+            'valid_days' => 'required_if:status,quoted|nullable|integer|between:1,60',
+        ]);
+        $service->quote($customQuote, $data + ['valid_days' => 7]);
+
+        return back()->with('success', 'Penawaran ukuran custom diperbarui.');
+    }
+
+    public function production(Request $request, OrderItem $item, CustomProductService $service)
+    {
+        $data = $request->validate(['status' => 'required|in:reviewing,approved,production,quality_check,ready_to_ship', 'note' => 'nullable|string|max:1000']);
+        $service->updateProduction($item, $data['status'], $data['note'] ?? null);
+
+        return back()->with('success', 'Status produksi diperbarui.');
     }
 
     public function action(Request $r, Order $order, OrderWorkflow $workflow)
@@ -130,6 +164,28 @@ class AdminController extends Controller
             }
         }
         $data = $r->validate($rules);
+        if ($resource === 'measurement-templates') {
+            try {
+                $fields = json_decode($data['fields'], true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                throw ValidationException::withMessages(['fields' => 'Field ukuran harus berupa JSON yang valid.']);
+            }
+            if (! is_array($fields) || $fields === []) {
+                throw ValidationException::withMessages(['fields' => 'Tambahkan minimal satu field ukuran.']);
+            }
+            foreach ($fields as $field) {
+                if (! is_array($field) || ! preg_match('/^[a-z][a-z0-9_]{1,49}$/', $field['key'] ?? '') || empty($field['label']) || empty($field['unit'])) {
+                    throw ValidationException::withMessages(['fields' => 'Setiap field wajib memiliki key, label, dan unit. Key memakai huruf kecil/angka/underscore.']);
+                }
+                if (isset($field['min'], $field['max']) && $field['min'] > $field['max']) {
+                    throw ValidationException::withMessages(['fields' => 'Nilai minimum field tidak boleh melebihi maksimum.']);
+                }
+            }
+            $data['fields'] = $fields;
+            if ($data['pricing_mode'] === 'fixed' && $data['surcharge'] === null) {
+                throw ValidationException::withMessages(['surcharge' => 'Biaya tetap wajib diisi untuk mekanisme ini.']);
+            }
+        }
         if ($resource === 'coupons' && $data['type'] === 'percent' && $data['value'] > 100) {
             throw ValidationException::withMessages(['value' => 'Persentase maksimal 100.']);
         }
@@ -137,6 +193,12 @@ class AdminController extends Controller
             throw ValidationException::withMessages(['uses_product_type' => 'Struktur series dengan varian tidak dapat diubah.']);
         }
         if ($resource === 'variants') {
+            if ($data['fulfillment'] === 'custom_made' && empty($data['measurement_template_id'])) {
+                throw ValidationException::withMessages(['measurement_template_id' => 'Pilih template ukuran untuk varian custom.']);
+            }
+            if ($data['fulfillment'] !== 'custom_made') {
+                $data['measurement_template_id'] = null;
+            }
             if ($record->exists && OrderItem::where('variant_id', $record->id)->exists()) {
                 foreach (['sku', 'series_id', 'product_type', 'color', 'size', 'fulfillment'] as $key) {
                     if ((string) $record->$key !== (string) $data[$key]) {

@@ -1,0 +1,11 @@
+@extends('layouts.admin')
+@section('title','Penawaran custom')
+@section('content')
+<div class="admin-heading"><div><span class="eyebrow">UKURAN & HARGA</span><h1>Penawaran custom</h1><p>Tinjau ukuran pelanggan lalu tentukan biaya dan estimasi produksi.</p></div></div>
+<form class="filter-bar mb-4"><select name="status" class="form-select"><option value="">Semua status</option>@foreach(['submitted','quoted','accepted','rejected','ordered'] as $status)<option value="{{ $status }}" @selected(request('status')===$status)>{{ strtoupper($status) }}</option>@endforeach</select><button class="btn btn-outline-dark">Terapkan</button></form>
+@forelse($quotes as $quote)<div class="panel mb-4"><div class="summary-row"><span><strong>{{ $quote->number }}</strong><br>{{ $quote->user->name }} · {{ $quote->variant->series->name }} · {{ $quote->variant->sku }}</span><span class="badge">{{ strtoupper($quote->status) }}</span></div>
+<p>@foreach($quote->measurements as $key=>$value)<strong>{{ $key }}:</strong> {{ $value }}{{ !$loop->last?' · ':'' }}@endforeach</p>
+@if(in_array($quote->status,['submitted','quoted']))<form method="post" action="{{ route('admin.custom-quotes.update',$quote) }}">@csrf<div class="form-grid"><div><label>Status</label><select name="status" class="form-select"><option value="quoted">Kirim penawaran</option><option value="rejected">Tolak</option></select></div><div><label>Biaya custom</label><input name="surcharge" type="number" min="0" class="form-control" value="{{ $quote->surcharge }}"></div><div><label>Estimasi produksi</label><input name="lead_time" class="form-control" value="{{ $quote->lead_time }}"></div><div><label>Berlaku (hari)</label><input name="valid_days" type="number" min="1" max="60" value="7" class="form-control"></div><div class="span-2"><label>Catatan untuk pelanggan</label><textarea name="admin_notes" class="form-control" required>{{ $quote->admin_notes }}</textarea></div></div><button class="btn btn-dark mt-3">Simpan & kirim</button></form>@else<p>{{ $quote->admin_notes }}</p>@endif
+</div>@empty<div class="empty-state"><p>Belum ada permintaan penawaran.</p></div>@endforelse
+{{ $quotes->links() }}
+@endsection

@@ -13,13 +13,14 @@
             <div class="{{ $field[1]==='textarea'?'span-2':'' }}">
                 <label for="{{ $key }}">{{ $field[0] }}</label>
                 @if($field[1]==='textarea')
-                    <textarea id="{{ $key }}" name="{{ $key }}" class="form-control" rows="5">{{ $value }}</textarea>
-                @elseif(in_array($field[1],['select','category','series','variant','price_group']))
+                    <textarea id="{{ $key }}" name="{{ $key }}" class="form-control" rows="5">{{ is_array($value) ? json_encode($value, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE) : $value }}</textarea>
+                @elseif(in_array($field[1],['select','category','series','variant','price_group','measurement_template']))
                     @php($options=match($field[1]){
                         'category'=>\App\Models\Category::pluck('name','id'),
                         'series'=>\App\Models\Series::pluck('name','id'),
                         'variant'=>\App\Models\Variant::orderBy('sku')->pluck('sku','id'),
                         'price_group'=>\App\Models\PriceGroup::orderBy('name')->pluck('name','id'),
+                        'measurement_template'=>[''=>'— Pilih template —']+\App\Models\MeasurementTemplate::orderBy('name')->pluck('name','id')->all(),
                         default=>$field[3],
                     })
                     <select id="{{ $key }}" name="{{ $key }}" class="form-select">

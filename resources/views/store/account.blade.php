@@ -36,6 +36,14 @@
             </details>
         </div></div>
     </div>
+    @if($customQuotes->isNotEmpty())
+    <div class="panel mt-4"><span class="eyebrow">UKURAN CUSTOM</span><h2 class="mt-3">Penawaran saya</h2>
+        @foreach($customQuotes as $quote)<div class="border-bottom py-3"><div class="summary-row"><span><strong>{{ $quote->number }}</strong><br>{{ $quote->variant->series->name }} · {{ $quote->variant->sku }}<br><small>Status {{ strtoupper($quote->status) }} @if($quote->expires_at)· berlaku sampai {{ $quote->expires_at->format('d M Y H:i') }}@endif</small></span><span>@if($quote->surcharge!==null)@rupiah($quote->surcharge)@endif</span></div>
+            @if($quote->admin_notes)<p>{{ $quote->admin_notes }}</p>@endif
+            @if($quote->status==='quoted' && $quote->expires_at?->isFuture())<form method="post" action="{{ route('custom.accept',$quote) }}">@csrf<button class="btn btn-dark btn-sm">Setujui dan masukkan ke keranjang</button></form>@endif
+        </div>@endforeach
+    </div>
+    @endif
     <div class="panel mt-4">
         <span class="eyebrow">PROGRAM MITRA DTHREE</span>
         <h2 class="mt-3">Akun reseller, dropshipper, atau grosir</h2>

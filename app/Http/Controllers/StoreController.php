@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CustomQuote;
 use App\Models\Order;
 use App\Models\Page;
 use App\Models\Series;
@@ -10,6 +11,7 @@ use App\Models\Variant;
 use App\Services\AfterSalesService;
 use App\Services\Audit;
 use App\Services\CheckoutService;
+use App\Services\CustomProductService;
 use App\Services\OrderCommunication;
 use App\Services\PricingService;
 use Illuminate\Http\Request;
@@ -60,7 +62,7 @@ class StoreController extends Controller
 
     public function product(Request $r, string $slug, PricingService $pricing)
     {
-        $series = Series::published()->where('slug', $slug)->with(['category', 'variants' => fn ($q) => $q->where('active', true)->orderBy('id')])->firstOrFail();
+        $series = Series::published()->where('slug', $slug)->with(['category', 'variants' => fn ($q) => $q->where('active', true)->with('measurementTemplate')->orderBy('id')])->firstOrFail();
         $priceGroup = $pricing->groupFor($r->user());
         $businessTiers = $series->variants->mapWithKeys(fn (Variant $variant) => [$variant->id => $pricing->tiersFor($variant, $r->user())]);
 
@@ -70,7 +72,7 @@ class StoreController extends Controller
     public function cart(Request $r, CheckoutService $service)
     {
         $cart = $r->session()->get('cart', []);
-        $lines = $cart ? $service->lines($cart, false, $r->user()) : [];
+        $lines = $cart ? $service->lines($cart, false, $r->user(), $r->session()->get('cart_customizations', [])) : [];
 
         return view('store.cart', compact('cart', 'lines'));
     }
@@ -78,9 +80,13 @@ class StoreController extends Controller
     public function add(Request $r, CheckoutService $service)
     {
         $d = $r->validate(['variant_id' => 'required|integer|exists:variants,id', 'quantity' => 'required|integer|min:1|max:100']);
+        $variant = Variant::findOrFail($d['variant_id']);
+        if ($variant->fulfillment === 'custom_made') {
+            throw ValidationException::withMessages(['variant_id' => 'Gunakan formulir ukuran custom pada halaman produk.']);
+        }
         $cart = $r->session()->get('cart', []);
         $cart[$d['variant_id']] = ($cart[$d['variant_id']] ?? 0) + $d['quantity'];
-        $service->lines($cart, false, $r->user());
+        $service->lines($cart, false, $r->user(), $r->session()->get('cart_customizations', []));
         $r->session()->put('cart', $cart);
         $r->session()->forget('checkout_key');
 
@@ -93,6 +99,9 @@ class StoreController extends Controller
         $cart = $r->session()->get('cart', []);
         if ($d['quantity'] === 0) {
             unset($cart[$d['variant_id']]);
+            $customizations = $r->session()->get('cart_customizations', []);
+            unset($customizations[$d['variant_id']]);
+            $r->session()->put('cart_customizations', $customizations);
         } elseif (isset($cart[$d['variant_id']])) {
             $cart[$d['variant_id']] = $d['quantity'];
         }
@@ -110,7 +119,7 @@ class StoreController extends Controller
         if (! $r->session()->has('checkout_key')) {
             $r->session()->put('checkout_key', Str::random(64));
         }
-        $lines = $service->lines($r->session()->get('cart'), false, $r->user());
+        $lines = $service->lines($r->session()->get('cart'), false, $r->user(), $r->session()->get('cart_customizations', []));
         $rates = ShippingRate::where('active', true)->get();
 
         return view('store.checkout', compact('lines', 'rates'));
@@ -129,7 +138,7 @@ class StoreController extends Controller
     public function review(Request $r, CheckoutService $service)
     {
         $data = $this->checkoutData($r);
-        $quote = $service->quote($r->session()->get('cart', []), $data, false, $r->user());
+        $quote = $service->quote($r->session()->get('cart', []), $data, false, $r->user(), $r->session()->get('cart_customizations', []));
         $r->session()->put('checkout_data', $data);
         $r->session()->put('checkout_quote', $service->fingerprint($quote));
 
@@ -146,10 +155,45 @@ class StoreController extends Controller
         $data = $r->session()->get('checkout_data');
         abort_unless($data, 419);
         abort_unless($r->session()->has('checkout_quote'), 419);
-        $o = $service->place($r->session()->get('cart', []), $data, $r->input('checkout_key'), $r->user()?->id, $r->session()->get('checkout_quote'));
-        $r->session()->forget(['cart', 'checkout_data', 'checkout_quote']);
+        $o = $service->place($r->session()->get('cart', []), $data, $r->input('checkout_key'), $r->user()?->id, $r->session()->get('checkout_quote'), $r->session()->get('cart_customizations', []));
+        $r->session()->forget(['cart', 'cart_customizations', 'checkout_data', 'checkout_quote']);
 
         return redirect($o->customerUrl())->with('success', 'Pesanan berhasil dibuat. Simpan tautan halaman ini.');
+    }
+
+    public function customize(Request $r, Variant $variant, CustomProductService $service)
+    {
+        $data = $r->validate(['request_key' => 'required|uuid', 'measurements' => 'required|array', 'measurement_approval' => 'accepted']);
+        if ($variant->measurementTemplate?->pricing_mode === 'quote') {
+            if (! $r->user()) {
+                return redirect()->route('login')->withErrors(['custom' => 'Masuk atau daftar untuk meminta penawaran custom.']);
+            }
+            $quote = $service->requestQuote($variant, $r->user(), $data['measurements'], $data['request_key']);
+
+            return redirect()->route('account')->with('success', 'Permintaan penawaran '.$quote->number.' dikirim.');
+        }
+        $customization = $service->fixedCustomization($variant, $data['measurements']);
+        $cart = $r->session()->get('cart', []);
+        $customizations = $r->session()->get('cart_customizations', []);
+        $cart[$variant->id] = 1;
+        $customizations[$variant->id] = $customization;
+        $r->session()->put(['cart' => $cart, 'cart_customizations' => $customizations]);
+        $r->session()->forget('checkout_key');
+
+        return redirect()->route('cart')->with('success', 'Ukuran custom disetujui dan ditambahkan ke keranjang.');
+    }
+
+    public function acceptCustomQuote(Request $r, CustomQuote $customQuote, CustomProductService $service)
+    {
+        $customization = $service->accept($customQuote, $r->user());
+        $cart = $r->session()->get('cart', []);
+        $customizations = $r->session()->get('cart_customizations', []);
+        $cart[$customQuote->variant_id] = 1;
+        $customizations[$customQuote->variant_id] = $customization;
+        $r->session()->put(['cart' => $cart, 'cart_customizations' => $customizations]);
+        $r->session()->forget('checkout_key');
+
+        return redirect()->route('cart')->with('success', 'Penawaran diterima dan produk custom ditambahkan ke keranjang.');
     }
 
     public function order(Order $order)

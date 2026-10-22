@@ -42,6 +42,11 @@ class Variant extends Model
         return $this->hasMany(VariantPrice::class)->orderBy('minimum_quantity');
     }
 
+    public function measurementTemplate()
+    {
+        return $this->belongsTo(MeasurementTemplate::class);
+    }
+
     public function getAvailableAttribute(): int
     {
         return max(0, $this->stock - $this->reserved);

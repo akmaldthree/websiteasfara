@@ -10,6 +10,11 @@ class OrderItem extends Model
 
     protected function casts(): array
     {
-        return ['attributes' => 'array'];
+        return ['attributes' => 'array', 'custom_cost' => 'integer'];
+    }
+
+    public function productionMilestones()
+    {
+        return $this->hasMany(ProductionMilestone::class)->orderBy('id');
     }
 }

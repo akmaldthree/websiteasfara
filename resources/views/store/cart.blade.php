@@ -19,6 +19,7 @@
                         <div class="flex-grow-1">
                             <h2>{{ $v->series->name }}</h2>
                             <p>{{ $v->label }} · {{ $v->sku }}<br>@rupiah($line['unit_price']) / item @if($line['price_tier_minimum'])· Tier {{ $line['price_tier_minimum'] }}+@endif · Tersedia {{ $v->available }}</p>
+                            @if($line['customization'])<p class="small"><strong>Ukuran custom:</strong> @foreach($line['customization']['measurements'] as $key=>$value){{ $line['customization']['template']['fields'][$loop->index]['label'] ?? $key }} {{ $value }}{{ $line['customization']['template']['fields'][$loop->index]['unit'] ?? '' }}{{ !$loop->last?' · ':'' }}@endforeach<br>Biaya custom @rupiah($line['custom_cost']) · {{ $line['customization']['lead_time'] }}</p>@endif
                             <form method="post" action="{{ route('cart.update') }}">@csrf
                                 <input type="hidden" name="variant_id" value="{{ $v->id }}">
                                 <label class="visually-hidden" for="qty-{{ $v->id }}">Jumlah {{ $v->sku }}</label>

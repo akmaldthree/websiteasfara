@@ -55,6 +55,7 @@ class AccountController extends Controller
             'orders' => $r->user()->orders()->latest()->paginate(10),
             'addresses' => $r->user()->addresses,
             'businessAccount' => $r->user()->businessAccount()->with('priceGroup')->first(),
+            'customQuotes' => $r->user()->customQuotes()->with('variant.series')->latest()->get(),
         ]);
     }
 

@@ -59,6 +59,7 @@ class OrderWorkflow
                 }
             } elseif ($action === 'pack') {
                 $this->check($o->status === 'confirmed' && $o->fulfillment_status === 'processing', 'Pesanan belum siap dikemas.');
+                $this->check(! $o->items()->where('fulfillment', 'custom_made')->where('production_status', '!=', 'ready_to_ship')->exists(), 'Produk custom belum selesai quality control dan belum siap dikirim.');
                 $o->fulfillment_status = 'packed';
             } elseif ($action === 'ship') {
                 $this->check($o->status === 'confirmed' && $o->fulfillment_status === 'packed' && (bool) $tracking, 'Pesanan harus dikemas dan nomor resi wajib diisi.');

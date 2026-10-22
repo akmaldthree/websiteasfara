@@ -14,6 +14,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 | COD | Aktif/nonaktif, wilayah tarif, ready stock, min/max subtotal, biaya tetap/persen/cap, konfirmasi CS | Belum blacklist pelanggan dan aturan kelompok/kategori/kurir lanjutan |
 | Ongkir | Tarif manual POS/JNE menurut provinsi/kota, berat kg pertama/tambahan, estimasi, resi | Belum adapter tarif dan tracking otomatis; belum override ongkir order |
 | Promosi | Satu voucher nominal/persen/subsidi ongkir, periode, minimum, maksimum, kuota | Belum segmentasi kategori/series/grup, stacking, simulasi, approval campaign |
+| Produk custom | Template ukuran dinamis dengan unit/bantuan/batas, biaya tetap atau quotation admin, persetujuan pelanggan, snapshot order, milestone produksi dan gate sebelum packing | Belum upload referensi desain, revisi ukuran dua arah, dan notifikasi khusus per milestone |
 | B2B | Pengajuan reseller/dropshipper/grosir, peninjauan admin, grup harga privat, minimum pesanan, tier harga per SKU, snapshot checkout | Belum dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal |
 | Akun | Registrasi email, login, reset password, buku alamat dengan alamat utama, riwayat akun, invoice cetak | Belum login telepon, konversi tamu terverifikasi, pesan ulang |
 | Admin | Lima peran, permission tindakan, aktif/nonaktif dan perubahan peran staf, konfigurasi toko, daftar pesanan, inventori, audit | Belum 2FA dan tindakan massal |
@@ -30,14 +31,14 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 1. WhatsApp otomatis dan integrasi penyedia pesan. Email transaksi sudah memakai outbox, tetapi SMTP nyata, reputasi domain, dan alert eksternal harus diuji di staging.
 2. Adapter penyedia tarif POS/JNE dan tracking, retry/cache/fallback otomatis. Tarif manual tetap dapat digunakan.
 3. Otomasi ongkir retur, approval refund berjenjang, adjustment loyalty, dan rekonsiliasi bank. Refund saat ini dicatat setelah Keuangan benar-benar mengirim dana.
-4. Fitur pertumbuhan lanjutan: custom size/quotation/produksi, bundling komponen, wishlist, review terverifikasi, loyalty, serta kelanjutan B2B berupa dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal.
+4. Fitur pertumbuhan lanjutan: bundling komponen, wishlist, review terverifikasi, loyalty, serta kelanjutan B2B berupa dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal.
 5. CMS lanjutan, galeri dan foto per warna, SEO metadata per halaman/produk, structured data, analytics events dan persetujuan pemasaran.
 6. Hardening produksi: 2FA staf, audit sensitif dengan redaksi berdasarkan peran, SLA bukti transfer, retensi data, monitoring, simulasi koneksi eksternal, beban serta konkurensi MySQL dan backup restore.
 7. Integrasi sumber stok/dashboard produksi dua arah. Tidak ada data aplikasi lain yang disalin ke e-commerce.
 
 ## Verifikasi dan penerimaan
 
-Tes otomatis menguji snapshot harga retail/B2B, kerahasiaan tier, minimum grup, perubahan tier setelah review, pengajuan/persetujuan mitra, replay checkout, stok tidak cukup, persetujuan transfer berulang, expiry dan bukti pending, upload ulang, COD tidak layak, batas subsidi/kuota voucher, batas akses role, SKU/kombinasi, import preview, alamat milik pengguna, registrasi yang tidak bisa menaikkan role, perubahan harga setelah review, dan rendering halaman.
+Tes otomatis menguji snapshot harga retail/B2B/custom, validasi ukuran, quotation dan penerimaan pelanggan, gate produksi sebelum packing, kerahasiaan tier, minimum grup, perubahan tier setelah review, pengajuan/persetujuan mitra, replay checkout, stok tidak cukup, persetujuan transfer berulang, expiry dan bukti pending, upload ulang, COD tidak layak, batas subsidi/kuota voucher, batas akses role, SKU/kombinasi, import preview, alamat milik pengguna, registrasi yang tidak bisa menaikkan role, perubahan harga setelah review, dan rendering halaman.
 
 Browser diperiksa pada desktop dan lebar ponsel 390px; pemilihan SKU dan tambah keranjang diuji. Tes SQLite bukan bukti uji konkurensi MySQL. CI disiapkan untuk menjalankan suite yang sama pada MySQL; uji paralel dua proses tetap diperlukan sebelum go-live.
 

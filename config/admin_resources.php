@@ -2,6 +2,7 @@
 
 use App\Models\Category;
 use App\Models\Coupon;
+use App\Models\MeasurementTemplate;
 use App\Models\Page;
 use App\Models\PriceGroup;
 use App\Models\Series;
@@ -11,6 +12,11 @@ use App\Models\VariantPrice;
 
 // field: label, input type, validation, optional select options.
 return [
+    'measurement-templates' => ['model' => MeasurementTemplate::class, 'title' => 'Template ukuran custom', 'permission' => 'catalog.write', 'columns' => ['name' => 'Template', 'product_type' => 'Jenis produk', 'pricing_mode' => 'Harga', 'surcharge' => 'Biaya custom', 'lead_time' => 'Estimasi', 'active' => 'Aktif'], 'fields' => [
+        'name' => ['Nama template', 'text', 'required|string|max:150'], 'product_type' => ['Jenis produk (opsional)', 'text', 'nullable|string|max:100'],
+        'pricing_mode' => ['Mekanisme harga', 'select', 'required|in:fixed,quote', ['fixed' => 'Biaya tetap', 'quote' => 'Penawaran admin']],
+        'surcharge' => ['Biaya custom tetap (Rupiah)', 'number', 'nullable|integer|min:0|max:100000000'], 'lead_time' => ['Estimasi produksi', 'text', 'required|string|max:150'],
+        'fields' => ['Field ukuran (JSON)', 'textarea', 'required|string|max:20000'], 'policy' => ['Petunjuk dan kebijakan', 'textarea', 'nullable|string|max:5000'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'price-groups' => ['model' => PriceGroup::class, 'title' => 'Grup harga bisnis', 'permission' => 'catalog.write', 'columns' => ['name' => 'Grup', 'business_type' => 'Jenis bisnis', 'minimum_order_quantity' => 'Min. item', 'minimum_order_amount' => 'Min. nilai', 'active' => 'Aktif'], 'fields' => [
         'name' => ['Nama grup', 'text', 'required|string|max:100'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:100'],
         'business_type' => ['Jenis bisnis', 'select', 'required|in:reseller,dropshipper,wholesale', ['reseller' => 'Reseller', 'dropshipper' => 'Dropshipper', 'wholesale' => 'Grosir']],
@@ -32,7 +38,8 @@ return [
         'series_id' => ['Series', 'series', 'required|exists:series,id'], 'sku' => ['SKU manual', 'text', 'required|regex:/^[A-Za-z0-9._-]+$/|max:80'], 'product_type' => ['Jenis produk (kosong untuk Abaya)', 'text', 'nullable|string|max:100'],
         'color' => ['Warna', 'text', 'required|string|max:80'], 'size' => ['Ukuran', 'text', 'required|string|max:40'], 'price' => ['Harga (Rupiah)', 'number', 'required|integer|min:1|max:100000000'],
         'weight' => ['Berat (gram)', 'number', 'required|integer|min:1|max:100000'], 'low_stock' => ['Peringatan stok minimum', 'number', 'required|integer|min:0|max:100000'],
-        'fulfillment' => ['Metode pemenuhan', 'select', 'required|in:ready_stock,pre_order', ['ready_stock' => 'Ready stock', 'pre_order' => 'Pre-order']],
+        'fulfillment' => ['Metode pemenuhan', 'select', 'required|in:ready_stock,pre_order,custom_made', ['ready_stock' => 'Ready stock', 'pre_order' => 'Pre-order', 'custom_made' => 'Ukuran custom']],
+        'measurement_template_id' => ['Template ukuran (wajib untuk custom)', 'measurement_template', 'nullable|exists:measurement_templates,id'],
         'lead_time' => ['Estimasi pemenuhan', 'text', 'nullable|string|max:150'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'shipping-rates' => ['model' => ShippingRate::class, 'title' => 'Tarif pengiriman', 'permission' => 'settings.write', 'columns' => ['courier' => 'Kurir', 'service' => 'Layanan', 'province' => 'Provinsi', 'city' => 'Kota', 'first_kg' => 'Kg pertama', 'cod' => 'COD'], 'fields' => [
         'courier' => ['Kurir', 'select', 'required|in:POS,JNE', ['POS' => 'POS', 'JNE' => 'JNE']], 'service' => ['Layanan', 'text', 'required|string|max:80'],

@@ -13,18 +13,32 @@
             @if($priceGroup)
                 <div class="alert alert-success">Harga privat <strong>{{ $priceGroup->name }}</strong> aktif. Harga menyesuaikan jumlah SKU yang dipilih.</div>
             @endif
-            <form method="post" action="{{ route('cart.add') }}">@csrf
+            @php($standardVariants=$series->variants->where('fulfillment','!=','custom_made'))
+            @if($standardVariants->isNotEmpty())<form method="post" action="{{ route('cart.add') }}">@csrf
                 <label for="variant">Pilih {{ $series->uses_product_type?'jenis produk, ':'' }}warna & ukuran</label>
                 <select name="variant_id" id="variant" class="form-select mb-3" required>
                     <option value="">Pilih varian Anda</option>
-                    @foreach($series->variants as $v)
+                    @foreach($standardVariants as $v)
                         @php($tiers=$businessTiers[$v->id]->map(fn($tier)=>['minimum'=>$tier->minimum_quantity,'price'=>$tier->price])->values())
                         <option value="{{ $v->id }}" data-price="{{ $v->price }}" data-tiers="{{ $tiers->toJson() }}" data-stock="{{ $v->available }}" data-sku="{{ $v->sku }}" data-method="{{ $v->fulfillment==='ready_stock'?'Ready stock':'Pre-order' }}" data-estimate="{{ $v->lead_time }}" @disabled($v->available<1) @selected(request('variant')==$v->id)>{{ $v->label }} — @rupiah($v->price) {{ $v->available<1?'(habis)':'' }}</option>
                     @endforeach
                 </select>
                 <div class="variant-info" id="variant-info" aria-live="polite">Pilih varian untuk melihat harga dan ketersediaan.</div>
                 <div class="d-flex gap-3 mt-4"><div><label for="qty">Jumlah</label><input class="form-control quantity" type="number" name="quantity" id="qty" min="1" max="100" value="1" required></div><button class="btn btn-dark align-self-end flex-grow-1">Tambahkan ke keranjang ↗</button></div>
-            </form>
+            </form>@endif
+            @foreach($series->variants->where('fulfillment','custom_made') as $v)
+                @if($v->measurementTemplate?->active)
+                @php($template=$v->measurementTemplate)
+                <div class="panel mt-4"><span class="eyebrow">UKURAN CUSTOM</span><h2 class="mt-2">{{ $v->label }}</h2>
+                    <p>{{ $template->policy }}<br><strong>@if($template->pricing_mode==='fixed')Biaya custom @rupiah($template->surcharge)@else Harga custom ditentukan melalui penawaran admin @endif</strong> · {{ $template->lead_time }}</p>
+                    <form method="post" action="{{ route('custom.submit',$v) }}">@csrf<input type="hidden" name="request_key" value="{{ \Illuminate\Support\Str::uuid() }}">
+                        <div class="form-grid">@foreach($template->fields as $field)<div><label for="custom-{{ $v->id }}-{{ $field['key'] }}">{{ $field['label'] }} ({{ $field['unit'] }})</label><input id="custom-{{ $v->id }}-{{ $field['key'] }}" class="form-control" type="number" step="0.1" name="measurements[{{ $field['key'] }}]" min="{{ $field['min'] ?? '' }}" max="{{ $field['max'] ?? '' }}" placeholder="{{ $field['example'] ?? '' }}" @required($field['required'] ?? true)>@if(!empty($field['help']))<small>{{ $field['help'] }}</small>@endif</div>@endforeach</div>
+                        <label class="d-block my-3"><input type="checkbox" name="measurement_approval" value="1" required> Saya memastikan ukuran sudah benar dan menyetujui kebijakan custom.</label>
+                        <button class="btn btn-dark">{{ $template->pricing_mode==='fixed'?'Tambahkan custom ke keranjang':'Kirim permintaan penawaran' }}</button>
+                    </form>
+                </div>
+                @endif
+            @endforeach
             @if($priceGroup && $businessTiers->flatten()->isNotEmpty())
                 <details class="mt-4"><summary>Lihat tier harga akun {{ $priceGroup->name }}</summary>
                     @foreach($series->variants as $v)
@@ -47,6 +61,6 @@
 <script>
 const select=document.getElementById('variant');const qty=document.getElementById('qty');
 function update(){const o=select.selectedOptions[0];if(!o.value){document.getElementById('variant-info').textContent='Pilih varian untuk melihat harga dan ketersediaan.';return;}const amount=Number(qty.value)||1;let price=Number(o.dataset.price);let applied=null;for(const tier of JSON.parse(o.dataset.tiers||'[]'))if(amount>=tier.minimum){price=tier.price;applied=tier.minimum;}document.getElementById('variant-info').textContent=new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(price)+(applied?' / item · tier '+applied+'+':' / item')+' · '+o.dataset.method+' · Tersedia '+o.dataset.stock+' · SKU '+o.dataset.sku+(o.dataset.estimate?' · '+o.dataset.estimate:'');}
-select.addEventListener('change',update);qty.addEventListener('input',update);update();
+if(select){select.addEventListener('change',update);qty.addEventListener('input',update);update();}
 </script>
 @endpush
