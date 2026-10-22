@@ -7,12 +7,12 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 | Area | Implementasi | Batas saat ini |
 | --- | --- | --- |
 | Katalog | Kategori, series, jenis opsional, warna, ukuran, SKU manual unik tanpa beda kapital, harga, berat, arsip | Satu foto per series; warna/ukuran berupa nilai per SKU |
-| Storefront | Beranda, pencarian nama/jenis/SKU, filter, sorting, pagination, detail, selector SKU, panduan ukuran | Logo tipografi dan ilustrasi contoh; belum aset brand/foto asli |
+| Storefront | Beranda, pencarian nama/jenis/SKU, filter, sorting, pagination, detail, selector SKU, panduan ukuran; logo, favicon, hero, copy beranda/footer, kontak, sosial, dan SEO default dikelola admin | Aset brand/foto asli perlu diunggah pemilik |
 | Stok | Saldo/kuota dan reservasi, transaksi DB, lock, conditional update, movement ledger, expiry | Satu gudang; pre-order memakai kuota yang dikelola manual; concurrency staging tetap wajib |
 | Checkout | Tamu, alamat Indonesia, pilihan tarif dan metode, review akhir, kalkulasi server, idempotensi, snapshot, keranjang akun lintas perangkat dan merge setelah login | Alamat berupa input teks, belum kode wilayah resmi |
 | Pembayaran | Rekening admin, bukti JPG/PNG/PDF privat, setujui/tolak/upload ulang, refund parsial/penuh dengan referensi dan bukti privat, audit | Verifikasi dan transfer refund tetap manual; tidak ada payment gateway atau mutasi bank otomatis |
 | COD | Aktif/nonaktif, wilayah tarif, ready stock, min/max subtotal, biaya tetap/persen/cap, konfirmasi CS | Belum blacklist pelanggan dan aturan kelompok/kategori/kurir lanjutan |
-| Ongkir | Tarif manual POS/JNE menurut provinsi/kota, berat kg pertama/tambahan, estimasi, resi | Belum adapter tarif dan tracking otomatis; belum override ongkir order |
+| Ongkir | Tarif manual POS/JNE menurut provinsi/kota, berat kg pertama/tambahan, estimasi, resi; mode/provider/URL/token API dapat disiapkan dari admin dengan fallback manual | Belum adapter tarif dan tracking otomatis; belum override ongkir order |
 | Promosi | Voucher nominal/persen/subsidi ongkir, periode, minimum, maksimum, kuota, target kategori/series/SKU, segmentasi pelanggan/grup B2B, prioritas, stacking terkendali, batas per pengguna, ledger dan snapshot | Belum simulasi serta approval campaign berjenjang |
 | Produk custom | Template ukuran dinamis dengan unit/bantuan/batas, biaya tetap atau quotation admin, persetujuan pelanggan, snapshot order, milestone produksi dan gate sebelum packing | Belum upload referensi desain, revisi ukuran dua arah, dan notifikasi khusus per milestone |
 | Bundling | SKU bundle, komposisi dan jumlah per komponen, ketersediaan dari komponen terlangka, berat turunan, reservasi/pengurangan/pembatalan stok komponen, snapshot order | Belum builder bundle di storefront; komposisi ditetapkan admin |
@@ -23,7 +23,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 | Admin | Lima peran, permission tindakan, aktif/nonaktif dan perubahan peran staf, konfigurasi toko, daftar pesanan, inventori, audit | Belum 2FA dan tindakan massal |
 | Konten | Halaman, banner, section beranda, menu, FAQ, journal, campaign; upload gambar, urutan, jadwal tayang, metadata SEO, preview admin | Editor masih berbasis teks; belum rich-text block editor dan revision history |
 | Import | CSV/XLSX, template, preview, validasi seluruh baris, create/upsert atomik, audit dan ledger perubahan stok, generator kombinasi jenis/warna/ukuran | Maks. 200 baris; XLSX membaca worksheet pertama sesuai kolom template |
-| Notifikasi | Outbox email transaksi, histori, deduplikasi event, retry terbatas, status tidak pasti setelah worker terhenti, dan tindak lanjut manual | SMTP harus dikonfigurasi dan diuji di staging; WhatsApp otomatis belum tersedia |
+| Notifikasi | Outbox email transaksi, histori, deduplikasi event, retry terbatas, status tidak pasti setelah worker terhenti, tindak lanjut manual, serta konfigurasi provider WhatsApp/token terenkripsi dari admin | SMTP harus diuji di staging; adapter WhatsApp otomatis belum tersedia |
 | Fulfillment | Status packing/kirim/terima, resi, riwayat pelanggan, picking list, packing slip, label, invoice | Tracking kurir tetap manual |
 | Laporan | Omzet bruto/bersih, refund, AOV, pelanggan berulang, produk, ongkir, stok rendah, dan export CSV | Belum margin, cohort, grafik, serta segmentasi promo lanjutan |
 | Layanan | Aturan retur/garansi, batas waktu, alasan, pengecualian SKU, bukti privat, item kasus, keputusan CS, pemeriksaan Gudang, restock terpisah, refund ledger | Belum ongkir balik otomatis, loyalty adjustment, dan SLA lanjutan |
@@ -33,9 +33,9 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 
 1. WhatsApp otomatis dan integrasi penyedia pesan. Email transaksi sudah memakai outbox, tetapi SMTP nyata, reputasi domain, dan alert eksternal harus diuji di staging.
 2. Adapter penyedia tarif POS/JNE dan tracking, retry/cache/fallback otomatis. Tarif manual tetap dapat digunakan.
-3. Otomasi ongkir retur, approval refund berjenjang, adjustment loyalty, dan rekonsiliasi bank. Refund saat ini dicatat setelah Keuangan benar-benar mengirim dana.
+3. Otomasi ongkir retur, approval refund berjenjang, dan rekonsiliasi bank. Adjustment loyalty proporsional saat refund sudah tersedia; transfer refund tetap dilakukan manual.
 4. Fitur pertumbuhan lanjutan: tier/member loyalty, kampanye bonus poin, pertanyaan produk, helpful voting, serta kelanjutan B2B berupa dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal.
-5. CMS lanjutan berupa rich-text block editor/revision history, galeri dan foto per warna, SEO metadata produk, structured data, analytics events dan persetujuan pemasaran.
+5. CMS lanjutan berupa rich-text block editor/revision history, galeri dan foto per warna, SEO metadata produk, structured data, serta analytics events. Persetujuan pemasaran email/WhatsApp sudah tersedia pada akun.
 6. Hardening produksi: 2FA staf, audit sensitif dengan redaksi berdasarkan peran, SLA bukti transfer, retensi data, monitoring, simulasi koneksi eksternal, beban serta konkurensi MySQL dan backup restore.
 7. Integrasi sumber stok/dashboard produksi dua arah. Tidak ada data aplikasi lain yang disalin ke e-commerce.
 

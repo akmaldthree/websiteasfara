@@ -28,6 +28,7 @@ use App\Services\Audit;
 use App\Services\CustomProductService;
 use App\Services\OrderWorkflow;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -350,7 +351,20 @@ class AdminController extends Controller
 
     public function saveSettings(Request $r)
     {
-        $rules = ['brand_name' => 'required|string|max:80', 'tagline' => 'required|string|max:160', 'hero_title' => 'required|string|max:150', 'hero_text' => 'required|string|max:500', 'whatsapp' => ['nullable', 'regex:/^62[0-9]{8,13}$/'], 'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0', 'loyalty_spend_per_point' => 'required|integer|min:1', 'loyalty_point_value' => 'required|integer|min:1', 'loyalty_min_redeem' => 'required|integer|min:1', 'loyalty_expiry_days' => 'required|integer|between:1,3650'];
+        $rules = [
+            'brand_name' => 'required|string|max:80', 'brand_subtitle' => 'nullable|string|max:80', 'tagline' => 'required|string|max:160',
+            'hero_eyebrow' => 'nullable|string|max:120', 'hero_title' => 'required|string|max:150', 'hero_text' => 'required|string|max:500', 'hero_button_label' => 'nullable|string|max:80', 'hero_button_url' => 'nullable|string|max:500',
+            'benefit_1' => 'nullable|string|max:150', 'benefit_2' => 'nullable|string|max:150', 'benefit_3' => 'nullable|string|max:150',
+            'story_eyebrow' => 'nullable|string|max:120', 'story_title' => 'nullable|string|max:200', 'story_text' => 'nullable|string|max:1000',
+            'footer_text' => 'nullable|string|max:500', 'store_location' => 'nullable|string|max:150', 'contact_email' => 'nullable|email|max:150',
+            'whatsapp' => ['nullable', 'regex:/^62[0-9]{8,13}$/'], 'instagram_url' => 'nullable|url|max:500', 'tiktok_url' => 'nullable|url|max:500', 'facebook_url' => 'nullable|url|max:500',
+            'default_seo_title' => 'nullable|string|max:200', 'default_seo_description' => 'nullable|string|max:300',
+            'shipping_mode' => 'required|in:manual,api', 'shipping_provider' => 'required|string|max:80', 'shipping_api_url' => 'nullable|url|max:500', 'shipping_api_token_new' => 'nullable|string|max:2000',
+            'tracking_mode' => 'required|in:manual,api', 'whatsapp_mode' => 'required|in:manual,api', 'whatsapp_provider' => 'required|string|max:80', 'whatsapp_api_url' => 'nullable|url|max:500', 'whatsapp_api_token_new' => 'nullable|string|max:2000',
+            'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0',
+            'loyalty_spend_per_point' => 'required|integer|min:1', 'loyalty_point_value' => 'required|integer|min:1', 'loyalty_min_redeem' => 'required|integer|min:1', 'loyalty_expiry_days' => 'required|integer|between:1,3650',
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+        ];
         $data = $r->validate($rules);
         $banks = [];
         foreach (explode("\n", $data['bank_text'] ?? '') as $line) {
@@ -362,6 +376,19 @@ class AdminController extends Controller
             }
         }
         unset($data['bank_text']);
+        foreach (['logo', 'favicon', 'hero_image'] as $image) {
+            unset($data[$image]);
+            if ($r->hasFile($image)) {
+                $data[$image] = $r->file($image)->store('branding', 'public');
+            }
+        }
+        foreach (['shipping_api_token', 'whatsapp_api_token'] as $secret) {
+            $input = $secret.'_new';
+            if (! empty($data[$input])) {
+                $data[$secret] = Crypt::encryptString($data[$input]);
+            }
+            unset($data[$input]);
+        }
         $data['bank_accounts'] = $banks;
         $data['cod_enabled'] = $r->boolean('cod_enabled');
         $data['loyalty_enabled'] = $r->boolean('loyalty_enabled');
