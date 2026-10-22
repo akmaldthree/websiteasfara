@@ -313,7 +313,7 @@ class AdminController extends Controller
 
     public function saveSettings(Request $r)
     {
-        $rules = ['brand_name' => 'required|string|max:80', 'tagline' => 'required|string|max:160', 'hero_title' => 'required|string|max:150', 'hero_text' => 'required|string|max:500', 'whatsapp' => ['nullable', 'regex:/^62[0-9]{8,13}$/'], 'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0'];
+        $rules = ['brand_name' => 'required|string|max:80', 'tagline' => 'required|string|max:160', 'hero_title' => 'required|string|max:150', 'hero_text' => 'required|string|max:500', 'whatsapp' => ['nullable', 'regex:/^62[0-9]{8,13}$/'], 'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0', 'loyalty_spend_per_point' => 'required|integer|min:1', 'loyalty_point_value' => 'required|integer|min:1', 'loyalty_min_redeem' => 'required|integer|min:1', 'loyalty_expiry_days' => 'required|integer|between:1,3650'];
         $data = $r->validate($rules);
         $banks = [];
         foreach (explode("\n", $data['bank_text'] ?? '') as $line) {
@@ -327,6 +327,7 @@ class AdminController extends Controller
         unset($data['bank_text']);
         $data['bank_accounts'] = $banks;
         $data['cod_enabled'] = $r->boolean('cod_enabled');
+        $data['loyalty_enabled'] = $r->boolean('loyalty_enabled');
         $data['checkout_enabled'] = $r->boolean('checkout_enabled');
         if ($data['checkout_enabled'] && ! count($banks)) {
             throw ValidationException::withMessages(['bank_text' => 'Isi rekening sebelum membuka checkout.']);

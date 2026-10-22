@@ -16,6 +16,8 @@ use Illuminate\Validation\ValidationException;
 
 class AfterSalesService
 {
+    public function __construct(private LoyaltyService $loyalty) {}
+
     public function policy(): array
     {
         return [
@@ -147,11 +149,22 @@ class AfterSalesService
             if ($beforeShipping) {
                 $this->check($amount + $already === (int) $order->total, 'Pembatalan sebelum pengiriman harus mengembalikan seluruh sisa pembayaran.');
                 if ($order->inventory_state === 'committed') {
-                    foreach ($order->items()->orderBy('variant_id')->get() as $item) {
-                        $variant = Variant::whereKey($item->variant_id)->lockForUpdate()->firstOrFail();
-                        $variant->increment('stock', $item->quantity);
+                    $targets = [];
+                    foreach ($order->items()->with('components')->get() as $item) {
+                        if ($item->components->isNotEmpty()) {
+                            foreach ($item->components as $component) {
+                                $targets[$component->variant_id] = ($targets[$component->variant_id] ?? 0) + $component->quantity;
+                            }
+                        } else {
+                            $targets[$item->variant_id] = ($targets[$item->variant_id] ?? 0) + $item->quantity;
+                        }
+                    }
+                    ksort($targets);
+                    foreach ($targets as $variantId => $quantity) {
+                        $variant = Variant::whereKey($variantId)->lockForUpdate()->firstOrFail();
+                        $variant->increment('stock', $quantity);
                         StockMovement::create(['variant_id' => $variant->id, 'order_id' => $order->id, 'user_id' => auth()->id(),
-                            'stock_delta' => $item->quantity, 'reserved_delta' => 0, 'reason' => 'Pembatalan berbayar / refund penuh']);
+                            'stock_delta' => $quantity, 'reserved_delta' => 0, 'reason' => 'Pembatalan berbayar / refund penuh']);
                     }
                     $order->inventory_state = 'released';
                 }
@@ -164,6 +177,7 @@ class AfterSalesService
             ]);
             $order->payment_status = $already + $amount === (int) $order->total ? 'refunded' : 'partially_refunded';
             $order->save();
+            $this->loyalty->adjustRefund($order, $refund, $already + $amount);
             Audit::record('refund.recorded', 'refund:'.$refund->id, null, $refund->only('order_id', 'amount', 'method', 'reference', 'paid_at'));
             OrderCommunication::record($order, 'refund-'.$refund->id, 'refund_recorded',
                 'Pengembalian dana sebesar Rp '.number_format($amount, 0, ',', '.').' telah dicatat melalui '.$refund->method.'.');

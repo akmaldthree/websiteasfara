@@ -8,6 +8,7 @@ use App\Models\Review;
 use App\Models\User;
 use App\Models\Variant;
 use App\Services\Audit;
+use App\Services\LoyaltyService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -63,6 +64,8 @@ class AccountController extends Controller
             'wishlist' => $r->user()->wishlistItems()->with('variant.series')->latest()->get(),
             'reviewableItems' => OrderItem::with('order')->whereHas('order', fn ($query) => $query->where('user_id', $r->user()->id)->whereIn('fulfillment_status', ['received']))->doesntHave('review')->latest()->get(),
             'myReviews' => $r->user()->reviews()->with('variant.series')->latest()->get(),
+            'loyaltyBalance' => app(LoyaltyService::class)->balance($r->user()),
+            'loyaltyTransactions' => $r->user()->loyaltyTransactions()->latest()->take(20)->get(),
         ]);
     }
 

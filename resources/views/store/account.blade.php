@@ -36,6 +36,7 @@
             </details>
         </div></div>
     </div>
+    <div class="panel mt-4"><span class="eyebrow">DTHREE LOYALTY</span><h2 class="mt-3">{{ number_format($loyaltyBalance,0,',','.') }} poin tersedia</h2><p>Poin dapat digunakan saat checkout setelah program diaktifkan oleh admin.</p>@if($loyaltyTransactions->isNotEmpty())<div class="table-responsive"><table class="table"><thead><tr><th>Tanggal</th><th>Aktivitas</th><th>Poin</th></tr></thead><tbody>@foreach($loyaltyTransactions as $transaction)<tr><td>{{ $transaction->created_at->format('d M Y') }}</td><td>{{ str_replace('_',' ',$transaction->type) }}</td><td>{{ $transaction->points>0?'+':'' }}{{ $transaction->points }}</td></tr>@endforeach</tbody></table></div>@endif</div>
     @if($customQuotes->isNotEmpty())
     <div class="panel mt-4"><span class="eyebrow">UKURAN CUSTOM</span><h2 class="mt-3">Penawaran saya</h2>
         @foreach($customQuotes as $quote)<div class="border-bottom py-3"><div class="summary-row"><span><strong>{{ $quote->number }}</strong><br>{{ $quote->variant->series->name }} · {{ $quote->variant->sku }}<br><small>Status {{ strtoupper($quote->status) }} @if($quote->expires_at)· berlaku sampai {{ $quote->expires_at->format('d M Y H:i') }}@endif</small></span><span>@if($quote->surcharge!==null)@rupiah($quote->surcharge)@endif</span></div>

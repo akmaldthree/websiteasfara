@@ -17,7 +17,7 @@ use Illuminate\Validation\ValidationException;
 
 class CheckoutService
 {
-    public function __construct(private PricingService $pricing, private CustomProductService $customProducts) {}
+    public function __construct(private PricingService $pricing, private CustomProductService $customProducts, private LoyaltyService $loyalty) {}
 
     public function lines(array $cart, bool $lock = false, ?User $customer = null, array $customizations = []): array
     {
@@ -145,7 +145,14 @@ class CheckoutService
             }
         }
 
-        return ['lines' => $lines, 'price_group' => $group, 'subtotal' => $subtotal, 'custom_cost' => $customCost, 'weight' => $weight, 'rate' => $rate, 'shipping_cost' => $shipping, 'discount' => $discount, 'shipping_discount' => $shippingDiscount, 'cod_fee' => $fee, 'total' => $merchandiseTotal + $shipping + $fee - $discount - $shippingDiscount, 'coupon' => $coupon];
+        $loyalty = ['points' => 0, 'discount' => 0];
+        $requestedPoints = max(0, (int) ($input['loyalty_points'] ?? 0));
+        if ($requestedPoints > 0) {
+            $this->check($customer !== null, 'Masuk ke akun untuk menggunakan poin loyalty.');
+            $loyalty = $this->loyalty->redemption($customer, $requestedPoints, max(0, $merchandiseTotal - $discount));
+        }
+
+        return ['lines' => $lines, 'price_group' => $group, 'subtotal' => $subtotal, 'custom_cost' => $customCost, 'weight' => $weight, 'rate' => $rate, 'shipping_cost' => $shipping, 'discount' => $discount, 'shipping_discount' => $shippingDiscount, 'cod_fee' => $fee, 'loyalty_points' => $loyalty['points'], 'loyalty_discount' => $loyalty['discount'], 'total' => $merchandiseTotal + $shipping + $fee - $discount - $shippingDiscount - $loyalty['discount'], 'coupon' => $coupon];
     }
 
     public function fingerprint(array $quote): string
@@ -154,7 +161,7 @@ class CheckoutService
             'items' => array_map(fn ($line) => [$line['variant']->id, $line['variant']->sku, $line['quantity'], $line['unit_price'], $line['price_tier_minimum'], $line['custom_cost'], $line['customization'], $line['bundle'], $line['unit_weight'], $line['variant']->fulfillment, $line['variant']->lead_time], $quote['lines']),
             'price_group' => $quote['price_group'] ? [$quote['price_group']->id, $quote['price_group']->name, $quote['price_group']->business_type, $quote['price_group']->minimum_order_quantity, $quote['price_group']->minimum_order_amount] : null,
             'shipping' => [$quote['rate']->id, $quote['rate']->courier, $quote['rate']->service, $quote['rate']->estimate],
-            'amounts' => array_intersect_key($quote, array_flip(['subtotal', 'custom_cost', 'shipping_cost', 'discount', 'shipping_discount', 'cod_fee', 'total'])),
+            'amounts' => array_intersect_key($quote, array_flip(['subtotal', 'custom_cost', 'shipping_cost', 'discount', 'shipping_discount', 'cod_fee', 'loyalty_points', 'loyalty_discount', 'total'])),
         ], JSON_THROW_ON_ERROR));
     }
 
@@ -170,7 +177,7 @@ class CheckoutService
                 return $existing;
             }
             $this->check(Setting::get('checkout_enabled', false), 'Checkout belum dibuka. Silakan hubungi Dthree.');
-            $customer = $userId ? User::find($userId) : null;
+            $customer = $userId ? User::whereKey($userId)->lockForUpdate()->first() : null;
             $q = $this->quote($cart, $input, true, $customer, $customizations);
             $this->check($expectedQuote === null || hash_equals($expectedQuote, $this->fingerprint($q)), 'Harga atau pengiriman berubah. Kembali ke checkout untuk meninjau total terbaru sebelum memesan.');
             $order = Order::create([
@@ -180,11 +187,12 @@ class CheckoutService
                 'name' => $input['name'], 'phone' => $input['phone'], 'email' => $input['email'] ?? null,
                 'address' => array_intersect_key($input, array_flip(['province', 'city', 'district', 'postal_code', 'detail'])),
                 'payment_method' => $input['payment_method'], 'subtotal' => $q['subtotal'], 'custom_cost' => $q['custom_cost'], 'shipping_cost' => $q['shipping_cost'],
-                'discount' => $q['discount'], 'shipping_discount' => $q['shipping_discount'], 'cod_fee' => $q['cod_fee'], 'total' => $q['total'],
+                'discount' => $q['discount'], 'loyalty_points_redeemed' => $q['loyalty_points'], 'loyalty_discount' => $q['loyalty_discount'], 'shipping_discount' => $q['shipping_discount'], 'cod_fee' => $q['cod_fee'], 'total' => $q['total'],
                 'shipping' => ['courier' => $q['rate']->courier, 'service' => $q['rate']->service, 'estimate' => $q['rate']->estimate, 'source' => 'manual', 'origin' => 'Tasikmalaya', 'weight' => $q['weight']],
                 'bank_accounts' => Setting::get('bank_accounts', []), 'coupon_id' => $q['coupon']?->id, 'coupon_code' => $q['coupon']?->code,
                 'notes' => $input['notes'] ?? null, 'expires_at' => now()->addHours((int) Setting::get($input['payment_method'] === 'cod' ? 'cod_hours' : 'payment_hours', 24)),
             ]);
+            $this->loyalty->redeem($order);
             foreach ($q['lines'] as $l) {
                 $v = $l['variant'];
                 $qty = $l['quantity'];

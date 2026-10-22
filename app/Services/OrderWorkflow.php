@@ -11,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class OrderWorkflow
 {
+    public function __construct(private LoyaltyService $loyalty) {}
+
     public function act(Order $order, string $action, ?string $reason = null, ?string $tracking = null): void
     {
         DB::transaction(function () use ($order, $action, $reason, $tracking) {
@@ -89,6 +91,12 @@ class OrderWorkflow
                 $this->check(false, 'Tindakan tidak dikenal.');
             }
             $o->save();
+            if ($o->status === 'completed') {
+                $this->loyalty->earn($o);
+            }
+            if ($o->status === 'cancelled') {
+                $this->loyalty->restoreCancelled($o);
+            }
             Audit::record('order.'.$action, 'order:'.$o->id, $before, $o->only(['status', 'payment_status', 'fulfillment_status', 'inventory_state']) + ['reason' => $reason]);
             $message = match ($action) {
                 'approve' => 'Pembayaran transfer telah disetujui. Pesanan mulai diproses.',

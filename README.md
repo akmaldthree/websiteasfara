@@ -16,6 +16,7 @@ Website e-commerce Dthree dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. 
 - Produk ukuran custom dengan template field dinamis, validasi dan persetujuan ukuran, biaya tetap atau penawaran admin, snapshot checkout, serta milestone produksi sampai siap kirim.
 - Bundle SKU dengan komposisi yang dikelola admin, ketersediaan dan berat turunan, reservasi stok komponen atomik, serta snapshot isi bundle pada pesanan.
 - Wishlist akun dan ulasan hanya dari item yang benar-benar diterima, hingga tiga foto, antrean moderasi admin, serta label pembelian terverifikasi pada storefront.
+- Loyalty berbasis ledger dengan aturan nilai/perolehan/masa berlaku dari admin, redeem atomik saat checkout, pemberian poin idempoten setelah pesanan selesai, pemulihan saat batal, dan penyesuaian proporsional saat refund.
 
 ## Instalasi hosting
 
