@@ -8,6 +8,7 @@ use App\Models\BusinessAccount;
 use App\Models\BusinessOrderRule;
 use App\Models\Category;
 use App\Models\ContentEntry;
+use App\Models\ContentRevision;
 use App\Models\CustomQuote;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -325,12 +326,44 @@ class AdminController extends Controller
             unset($data['image']);
         }
         DB::transaction(function () use ($record, $data, $resource) {
-            $before = $record->exists ? $record->toArray() : null;
+            $before = $record->exists ? $record->getAttributes() : null;
+            if ($before && in_array($resource, ['pages', 'content'], true)) {
+                ContentRevision::create(['content_type' => $resource, 'content_id' => $record->id, 'user_id' => auth()->id(), 'snapshot' => $before]);
+            }
             $record->fill($data)->save();
             Audit::record($resource.'.saved', $resource.':'.$record->id, $before, $record->toArray());
         });
 
         return redirect()->route('admin.resources', $resource)->with('success', 'Data berhasil disimpan.');
+    }
+
+    public function contentHistory(string $resource, int $id)
+    {
+        abort_unless(in_array($resource, ['pages', 'content'], true), 404);
+        $schema = $this->resource($resource);
+        $record = $schema['model']::findOrFail($id);
+        $revisions = ContentRevision::where('content_type', $resource)->where('content_id', $id)->with('user')->latest()->paginate(20);
+
+        return view('admin.content-history', compact('resource', 'schema', 'record', 'revisions'));
+    }
+
+    public function restoreContent(ContentRevision $revision)
+    {
+        abort_unless(in_array($revision->content_type, ['pages', 'content'], true), 404);
+        $schema = $this->resource($revision->content_type);
+        $record = $schema['model']::findOrFail($revision->content_id);
+
+        DB::transaction(function () use ($record, $revision) {
+            $record = $record->newQuery()->lockForUpdate()->findOrFail($record->id);
+            $before = $record->getAttributes();
+            ContentRevision::create(['content_type' => $revision->content_type, 'content_id' => $record->id, 'user_id' => auth()->id(), 'snapshot' => $before]);
+            $snapshot = $revision->snapshot;
+            unset($snapshot['id'], $snapshot['created_at'], $snapshot['updated_at']);
+            $record->fill($snapshot)->save();
+            Audit::record($revision->content_type.'.restored', $revision->content_type.':'.$record->id, $before, $record->getAttributes());
+        });
+
+        return redirect()->route('admin.content.history', [$revision->content_type, $revision->content_id])->with('success', 'Versi konten berhasil dipulihkan. Versi sebelumnya tetap tersimpan.');
     }
 
     public function inventory(Request $r)

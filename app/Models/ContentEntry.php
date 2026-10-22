@@ -22,4 +22,9 @@ class ContentEntry extends Model
     {
         return $this->image ? asset('storage/'.$this->image) : null;
     }
+
+    public function revisions()
+    {
+        return $this->hasMany(ContentRevision::class, 'content_id')->where('content_type', 'content')->latest();
+    }
 }

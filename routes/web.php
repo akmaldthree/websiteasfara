@@ -62,6 +62,8 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/ulasan', [Admin::class, 'reviews'])->middleware('permission:content.write')->name('reviews');
     Route::get('/konten/{contentEntry}/preview', [Admin::class, 'contentPreview'])->middleware('permission:content.write')->name('content.preview');
     Route::post('/ulasan/{review}', [Admin::class, 'reviewAction'])->middleware('permission:content.write')->name('reviews.update');
+    Route::get('/konten-riwayat/{resource}/{id}', [Admin::class, 'contentHistory'])->middleware('permission:content.write')->whereNumber('id')->name('content.history');
+    Route::post('/konten-riwayat/{revision}/pulihkan', [Admin::class, 'restoreContent'])->middleware('permission:content.write')->name('content.restore');
     Route::get('/bukti/{proof}', [Admin::class, 'proof'])->middleware('permission:payments.read')->name('proof');
     Route::get('/inventori', [Admin::class, 'inventory'])->middleware('permission:inventory.read')->name('inventory');
     Route::post('/inventori/{variant}', [Admin::class, 'adjust'])->middleware('permission:inventory.write')->name('inventory.adjust');
