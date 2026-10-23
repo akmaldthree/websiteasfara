@@ -226,6 +226,10 @@ class BusinessCommerceTest extends TestCase
         $entry = CommissionEntry::where('order_id', $order->id)->where('type', 'earned')->firstOrFail();
         $this->assertSame(18750, $entry->amount);
         $this->assertSame($sales->id, $entry->sales_user_id);
+
+        $order->update(['payment_status' => 'refunded']);
+        $nextQuote = $service->quote([$this->variant->id => 3], $input, false, $customer);
+        $this->assertSame(775000, $nextQuote['total']);
     }
 
     public function test_approved_business_can_build_cart_from_bulk_sku_list(): void

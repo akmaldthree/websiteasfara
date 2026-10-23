@@ -212,7 +212,7 @@ class CheckoutService
 
         $total = $merchandiseTotal + $shipping + $fee - $discount - $shippingDiscount - $loyalty['discount'];
         if (($input['payment_method'] ?? '') === 'credit') {
-            $outstanding = Order::where('user_id', $customer->id)->where('payment_method', 'credit')->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled')->sum('total');
+            $outstanding = Order::where('user_id', $customer->id)->where('payment_method', 'credit')->whereNull('paid_at')->where('status', '!=', 'cancelled')->sum('total');
             $this->check($outstanding + $total <= $businessAccount->credit_limit, 'Limit kredit tidak mencukupi untuk pesanan ini.');
         }
 

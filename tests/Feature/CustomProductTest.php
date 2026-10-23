@@ -121,4 +121,23 @@ class CustomProductTest extends TestCase
         Storage::disk('local')->assertExists($quote->reference_path);
         $this->actingAs($admin)->get(route('admin.custom-quotes.reference', $quote))->assertOk();
     }
+
+    public function test_failed_or_unauthenticated_custom_submission_does_not_leave_private_orphan_file(): void
+    {
+        Storage::fake('local');
+        $payload = [
+            'request_key' => fake()->uuid(), 'measurements' => ['chest' => 500], 'measurement_approval' => '1',
+            'reference' => UploadedFile::fake()->create('referensi.pdf', 100, 'application/pdf'),
+        ];
+
+        $this->post(route('custom.submit', $this->variant), $payload)->assertSessionHasErrors();
+        $this->assertSame([], Storage::disk('local')->allFiles('custom-references'));
+
+        $this->template->update(['pricing_mode' => 'quote']);
+        $payload['measurements'] = ['chest' => 100];
+        $payload['request_key'] = fake()->uuid();
+        $payload['reference'] = UploadedFile::fake()->create('quote.pdf', 100, 'application/pdf');
+        $this->post(route('custom.submit', $this->variant->fresh()), $payload)->assertRedirect(route('login'));
+        $this->assertSame([], Storage::disk('local')->allFiles('custom-references'));
+    }
 }
