@@ -7,10 +7,21 @@ use App\Models\Order;
 use App\Models\Refund;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 class LoyaltyService
 {
+    public function tier(User $user): array
+    {
+        $earned = (int) LoyaltyTransaction::where('user_id', $user->id)->where('type', 'earn')->where('points', '>', 0)->sum('points');
+        $tiers = collect(Setting::get('loyalty_tiers', [['name' => 'Member', 'minimum' => 0]]))->sortBy('minimum')->values();
+        $current = $tiers->last(fn ($tier) => $earned >= (int) $tier['minimum']) ?? ['name' => 'Member', 'minimum' => 0];
+        $next = $tiers->first(fn ($tier) => (int) $tier['minimum'] > $earned);
+
+        return ['name' => $current['name'], 'minimum' => (int) $current['minimum'], 'lifetime_points' => $earned, 'next' => $next];
+    }
+
     public function balance(User $user): int
     {
         $points = LoyaltyTransaction::where('user_id', $user->id)
@@ -50,10 +61,24 @@ class LoyaltyService
         }
         $spendPerPoint = max(1, (int) Setting::get('loyalty_spend_per_point', 10000));
         $eligible = max(0, $order->subtotal + $order->custom_cost - $order->discount - $order->loyalty_discount);
-        $points = intdiv($eligible, $spendPerPoint);
+        $basePoints = intdiv($eligible, $spendPerPoint);
+        $multiplier = $this->bonusMultiplier();
+        $points = $basePoints * $multiplier;
         if ($points > 0) {
-            LoyaltyTransaction::firstOrCreate(['reference' => 'order:'.$order->id.':earn'], ['user_id' => $order->user_id, 'order_id' => $order->id, 'type' => 'earn', 'points' => $points, 'expires_at' => now()->addDays((int) Setting::get('loyalty_expiry_days', 365))]);
+            LoyaltyTransaction::firstOrCreate(['reference' => 'order:'.$order->id.':earn'], ['user_id' => $order->user_id, 'order_id' => $order->id, 'type' => 'earn', 'points' => $points, 'metadata' => ['base_points' => $basePoints, 'multiplier' => $multiplier, 'campaign' => $multiplier > 1 ? Setting::get('loyalty_bonus_name', 'Bonus poin') : null], 'expires_at' => now()->addDays((int) Setting::get('loyalty_expiry_days', 365))]);
         }
+    }
+
+    private function bonusMultiplier(): int
+    {
+        $multiplier = max(1, (int) Setting::get('loyalty_bonus_multiplier', 1));
+        $start = Setting::get('loyalty_bonus_start');
+        $end = Setting::get('loyalty_bonus_end');
+        if ($multiplier === 1 || ! $start || ! $end || ! now()->between(Carbon::parse($start)->startOfDay(), Carbon::parse($end)->endOfDay())) {
+            return 1;
+        }
+
+        return $multiplier;
     }
 
     public function restoreCancelled(Order $order): void

@@ -73,6 +73,25 @@ class LoyaltyProgramTest extends TestCase
         $this->assertDatabaseCount('loyalty_transactions', 2);
     }
 
+    public function test_active_bonus_campaign_multiplies_points_and_updates_member_tier(): void
+    {
+        unset($this->checkout['loyalty_points']);
+        Setting::put('loyalty_bonus_name', 'Ramadan Triple Points');
+        Setting::put('loyalty_bonus_multiplier', 3);
+        Setting::put('loyalty_bonus_start', now()->subDay()->toDateString());
+        Setting::put('loyalty_bonus_end', now()->addDay()->toDateString());
+        Setting::put('loyalty_tiers', [['name' => 'Member', 'minimum' => 0], ['name' => 'Silver', 'minimum' => 500], ['name' => 'Gold', 'minimum' => 1050]]);
+        $order = app(CheckoutService::class)->place([$this->variant->id => 1], $this->checkout, hash('sha256', 'loyalty-bonus'), $this->user->id);
+        $order->update(['status' => 'confirmed', 'payment_status' => 'paid', 'fulfillment_status' => 'shipped', 'paid_at' => now()]);
+        app(OrderWorkflow::class)->act($order, 'receive');
+
+        $earned = LoyaltyTransaction::where('reference', 'order:'.$order->id.':earn')->firstOrFail();
+        $this->assertSame(90, $earned->points);
+        $this->assertSame(3, $earned->metadata['multiplier']);
+        $this->assertSame('Ramadan Triple Points', $earned->metadata['campaign']);
+        $this->assertSame('Gold', app(LoyaltyService::class)->tier($this->user)['name']);
+    }
+
     public function test_expired_points_are_not_available(): void
     {
         LoyaltyTransaction::where('reference', 'opening')->update(['expires_at' => now()->subDay()]);

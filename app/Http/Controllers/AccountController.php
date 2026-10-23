@@ -62,6 +62,8 @@ class AccountController extends Controller
 
     public function account(Request $r)
     {
+        $loyalty = app(LoyaltyService::class);
+
         return view('store.account', [
             'orders' => $r->user()->orders()->latest()->paginate(10),
             'addresses' => $r->user()->addresses,
@@ -70,7 +72,8 @@ class AccountController extends Controller
             'wishlist' => $r->user()->wishlistItems()->with('variant.series')->latest()->get(),
             'reviewableItems' => OrderItem::with('order')->whereHas('order', fn ($query) => $query->where('user_id', $r->user()->id)->whereIn('fulfillment_status', ['received']))->doesntHave('review')->latest()->get(),
             'myReviews' => $r->user()->reviews()->with('variant.series')->latest()->get(),
-            'loyaltyBalance' => app(LoyaltyService::class)->balance($r->user()),
+            'loyaltyBalance' => $loyalty->balance($r->user()),
+            'loyaltyTier' => $loyalty->tier($r->user()),
             'loyaltyTransactions' => $r->user()->loyaltyTransactions()->latest()->take(20)->get(),
         ]);
     }

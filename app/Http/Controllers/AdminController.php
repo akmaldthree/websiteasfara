@@ -509,6 +509,7 @@ class AdminController extends Controller
             'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0',
             'cod_blocked_phones_text' => 'nullable|string|max:10000', 'cod_excluded_skus_text' => 'nullable|string|max:10000', 'cod_excluded_categories_text' => 'nullable|string|max:10000',
             'loyalty_spend_per_point' => 'required|integer|min:1', 'loyalty_point_value' => 'required|integer|min:1', 'loyalty_min_redeem' => 'required|integer|min:1', 'loyalty_expiry_days' => 'required|integer|between:1,3650',
+            'loyalty_tiers_text' => 'nullable|string|max:5000', 'loyalty_bonus_name' => 'nullable|string|max:100', 'loyalty_bonus_multiplier' => 'required|integer|between:1,20', 'loyalty_bonus_start' => 'nullable|date', 'loyalty_bonus_end' => 'nullable|date|after_or_equal:loyalty_bonus_start',
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ];
         $data = $r->validate($rules);
@@ -529,6 +530,19 @@ class AdminController extends Controller
             unset($data[$input]);
         }
         $data['cod_allowed_segments'] = collect(['guest', 'customer', 'business'])->filter(fn ($segment) => $r->boolean('cod_segment_'.$segment))->values()->all();
+        $tiers = [];
+        foreach (explode("\n", $data['loyalty_tiers_text'] ?? '') as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            $parts = array_map('trim', explode('|', $line));
+            if (count($parts) !== 2 || $parts[0] === '' || filter_var($parts[1], FILTER_VALIDATE_INT) === false || (int) $parts[1] < 0) {
+                throw ValidationException::withMessages(['loyalty_tiers_text' => 'Format setiap level: Nama | Minimum poin, dengan minimum berupa angka nol atau lebih.']);
+            }
+            $tiers[] = ['name' => $parts[0], 'minimum' => (int) $parts[1]];
+        }
+        $data['loyalty_tiers'] = collect($tiers ?: [['name' => 'Member', 'minimum' => 0]])->sortBy('minimum')->unique('minimum')->values()->all();
+        unset($data['loyalty_tiers_text']);
         foreach (['logo', 'favicon', 'hero_image'] as $image) {
             unset($data[$image]);
             if ($r->hasFile($image)) {
