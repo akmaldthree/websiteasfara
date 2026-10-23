@@ -9,9 +9,11 @@ use App\Models\Setting;
 use App\Models\ShippingRate;
 use App\Models\User;
 use App\Models\Variant;
+use App\Notifications\ProductQuestionAnswered;
 use App\Services\CheckoutService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -79,7 +81,9 @@ class CustomerEngagementTest extends TestCase
         $this->actingAs($customer)->post(route('product.question', $this->variant->series), ['question' => 'Apakah bahan produk ini cocok untuk cuaca panas?'])->assertRedirect()->assertSessionHasNoErrors();
         $question = ProductQuestion::firstOrFail();
         $this->get(route('product', 'dress-review'))->assertDontSee('Apakah bahan produk ini');
+        Notification::fake();
         $this->actingAs($admin)->post(route('admin.questions.update', $question), ['status' => 'answered', 'answer' => 'Bahannya ringan dan nyaman untuk cuaca panas.'])->assertRedirect()->assertSessionHasNoErrors();
+        Notification::assertSentTo($customer, ProductQuestionAnswered::class);
         $this->get(route('product', 'dress-review'))->assertSee('Apakah bahan produk ini')->assertSee('Bahannya ringan');
 
         $reviewOwner = User::factory()->create();

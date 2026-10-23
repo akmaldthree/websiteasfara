@@ -28,6 +28,7 @@ use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Variant;
 use App\Models\VariantPrice;
+use App\Notifications\ProductQuestionAnswered;
 use App\Services\AfterSalesService;
 use App\Services\Audit;
 use App\Services\CustomProductService;
@@ -153,6 +154,10 @@ class AdminController extends Controller
             'answered_at' => now(),
         ]);
         Audit::record('product_question.moderated', 'product_question:'.$question->id, $before, $question->only('status', 'answer'));
+        if ($data['status'] === 'answered' && $before['status'] !== 'answered') {
+            $question->loadMissing(['user', 'series']);
+            $question->user->notify(new ProductQuestionAnswered($question));
+        }
 
         return back()->with('success', 'Pertanyaan produk diperbarui.');
     }
