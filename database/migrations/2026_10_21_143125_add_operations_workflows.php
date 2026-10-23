@@ -70,7 +70,7 @@ return new class extends Migration
             $t->string('reference', 100);
             $t->text('reason');
             $t->string('proof_path');
-            $t->timestamp('paid_at');
+            $t->dateTime('paid_at');
             $t->timestamps();
             $t->unique(['order_id', 'reference']);
         });

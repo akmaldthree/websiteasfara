@@ -32,7 +32,7 @@ return new class extends Migration
             $table->foreignId('price_group_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->text('review_notes')->nullable();
-            $table->timestamp('submitted_at');
+            $table->dateTime('submitted_at');
             $table->timestamp('reviewed_at')->nullable();
             $table->timestamps();
         });

@@ -1,22 +1,21 @@
 # Panduan Deploy Dthree di store dthree co id
 
-Panduan ini memasang website e-commerce pada `https://store.dthree.co.id` tanpa mengubah website utama `https://dthree.co.id`. Repository Laravel berada di luar `public_html`, sedangkan document root subdomain diarahkan langsung ke folder `public` Laravel.
+Panduan ini memasang website e-commerce pada `https://store.dthree.co.id` tanpa mengubah website utama `https://dthree.co.id`. Repository Laravel berada langsung di folder subdomain, sedangkan document root subdomain diarahkan ke folder `public` Laravel.
 
 ## 1. Lokasi aplikasi
 
 Gunakan struktur berikut:
 
 ```text
-/home/dthreeco/dthreecommerce/websitedthree/        aplikasi Laravel
-/home/dthreeco/dthreecommerce/websitedthree/public  document root store.dthree.co.id
+/home/dthreeco/store.dthree.co.id/        aplikasi Laravel
+/home/dthreeco/store.dthree.co.id/public  document root store.dthree.co.id
 ```
 
 Jika repository belum berhasil di-clone, pasang SSH deploy key terlebih dahulu, lalu jalankan:
 
 ```bash
-cd ~/dthreecommerce
-git clone git@github-dthree:akmaldthree/websitedthree.git
-cd websitedthree
+cd ~/store.dthree.co.id
+git clone git@github-dthree:akmaldthree/websitedthree.git .
 git branch --show-current
 ```
 
@@ -38,18 +37,18 @@ Gunakan hasil `realpath public` sebagai document root subdomain.
 5. Isi document root dengan path relatif berikut:
 
    ```text
-   dthreecommerce/websitedthree/public
+   store.dthree.co.id/public
    ```
 
 6. Pastikan hasil akhirnya menunjuk ke:
 
    ```text
-   /home/dthreeco/dthreecommerce/websitedthree/public
+   /home/dthreeco/store.dthree.co.id/public
    ```
 
 7. Klik **Submit**.
 
-Jika cPanel membatasi document root agar selalu berada di bawah `public_html`, hubungi dukungan hosting dan minta `store.dthree.co.id` diarahkan ke hasil perintah `realpath ~/dthreecommerce/websitedthree/public`. Jangan memindahkan seluruh repository ke web root.
+Jika cPanel membatasi document root agar selalu berada di bawah `public_html`, hubungi dukungan hosting dan minta `store.dthree.co.id` diarahkan ke hasil perintah `realpath ~/store.dthree.co.id/public`. Jangan arahkan document root ke root repository.
 
 ## 3. DNS subdomain
 
@@ -79,7 +78,7 @@ Gunakan database kosong. Jangan menjalankan `migrate:fresh`, `db:wipe`, atau `mi
 ## 5. Instal aplikasi
 
 ```bash
-cd ~/dthreecommerce/websitedthree
+cd ~/store.dthree.co.id
 
 php -v
 composer --version
@@ -124,6 +123,7 @@ SESSION_DOMAIN=store.dthree.co.id
 CACHE_STORE=database
 QUEUE_CONNECTION=database
 FILESYSTEM_DISK=local
+PUBLIC_FILESYSTEM_ROOT=/home/dthreeco/store.dthree.co.id/public/storage
 
 MAIL_MAILER=smtp
 MAIL_SCHEME=null
@@ -142,15 +142,18 @@ Jangan mengirim `.env`, password, token, atau private key melalui chat dan janga
 ## 6. Inisialisasi pertama
 
 ```bash
-cd ~/dthreecommerce/websitedthree
+cd ~/store.dthree.co.id
 
 php artisan key:generate
 php artisan migrate --force
 php artisan db:seed --force
 chmod -R u+rwX storage bootstrap/cache
-php artisan storage:link
+mkdir -p public/storage
+chmod -R u+rwX public/storage
 php artisan optimize
 ```
+
+`PUBLIC_FILESYSTEM_ROOT` menyimpan media publik langsung di `public/storage`. Konfigurasi ini ditujukan untuk shared hosting yang menonaktifkan fungsi PHP `symlink()` dan `exec()`, sehingga `php artisan storage:link` tidak diperlukan.
 
 `APP_KEY` hanya dibuat satu kali. Jangan menggantinya setelah website mulai digunakan.
 
@@ -195,19 +198,19 @@ php -v
 Gunakan path hasil `which php` pada Cron Jobs. Contoh jika hasilnya `/usr/bin/php`:
 
 ```cron
-* * * * * cd /home/dthreeco/dthreecommerce/websitedthree && /usr/bin/php artisan schedule:run >> /home/dthreeco/dthreecommerce/websitedthree/storage/logs/scheduler.log 2>&1
+* * * * * cd /home/dthreeco/store.dthree.co.id && /usr/bin/php artisan schedule:run >> /home/dthreeco/store.dthree.co.id/storage/logs/scheduler.log 2>&1
 ```
 
 Untuk shared hosting tanpa process manager, tambahkan queue worker pendek:
 
 ```cron
-* * * * * cd /home/dthreeco/dthreecommerce/websitedthree && /usr/bin/php artisan queue:work --stop-when-empty --max-time=50 --tries=3 >> /home/dthreeco/dthreecommerce/websitedthree/storage/logs/queue.log 2>&1
+* * * * * cd /home/dthreeco/store.dthree.co.id && /usr/bin/php artisan queue:work --stop-when-empty --max-time=50 --tries=3 >> /home/dthreeco/store.dthree.co.id/storage/logs/queue.log 2>&1
 ```
 
 Verifikasi:
 
 ```bash
-cd ~/dthreecommerce/websitedthree
+cd ~/store.dthree.co.id
 php artisan schedule:list
 php artisan schedule:run
 php artisan system:heartbeat
@@ -250,7 +253,7 @@ Jangan menjalankan `DemoSeeder` pada database produksi.
 Backup database dan `storage/app`, kemudian:
 
 ```bash
-cd ~/dthreecommerce/websitedthree
+cd ~/store.dthree.co.id
 bash scripts/deploy.sh
 ```
 
@@ -265,7 +268,7 @@ PHP_BIN=<PATH_PHP_84> COMPOSER_BIN=<PATH_COMPOSER> bash scripts/deploy.sh
 ## 13. Pemeriksaan akhir
 
 ```bash
-cd ~/dthreecommerce/websitedthree
+cd ~/store.dthree.co.id
 
 php artisan about
 php artisan migrate:status
@@ -276,4 +279,3 @@ curl -I https://store.dthree.co.id/up
 ```
 
 Pastikan seluruh migration berstatus `Ran`, Git working tree kosong, SSL aktif, cron memperbarui heartbeat, dan file `.env` tidak dapat diakses melalui web.
-

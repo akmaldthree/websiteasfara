@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('bank_name', 100);
             $table->string('account_number', 100);
             $table->string('payment_reference', 150)->unique();
-            $table->timestamp('paid_at');
+            $table->dateTime('paid_at');
             $table->string('proof_path')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();

@@ -86,8 +86,8 @@ return new class extends Migration
             $t->unsignedInteger('maximum')->nullable();
             $t->unsignedInteger('usage_limit')->default(100);
             $t->unsignedInteger('used')->default(0);
-            $t->timestamp('starts_at');
-            $t->timestamp('ends_at');
+            $t->dateTime('starts_at');
+            $t->dateTime('ends_at');
             $t->boolean('active')->default(true);
             $t->timestamps();
         });
@@ -118,7 +118,7 @@ return new class extends Migration
             $t->text('rejection_reason')->nullable();
             $t->string('tracking_number')->nullable();
             $t->string('inventory_state')->default('reserved');
-            $t->timestamp('expires_at')->index();
+            $t->dateTime('expires_at')->index();
             $t->timestamp('paid_at')->nullable();
             $t->timestamp('shipped_at')->nullable();
             $t->timestamp('completed_at')->nullable();
