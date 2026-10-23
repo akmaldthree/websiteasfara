@@ -25,6 +25,7 @@ Website e-commerce Dthree dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. 
 - Pusat konfigurasi admin mengelola identitas brand, logo/favicon/hero, seluruh copy utama beranda dan footer, SEO default, kontak/media sosial, serta pilihan mode manual/API untuk ongkir, tracking, dan WhatsApp dengan token terenkripsi.
 - Galeri produk mendukung banyak foto dan pengaitan warna/SKU; kategori dan series memiliki metadata SEO, canonical, structured data, serta tautan berbagi varian.
 - CMS menyediakan media library, editor blok terstruktur yang aman, template halaman, tema serta header/footer global, preview, jadwal tayang, workflow draft–review–approve, riwayat revisi, dan pemulihan versi lama.
+- Akun staf dapat mengaktifkan verifikasi dua langkah melalui kode email dari menu Keamanan akun.
 - Analytics internal anonim merekam funnel storefront tanpa kata pencarian atau data pribadi, dapat dimatikan admin, dan tampil pada laporan Management.
 - Staf pengiriman dapat mengubah ongkir sebelum bukti pembayaran masuk; nilai awal, alasan, total baru, timeline, dan audit tersimpan.
 

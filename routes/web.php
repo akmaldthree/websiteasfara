@@ -30,6 +30,8 @@ Route::middleware('signed')->group(function () {
 Route::middleware('guest')->group(function () {
     Route::get('/masuk', fn () => view('store.auth', ['mode' => 'login']))->name('login');
     Route::post('/masuk', [Account::class, 'login'])->middleware('throttle:5,1')->name('login.submit');
+    Route::get('/verifikasi-staf', [Account::class, 'twoFactorChallenge'])->name('two-factor.challenge');
+    Route::post('/verifikasi-staf', [Account::class, 'twoFactorVerify'])->middleware('throttle:5,1')->name('two-factor.verify');
     Route::get('/daftar', fn () => view('store.auth', ['mode' => 'register']))->name('register');
     Route::post('/daftar', [Account::class, 'register'])->middleware('throttle:5,1')->name('register.submit');
     Route::get('/lupa-kata-sandi', fn () => view('store.auth', ['mode' => 'forgot']))->name('password.request');
@@ -54,6 +56,8 @@ Route::middleware('auth')->group(function () {
 });
 Route::post('/pesanan/{order}/klaim', [Account::class, 'claimOrder'])->middleware(['auth', 'signed'])->name('orders.claim');
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
+    Route::get('/keamanan', [Admin::class, 'security'])->middleware('permission:dashboard')->name('security');
+    Route::post('/keamanan', [Admin::class, 'saveSecurity'])->middleware('permission:dashboard')->name('security.save');
     Route::get('/', [Admin::class, 'dashboard'])->middleware('permission:dashboard')->name('dashboard');
     Route::get('/pesanan', [Admin::class, 'orders'])->middleware('permission:orders.read')->name('orders');
     Route::get('/pesanan/{order}', [Admin::class, 'order'])->middleware('permission:orders.read')->name('order');

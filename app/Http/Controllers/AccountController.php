@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\Review;
 use App\Models\User;
 use App\Models\Variant;
+use App\Notifications\StaffLoginCode;
 use App\Services\Audit;
 use App\Services\CartService;
 use App\Services\LoyaltyService;
@@ -32,11 +33,52 @@ class AccountController extends Controller
         if (! Auth::attempt([$field => $d['login'], 'password' => $d['password'], 'active' => true], $r->boolean('remember'))) {
             throw ValidationException::withMessages(['login' => 'Email, nomor telepon, atau kata sandi tidak sesuai.']);
         }
+        $user = $r->user();
+        if ($user->role !== 'customer' && $user->two_factor_enabled) {
+            $code = (string) random_int(100000, 999999);
+            Auth::logout();
+            $r->session()->regenerate();
+            $r->session()->put('staff_two_factor', [
+                'user_id' => $user->id,
+                'code_hash' => Hash::make($code),
+                'expires_at' => now()->addMinutes(10)->timestamp,
+                'remember' => $r->boolean('remember'),
+            ]);
+            $user->notify(new StaffLoginCode($code));
+
+            return redirect()->route('two-factor.challenge');
+        }
         $r->session()->regenerate();
         $merged = $cartService->merge($r->user(), $r->session()->get('cart', []), $r->session()->get('cart_customizations', []));
         $r->session()->put(['cart' => $merged['cart'], 'cart_customizations' => $merged['customizations']]);
 
         return redirect()->intended($r->user()->role === 'customer' ? route('account') : route('admin.dashboard'));
+    }
+
+    public function twoFactorChallenge(Request $request)
+    {
+        if (! $request->session()->has('staff_two_factor')) {
+            return redirect()->route('login');
+        }
+
+        return view('store.two-factor');
+    }
+
+    public function twoFactorVerify(Request $request, CartService $cartService)
+    {
+        $data = $request->validate(['code' => ['required', 'digits:6']]);
+        $challenge = $request->session()->get('staff_two_factor');
+        if (! is_array($challenge) || ($challenge['expires_at'] ?? 0) < now()->timestamp || ! Hash::check($data['code'], $challenge['code_hash'] ?? '')) {
+            throw ValidationException::withMessages(['code' => 'Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan masuk kembali.']);
+        }
+        $user = User::whereKey($challenge['user_id'])->where('active', true)->where('role', '!=', 'customer')->firstOrFail();
+        Auth::login($user, (bool) ($challenge['remember'] ?? false));
+        $request->session()->forget('staff_two_factor');
+        $request->session()->regenerate();
+        $merged = $cartService->merge($user, $request->session()->get('cart', []), $request->session()->get('cart_customizations', []));
+        $request->session()->put(['cart' => $merged['cart'], 'cart_customizations' => $merged['customizations']]);
+
+        return redirect()->intended(route('admin.dashboard'));
     }
 
     public function register(Request $r, CartService $cartService)

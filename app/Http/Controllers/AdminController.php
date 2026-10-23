@@ -34,6 +34,7 @@ use App\Services\OrderWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -557,6 +558,28 @@ class AdminController extends Controller
     public function settings()
     {
         return view('admin.settings');
+    }
+
+    public function security()
+    {
+        return view('admin.security');
+    }
+
+    public function saveSecurity(Request $request)
+    {
+        $data = $request->validate(['current_password' => 'required|string', 'two_factor_enabled' => 'nullable|boolean']);
+        if (! Hash::check($data['current_password'], $request->user()->password)) {
+            throw ValidationException::withMessages(['current_password' => 'Kata sandi saat ini tidak sesuai.']);
+        }
+        $enabled = $request->boolean('two_factor_enabled');
+        $before = $request->user()->only(['two_factor_enabled', 'two_factor_confirmed_at']);
+        $request->user()->forceFill([
+            'two_factor_enabled' => $enabled,
+            'two_factor_confirmed_at' => $enabled ? now() : null,
+        ])->save();
+        Audit::record('staff.two_factor_updated', 'user:'.$request->user()->id, $before, $request->user()->only(['two_factor_enabled', 'two_factor_confirmed_at']));
+
+        return back()->with('success', $enabled ? 'Verifikasi dua langkah sudah aktif.' : 'Verifikasi dua langkah dinonaktifkan.');
     }
 
     public function saveSettings(Request $r)

@@ -30,6 +30,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'active' => 'boolean',
+            'two_factor_enabled' => 'boolean',
+            'two_factor_confirmed_at' => 'datetime',
             'marketing_email' => 'boolean',
             'marketing_whatsapp' => 'boolean',
             'consent_updated_at' => 'datetime',
