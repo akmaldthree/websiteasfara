@@ -92,6 +92,30 @@ class LoyaltyProgramTest extends TestCase
         $this->assertSame('Gold', app(LoyaltyService::class)->tier($this->user)['name']);
     }
 
+    public function test_bonus_campaign_can_target_a_product_and_member_tier_can_raise_point_value(): void
+    {
+        unset($this->checkout['loyalty_points']);
+        Setting::put('loyalty_bonus_name', 'Bonus SKU');
+        Setting::put('loyalty_bonus_multiplier', 2);
+        Setting::put('loyalty_bonus_start', now()->subDay()->toDateString());
+        Setting::put('loyalty_bonus_end', now()->addDay()->toDateString());
+        Setting::put('loyalty_bonus_target_type', 'variant');
+        Setting::put('loyalty_bonus_target_id', $this->variant->id);
+        Setting::put('loyalty_bonus_segment', 'customer');
+        $order = app(CheckoutService::class)->place([$this->variant->id => 1], $this->checkout, hash('sha256', 'loyalty-target'), $this->user->id);
+        $order->update(['status' => 'confirmed', 'payment_status' => 'paid', 'fulfillment_status' => 'shipped', 'paid_at' => now()]);
+        app(OrderWorkflow::class)->act($order, 'receive');
+
+        $earned = LoyaltyTransaction::where('reference', 'order:'.$order->id.':earn')->firstOrFail();
+        $this->assertSame(60, $earned->points);
+        $this->assertSame('variant:'.$this->variant->id, $earned->metadata['target']);
+
+        Setting::put('loyalty_tiers', [['name' => 'Gold', 'minimum' => 0, 'benefit' => 'Nilai poin +10%', 'value_bonus_percent' => 10]]);
+        $redemption = app(LoyaltyService::class)->redemption($this->user, 100, 50000);
+        $this->assertSame(11000, $redemption['discount']);
+        $this->assertSame('Nilai poin +10%', app(LoyaltyService::class)->tier($this->user)['benefit']);
+    }
+
     public function test_expired_points_are_not_available(): void
     {
         LoyaltyTransaction::where('reference', 'opening')->update(['expires_at' => now()->subDay()]);

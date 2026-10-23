@@ -602,6 +602,7 @@ class AdminController extends Controller
             'cod_blocked_phones_text' => 'nullable|string|max:10000', 'cod_excluded_skus_text' => 'nullable|string|max:10000', 'cod_excluded_categories_text' => 'nullable|string|max:10000',
             'loyalty_spend_per_point' => 'required|integer|min:1', 'loyalty_point_value' => 'required|integer|min:1', 'loyalty_min_redeem' => 'required|integer|min:1', 'loyalty_expiry_days' => 'required|integer|between:1,3650',
             'loyalty_tiers_text' => 'nullable|string|max:5000', 'loyalty_bonus_name' => 'nullable|string|max:100', 'loyalty_bonus_multiplier' => 'required|integer|between:1,20', 'loyalty_bonus_start' => 'nullable|date', 'loyalty_bonus_end' => 'nullable|date|after_or_equal:loyalty_bonus_start',
+            'loyalty_bonus_segment' => 'required|in:all,customer,business', 'loyalty_bonus_tier' => 'nullable|string|max:100', 'loyalty_bonus_target_type' => 'required|in:all,category,series,variant', 'loyalty_bonus_target_id' => 'nullable|integer|min:1',
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ];
         $data = $r->validate($rules);
@@ -628,13 +629,26 @@ class AdminController extends Controller
                 continue;
             }
             $parts = array_map('trim', explode('|', $line));
-            if (count($parts) !== 2 || $parts[0] === '' || filter_var($parts[1], FILTER_VALIDATE_INT) === false || (int) $parts[1] < 0) {
-                throw ValidationException::withMessages(['loyalty_tiers_text' => 'Format setiap level: Nama | Minimum poin, dengan minimum berupa angka nol atau lebih.']);
+            if (count($parts) < 2 || count($parts) > 4 || $parts[0] === '' || filter_var($parts[1], FILTER_VALIDATE_INT) === false || (int) $parts[1] < 0 || (isset($parts[3]) && (filter_var($parts[3], FILTER_VALIDATE_INT) === false || (int) $parts[3] < 0 || (int) $parts[3] > 500))) {
+                throw ValidationException::withMessages(['loyalty_tiers_text' => 'Format setiap level: Nama | Minimum poin | Benefit | Bonus nilai poin (%).']);
             }
-            $tiers[] = ['name' => $parts[0], 'minimum' => (int) $parts[1]];
+            $tiers[] = ['name' => $parts[0], 'minimum' => (int) $parts[1], 'benefit' => $parts[2] ?? '', 'value_bonus_percent' => (int) ($parts[3] ?? 0)];
         }
-        $data['loyalty_tiers'] = collect($tiers ?: [['name' => 'Member', 'minimum' => 0]])->sortBy('minimum')->unique('minimum')->values()->all();
+        $data['loyalty_tiers'] = collect($tiers ?: [['name' => 'Member', 'minimum' => 0, 'benefit' => '', 'value_bonus_percent' => 0]])->sortBy('minimum')->unique('minimum')->values()->all();
         unset($data['loyalty_tiers_text']);
+        if ($data['loyalty_bonus_target_type'] === 'all') {
+            $data['loyalty_bonus_target_id'] = null;
+        } else {
+            if (empty($data['loyalty_bonus_target_id'])) {
+                throw ValidationException::withMessages(['loyalty_bonus_target_id' => 'ID target wajib diisi untuk kampanye bertarget.']);
+            }
+            $targetModel = match ($data['loyalty_bonus_target_type']) {
+                'category' => Category::class, 'series' => Series::class, 'variant' => Variant::class,
+            };
+            if (! $targetModel::whereKey($data['loyalty_bonus_target_id'])->exists()) {
+                throw ValidationException::withMessages(['loyalty_bonus_target_id' => 'Target kampanye loyalty tidak ditemukan.']);
+            }
+        }
         foreach (['logo', 'favicon', 'hero_image'] as $image) {
             unset($data[$image]);
             if ($r->hasFile($image)) {
