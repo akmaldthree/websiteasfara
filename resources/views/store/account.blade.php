@@ -56,6 +56,7 @@
             <p><strong>{{ $businessAccount->business_name }}</strong> · {{ $businessAccount->business_type==='wholesale'?'Grosir':ucfirst($businessAccount->business_type) }}<br><small>Kanal penjualan: {{ $businessAccount->sales_channel }}</small></p>
             @if($businessAccount->status==='approved' && (!$businessAccount->expires_at || $businessAccount->expires_at->isFuture()))
                 <p>Grup harga <strong>{{ $businessAccount->priceGroup?->name }}</strong> aktif untuk akun ini. Masuk ke halaman produk untuk melihat tier harga privat.@if($businessAccount->credit_terms_days>0 && $businessAccount->credit_limit>0) Termin {{ $businessAccount->credit_terms_days }} hari tersedia dengan limit @rupiah($businessAccount->credit_limit).@endif</p>
+                <details class="mt-3"><summary>+ Buat pesanan massal dari daftar SKU</summary><form method="post" action="{{ route('business.bulk-order') }}" class="mt-3">@csrf<label for="bulk-items">Satu SKU per baris: SKU | jumlah</label><textarea id="bulk-items" name="items" class="form-control" rows="6" placeholder="DTHREE-001 | 12&#10;DTHREE-002 | 6" required>{{ old('items') }}</textarea><small>Maksimal 100 baris. Daftar ini mengganti isi keranjang dan akan ditinjau sebelum checkout.</small><button class="btn btn-dark mt-3">Validasi dan buat keranjang</button></form></details>
             @elseif($businessAccount->status==='rejected')
                 <p>{{ $businessAccount->review_notes }}</p>
             @else

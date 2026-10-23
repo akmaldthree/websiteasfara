@@ -120,6 +120,48 @@ class AccountController extends Controller
         ]);
     }
 
+    public function bulkOrder(Request $request, CartService $cartService)
+    {
+        $data = $request->validate(['items' => 'required|string|max:10000']);
+        $account = $request->user()->businessAccount;
+        if (! $account || $account->status !== 'approved' || ($account->expires_at && $account->expires_at->isPast())) {
+            throw ValidationException::withMessages(['items' => 'Portal pesanan massal hanya tersedia untuk akun bisnis aktif.']);
+        }
+        $rows = collect(preg_split('/\r\n|\r|\n/', trim($data['items'])))->filter();
+        if ($rows->count() > 100) {
+            throw ValidationException::withMessages(['items' => 'Maksimal 100 baris SKU per unggahan.']);
+        }
+        $quantities = [];
+        foreach ($rows as $index => $row) {
+            $parts = array_map('trim', preg_split('/[|,;]/', $row));
+            if (count($parts) !== 2 || ! preg_match('/^[A-Za-z0-9._-]+$/', $parts[0]) || filter_var($parts[1], FILTER_VALIDATE_INT) === false || (int) $parts[1] < 1) {
+                throw ValidationException::withMessages(['items' => 'Baris '.($index + 1).' harus memakai format SKU | jumlah.']);
+            }
+            $sku = strtoupper($parts[0]);
+            $quantities[$sku] = ($quantities[$sku] ?? 0) + (int) $parts[1];
+            if ($quantities[$sku] > 100) {
+                throw ValidationException::withMessages(['items' => "Jumlah {$sku} maksimal 100 item."]);
+            }
+        }
+        $variants = Variant::with('series.category')->whereIn('sku', array_keys($quantities))->get()->keyBy(fn ($variant) => strtoupper($variant->sku));
+        if ($variants->count() !== count($quantities)) {
+            $missing = collect(array_keys($quantities))->diff($variants->keys())->implode(', ');
+            throw ValidationException::withMessages(['items' => 'SKU tidak ditemukan: '.$missing]);
+        }
+        $cart = [];
+        foreach ($quantities as $sku => $quantity) {
+            $variant = $variants[$sku];
+            if (! $variant->active || ! $variant->series->active || ! $variant->series->category->active || $variant->fulfillment === 'custom_made') {
+                throw ValidationException::withMessages(['items' => "SKU {$sku} tidak tersedia untuk pesanan massal."]);
+            }
+            $cart[$variant->id] = $quantity;
+        }
+        $request->session()->put(['cart' => $cart, 'cart_customizations' => []]);
+        $cartService->sync($request->user(), $cart);
+
+        return redirect()->route('cart')->with('success', count($cart).' SKU dimasukkan ke keranjang. Tinjau harga, minimum, dan stok sebelum checkout.');
+    }
+
     public function wishlist(Request $request, Variant $variant)
     {
         $item = $request->user()->wishlistItems()->where('variant_id', $variant->id)->first();

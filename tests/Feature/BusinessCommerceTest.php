@@ -228,6 +228,19 @@ class BusinessCommerceTest extends TestCase
         $this->assertSame($sales->id, $entry->sales_user_id);
     }
 
+    public function test_approved_business_can_build_cart_from_bulk_sku_list(): void
+    {
+        $customer = User::factory()->create();
+        BusinessAccount::factory()->approved($this->group)->create(['user_id' => $customer->id, 'business_type' => 'reseller']);
+
+        $this->actingAs($customer)->post(route('business.bulk-order'), [
+            'items' => "b2b-mitra-l | 2\nB2B-MITRA-L | 1",
+        ])->assertRedirect(route('cart'))->assertSessionHasNoErrors();
+
+        $this->assertSame(3, session('cart')[$this->variant->id]);
+        $this->assertDatabaseHas('user_cart_items', ['user_id' => $customer->id, 'variant_id' => $this->variant->id, 'quantity' => 3]);
+    }
+
     /** @return array<string, mixed> */
     private function checkoutInput(): array
     {

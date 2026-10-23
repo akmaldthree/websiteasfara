@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/akun/alamat/{id}/utama', [Account::class, 'defaultAddress'])->name('address.default');
     Route::delete('/akun/alamat/{id}', [Account::class, 'deleteAddress'])->name('address.delete');
     Route::post('/akun/bisnis', [Account::class, 'businessApplication'])->middleware('throttle:5,1')->name('business.apply');
+    Route::post('/akun/bisnis/pesanan-massal', [Account::class, 'bulkOrder'])->middleware('throttle:10,1')->name('business.bulk-order');
     Route::post('/akun/penawaran/{customQuote}/terima', [Store::class, 'acceptCustomQuote'])->name('custom.accept');
     Route::post('/akun/wishlist/{variant}', [Account::class, 'wishlist'])->name('wishlist.toggle');
     Route::post('/akun/ulasan/{item}', [Account::class, 'review'])->name('review.store');
