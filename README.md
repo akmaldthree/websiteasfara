@@ -23,6 +23,10 @@ Website e-commerce Dthree dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. 
 - B2B mendukung masa aktif/suspend, diskon dasar grup, tier per SKU, minimum pembelian per kategori/series/SKU, dan identitas pengirim dropship pada dokumen paket.
 - Import katalog menerima CSV/XLSX dengan pratinjau atomik, mode buat/upsert beserta ledger stok, dan generator kombinasi jenis produk, warna, serta ukuran.
 - Pusat konfigurasi admin mengelola identitas brand, logo/favicon/hero, seluruh copy utama beranda dan footer, SEO default, kontak/media sosial, serta pilihan mode manual/API untuk ongkir, tracking, dan WhatsApp dengan token terenkripsi.
+- Galeri produk mendukung banyak foto dan pengaitan warna/SKU; kategori dan series memiliki metadata SEO, canonical, structured data, serta tautan berbagi varian.
+- CMS menyediakan editor blok terstruktur yang aman, preview, jadwal tayang, riwayat revisi, dan pemulihan versi lama.
+- Analytics internal anonim merekam funnel storefront tanpa kata pencarian atau data pribadi, dapat dimatikan admin, dan tampil pada laporan Management.
+- Staf pengiriman dapat mengubah ongkir sebelum bukti pembayaran masuk; nilai awal, alasan, total baru, timeline, dan audit tersimpan.
 
 ## Instalasi hosting
 
