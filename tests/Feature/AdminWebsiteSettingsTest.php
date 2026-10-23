@@ -31,6 +31,7 @@ class AdminWebsiteSettingsTest extends TestCase
             'cod_excluded_skus_text' => "abc-1\nABC-1",
             'cod_excluded_categories_text' => 'Abaya',
             'loyalty_tiers_text' => "Member | 0\nSilver | 500\nGold | 1500",
+            'payment_review_sla_hours' => 4,
         ];
         $payload['brand_name'] = 'Dthree Baru';
         $payload['hero_title'] = 'Judul dari dashboard';

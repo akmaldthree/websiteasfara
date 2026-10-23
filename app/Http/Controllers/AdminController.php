@@ -42,10 +42,14 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
+        $paymentSlaHours = max(1, (int) Setting::get('payment_review_sla_hours', 4));
+
         return view('admin.dashboard', [
             'revenue' => max(0, Order::whereNotNull('paid_at')->whereMonth('paid_at', now()->month)->whereYear('paid_at', now()->year)->sum('total')
                 - Refund::whereMonth('paid_at', now()->month)->whereYear('paid_at', now()->year)->sum('amount')),
             'waiting' => Order::where('payment_status', 'review')->count(), 'cod' => Order::where('payment_method', 'cod')->where('status', 'waiting')->count(),
+            'paymentOverdue' => Order::where('payment_status', 'review')->whereHas('proofs', fn ($query) => $query->where('created_at', '<=', now()->subHours($paymentSlaHours)))->count(),
+            'paymentSlaHours' => $paymentSlaHours,
             'packing' => Order::where('status', 'confirmed')->where('fulfillment_status', 'processing')->count(),
             'low' => Variant::whereRaw('stock - reserved <= low_stock')->count(), 'recent' => Order::latest()->take(8)->get(),
         ]);
@@ -507,6 +511,7 @@ class AdminController extends Controller
             'shipping_mode' => 'required|in:manual,api', 'shipping_provider' => 'required|string|max:80', 'shipping_api_url' => 'nullable|url|max:500', 'shipping_api_token_new' => 'nullable|string|max:2000',
             'tracking_mode' => 'required|in:manual,api', 'whatsapp_mode' => 'required|in:manual,api', 'whatsapp_provider' => 'required|string|max:80', 'whatsapp_api_url' => 'nullable|url|max:500', 'whatsapp_api_token_new' => 'nullable|string|max:2000',
             'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0',
+            'payment_review_sla_hours' => 'required|integer|between:1,168',
             'cod_blocked_phones_text' => 'nullable|string|max:10000', 'cod_excluded_skus_text' => 'nullable|string|max:10000', 'cod_excluded_categories_text' => 'nullable|string|max:10000',
             'loyalty_spend_per_point' => 'required|integer|min:1', 'loyalty_point_value' => 'required|integer|min:1', 'loyalty_min_redeem' => 'required|integer|min:1', 'loyalty_expiry_days' => 'required|integer|between:1,3650',
             'loyalty_tiers_text' => 'nullable|string|max:5000', 'loyalty_bonus_name' => 'nullable|string|max:100', 'loyalty_bonus_multiplier' => 'required|integer|between:1,20', 'loyalty_bonus_start' => 'nullable|date', 'loyalty_bonus_end' => 'nullable|date|after_or_equal:loyalty_bonus_start',

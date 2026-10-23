@@ -35,7 +35,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 2. Adapter penyedia tarif POS/JNE dan tracking, retry/cache/fallback otomatis. Tarif manual tetap dapat digunakan.
 3. Otomasi ongkir retur, approval refund berjenjang, dan rekonsiliasi bank. Adjustment loyalty proporsional saat refund sudah tersedia; transfer refund tetap dilakukan manual.
 4. Fitur pertumbuhan lanjutan: benefit loyalty khusus per level dan bonus bertarget, penagihan kredit serta ledger komisi B2B, dan portal pesanan massal.
-5. Hardening produksi: 2FA staf, audit sensitif dengan redaksi berdasarkan peran, SLA bukti transfer, retensi data, monitoring, simulasi koneksi eksternal, beban serta konkurensi MySQL dan backup restore.
+5. Hardening produksi: 2FA staf, audit sensitif dengan redaksi berdasarkan peran, retensi data, monitoring, simulasi koneksi eksternal, beban serta konkurensi MySQL dan backup restore. SLA bukti transfer sudah dapat diatur dan dipantau di dashboard.
 6. Integrasi sumber stok/dashboard produksi dua arah. Tidak ada data aplikasi lain yang disalin ke e-commerce.
 
 ## Verifikasi dan penerimaan
