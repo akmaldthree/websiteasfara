@@ -55,7 +55,7 @@
             <p>Status pengajuan: <span class="badge">{{ $businessAccount->status==='approved' && $businessAccount->expires_at?->isPast() ? 'EXPIRED' : strtoupper($businessAccount->status) }}</span> @if($businessAccount->expires_at)· berlaku sampai {{ $businessAccount->expires_at->format('d M Y') }}@endif</p>
             <p><strong>{{ $businessAccount->business_name }}</strong> · {{ $businessAccount->business_type==='wholesale'?'Grosir':ucfirst($businessAccount->business_type) }}<br><small>Kanal penjualan: {{ $businessAccount->sales_channel }}</small></p>
             @if($businessAccount->status==='approved' && (!$businessAccount->expires_at || $businessAccount->expires_at->isFuture()))
-                <p>Grup harga <strong>{{ $businessAccount->priceGroup?->name }}</strong> aktif untuk akun ini. Masuk ke halaman produk untuk melihat tier harga privat.</p>
+                <p>Grup harga <strong>{{ $businessAccount->priceGroup?->name }}</strong> aktif untuk akun ini. Masuk ke halaman produk untuk melihat tier harga privat.@if($businessAccount->credit_terms_days>0 && $businessAccount->credit_limit>0) Termin {{ $businessAccount->credit_terms_days }} hari tersedia dengan limit @rupiah($businessAccount->credit_limit).@endif</p>
             @elseif($businessAccount->status==='rejected')
                 <p>{{ $businessAccount->review_notes }}</p>
             @else

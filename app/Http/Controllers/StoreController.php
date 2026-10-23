@@ -192,7 +192,7 @@ class StoreController extends Controller
             'name' => 'required|string|max:100', 'phone' => ['required', 'regex:/^\+?[0-9]{9,15}$/'], 'email' => 'nullable|email|max:150',
             'province' => 'required|string|max:100', 'city' => 'required|string|max:100', 'district' => 'required|string|max:100',
             'postal_code' => 'required|digits:5', 'detail' => 'required|string|max:1000', 'shipping_rate_id' => 'required|integer',
-            'payment_method' => 'required|in:transfer,cod', 'coupon' => 'nullable|string|max:200', 'loyalty_points' => 'nullable|integer|min:0|max:100000000', 'notes' => 'nullable|string|max:1000', 'terms' => 'accepted',
+            'payment_method' => 'required|in:transfer,cod,credit', 'coupon' => 'nullable|string|max:200', 'loyalty_points' => 'nullable|integer|min:0|max:100000000', 'notes' => 'nullable|string|max:1000', 'terms' => 'accepted',
             'sender_name' => 'nullable|string|max:100', 'sender_phone' => ['nullable', 'regex:/^\+?[0-9]{9,15}$/'],
         ]);
     }

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\BusinessAccount;
 use App\Models\BusinessOrderRule;
 use App\Models\Category;
+use App\Models\CommissionEntry;
 use App\Models\PriceGroup;
 use App\Models\Series;
 use App\Models\Setting;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Models\Variant;
 use App\Models\VariantPrice;
 use App\Services\CheckoutService;
+use App\Services\OrderWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -187,6 +189,43 @@ class BusinessCommerceTest extends TestCase
         $order = $service->place([$this->variant->id => 1], $input, hash('sha256', 'dropship-order'), $customer->id, $service->fingerprint($quote));
         $this->assertSame('Toko Pelanggan', $order->dropship_snapshot['name']);
         $this->assertSame('081234567899', $order->dropship_snapshot['phone']);
+    }
+
+    public function test_credit_terms_enforce_available_limit_and_completed_order_accrues_sales_commission(): void
+    {
+        $customer = User::factory()->create();
+        $sales = User::factory()->create();
+        $sales->forceFill(['role' => 'admin'])->save();
+        BusinessAccount::factory()->approved($this->group)->create([
+            'user_id' => $customer->id, 'business_type' => 'reseller', 'sales_user_id' => $sales->id,
+            'credit_terms_days' => 30, 'credit_limit' => 1000000, 'commission_percent' => 2.5,
+        ]);
+        $input = array_replace($this->checkoutInput(), ['payment_method' => 'credit']);
+        $service = app(CheckoutService::class);
+        $quote = $service->quote([$this->variant->id => 3], $input, false, $customer);
+        $order = $service->place([$this->variant->id => 3], $input, hash('sha256', 'business-credit'), $customer->id, $service->fingerprint($quote));
+
+        $this->assertNotNull($order->credit_due_at);
+        $this->assertSame(30, $order->business_snapshot['credit_terms_days']);
+        try {
+            $service->quote([$this->variant->id => 3], $input, false, $customer);
+            $this->fail('Limit kredit yang sudah terpakai harus diperhitungkan.');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString('Limit kredit', $exception->getMessage());
+        }
+
+        $this->actingAs($sales);
+        $workflow = app(OrderWorkflow::class);
+        $workflow->act($order, 'credit_confirm');
+        $workflow->act($order->fresh(), 'pack');
+        $workflow->act($order->fresh(), 'ship', tracking: 'JNE-CREDIT-1');
+        $workflow->act($order->fresh(), 'receive');
+        $workflow->act($order->fresh(), 'credit_paid');
+
+        $this->assertSame('completed', $order->fresh()->status);
+        $entry = CommissionEntry::where('order_id', $order->id)->where('type', 'earned')->firstOrFail();
+        $this->assertSame(18750, $entry->amount);
+        $this->assertSame($sales->id, $entry->sales_user_id);
     }
 
     /** @return array<string, mixed> */

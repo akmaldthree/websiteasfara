@@ -100,6 +100,7 @@ class CheckoutService
         $customCost = array_sum(array_column($lines, 'custom_cost'));
         $merchandiseTotal = $subtotal + $customCost;
         $group = $lines[0]['price_group'];
+        $businessAccount = $group ? $customer?->businessAccount()->with('salesUser')->first() : null;
         if ($group) {
             $quantity = array_sum(array_column($lines, 'quantity'));
             $this->check($quantity >= $group->minimum_order_quantity, "Minimum grup {$group->name} adalah {$group->minimum_order_quantity} item per pesanan.");
@@ -139,9 +140,10 @@ class CheckoutService
                 $this->check(! in_array(strtolower($l['variant']->series->category->slug), $excludedCategories, true), 'Salah satu kategori tidak memenuhi aturan COD.');
             }
             $fee = min((int) Setting::get('cod_fee_max', 100000), (int) Setting::get('cod_fee', 0) + (int) ceil($merchandiseTotal * (int) Setting::get('cod_percent', 0) / 100));
-        } else {
-            $this->check(($input['payment_method'] ?? '') === 'transfer', 'Metode pembayaran tidak valid.');
+        } elseif (($input['payment_method'] ?? '') === 'transfer') {
             $this->check(count(Setting::get('bank_accounts', [])) > 0, 'Rekening transfer belum dikonfigurasi.');
+        } else {
+            $this->check(($input['payment_method'] ?? '') === 'credit' && $businessAccount && $businessAccount->credit_terms_days > 0 && $businessAccount->credit_limit > 0, 'Termin kredit tidak tersedia untuk akun ini.');
         }
         $discount = 0;
         $shippingDiscount = 0;
@@ -207,14 +209,20 @@ class CheckoutService
             $loyalty = $this->loyalty->redemption($customer, $requestedPoints, max(0, $merchandiseTotal - $discount));
         }
 
-        return ['lines' => $lines, 'price_group' => $group, 'subtotal' => $subtotal, 'custom_cost' => $customCost, 'weight' => $weight, 'rate' => $rate, 'shipping_cost' => $shipping, 'discount' => $discount, 'shipping_discount' => $shippingDiscount, 'cod_fee' => $fee, 'loyalty_points' => $loyalty['points'], 'loyalty_discount' => $loyalty['discount'], 'total' => $merchandiseTotal + $shipping + $fee - $discount - $shippingDiscount - $loyalty['discount'], 'coupons' => $coupons, 'coupon_benefits' => $couponBenefits];
+        $total = $merchandiseTotal + $shipping + $fee - $discount - $shippingDiscount - $loyalty['discount'];
+        if (($input['payment_method'] ?? '') === 'credit') {
+            $outstanding = Order::where('user_id', $customer->id)->where('payment_method', 'credit')->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled')->sum('total');
+            $this->check($outstanding + $total <= $businessAccount->credit_limit, 'Limit kredit tidak mencukupi untuk pesanan ini.');
+        }
+
+        return ['lines' => $lines, 'price_group' => $group, 'business_account' => $businessAccount, 'subtotal' => $subtotal, 'custom_cost' => $customCost, 'weight' => $weight, 'rate' => $rate, 'shipping_cost' => $shipping, 'discount' => $discount, 'shipping_discount' => $shippingDiscount, 'cod_fee' => $fee, 'loyalty_points' => $loyalty['points'], 'loyalty_discount' => $loyalty['discount'], 'total' => $total, 'coupons' => $coupons, 'coupon_benefits' => $couponBenefits];
     }
 
     public function fingerprint(array $quote): string
     {
         return hash('sha256', json_encode([
             'items' => array_map(fn ($line) => [$line['variant']->id, $line['variant']->sku, $line['quantity'], $line['unit_price'], $line['price_tier_minimum'], $line['custom_cost'], $line['customization'], $line['bundle'], $line['unit_weight'], $line['variant']->fulfillment, $line['variant']->lead_time], $quote['lines']),
-            'price_group' => $quote['price_group'] ? [$quote['price_group']->id, $quote['price_group']->name, $quote['price_group']->business_type, $quote['price_group']->minimum_order_quantity, $quote['price_group']->minimum_order_amount, $quote['price_group']->discount_percent] : null,
+            'price_group' => $quote['price_group'] ? [$quote['price_group']->id, $quote['price_group']->name, $quote['price_group']->business_type, $quote['price_group']->minimum_order_quantity, $quote['price_group']->minimum_order_amount, $quote['price_group']->discount_percent, $quote['business_account']->credit_terms_days, $quote['business_account']->credit_limit, $quote['business_account']->sales_user_id, $quote['business_account']->commission_percent] : null,
             'shipping' => [$quote['rate']->id, $quote['rate']->courier, $quote['rate']->service, $quote['rate']->estimate],
             'coupons' => $quote['coupons']->map(fn ($coupon) => [$coupon->id, $coupon->code, $coupon->type, $coupon->value, $coupon->maximum, $coupon->target_type, $coupon->target_id, $coupon->segment, $coupon->price_group_id, $coupon->per_user_limit, $coupon->combinable, $coupon->priority, $quote['coupon_benefits'][$coupon->id]])->values()->all(),
             'amounts' => array_intersect_key($quote, array_flip(['subtotal', 'custom_cost', 'shipping_cost', 'discount', 'shipping_discount', 'cod_fee', 'loyalty_points', 'loyalty_discount', 'total'])),
@@ -239,7 +247,7 @@ class CheckoutService
             $order = Order::create([
                 'number' => 'D3-'.now()->format('ymd').'-'.strtoupper(Str::random(8)), 'checkout_key' => $key, 'user_id' => $userId,
                 'price_group_id' => $q['price_group']?->id,
-                'business_snapshot' => $q['price_group'] ? ['name' => $q['price_group']->name, 'slug' => $q['price_group']->slug, 'business_type' => $q['price_group']->business_type, 'minimum_order_quantity' => $q['price_group']->minimum_order_quantity, 'minimum_order_amount' => $q['price_group']->minimum_order_amount, 'discount_percent' => $q['price_group']->discount_percent] : null,
+                'business_snapshot' => $q['price_group'] ? ['name' => $q['price_group']->name, 'slug' => $q['price_group']->slug, 'business_type' => $q['price_group']->business_type, 'minimum_order_quantity' => $q['price_group']->minimum_order_quantity, 'minimum_order_amount' => $q['price_group']->minimum_order_amount, 'discount_percent' => $q['price_group']->discount_percent, 'business_account_id' => $q['business_account']->id, 'credit_terms_days' => $q['business_account']->credit_terms_days, 'credit_limit' => $q['business_account']->credit_limit, 'sales_user_id' => $q['business_account']->sales_user_id, 'sales_user_name' => $q['business_account']->salesUser?->name, 'commission_percent' => $q['business_account']->commission_percent] : null,
                 'dropship_snapshot' => $q['price_group']?->business_type === 'dropshipper' && ! empty($input['sender_name']) ? ['name' => $input['sender_name'], 'phone' => $input['sender_phone'] ?? null] : null,
                 'name' => $input['name'], 'phone' => $input['phone'], 'email' => $input['email'] ?? null,
                 'address' => array_intersect_key($input, array_flip(['province', 'city', 'district', 'postal_code', 'detail'])),
@@ -248,7 +256,9 @@ class CheckoutService
                 'shipping' => ['courier' => $q['rate']->courier, 'service' => $q['rate']->service, 'estimate' => $q['rate']->estimate, 'source' => 'manual', 'origin' => 'Tasikmalaya', 'weight' => $q['weight']],
                 'bank_accounts' => Setting::get('bank_accounts', []), 'coupon_id' => $q['coupons']->first()?->id, 'coupon_code' => $q['coupons']->isEmpty() ? null : $q['coupons']->pluck('code')->implode(','),
                 'coupon_snapshot' => $q['coupons']->map(fn ($coupon) => ['id' => $coupon->id, 'code' => $coupon->code, 'type' => $coupon->type, 'value' => $coupon->value, 'benefit' => $q['coupon_benefits'][$coupon->id], 'target_type' => $coupon->target_type, 'target_id' => $coupon->target_id])->values()->all(),
-                'notes' => $input['notes'] ?? null, 'expires_at' => now()->addHours((int) Setting::get($input['payment_method'] === 'cod' ? 'cod_hours' : 'payment_hours', 24)),
+                'notes' => $input['notes'] ?? null,
+                'expires_at' => $input['payment_method'] === 'credit' ? now()->addDays($q['business_account']->credit_terms_days) : now()->addHours((int) Setting::get($input['payment_method'] === 'cod' ? 'cod_hours' : 'payment_hours', 24)),
+                'credit_due_at' => $input['payment_method'] === 'credit' ? now()->addDays($q['business_account']->credit_terms_days) : null,
             ]);
             $this->loyalty->redeem($order);
             foreach ($q['lines'] as $l) {

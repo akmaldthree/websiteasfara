@@ -11,10 +11,11 @@
 @include('partials.refunds')
 @include('partials.order-events')
 </div><div class="col-lg-5">
-<div class="panel"><h2>{{ $order->payment_method==='cod'?'Pembayaran di tempat':'Instruksi pembayaran' }}</h2>
+<div class="panel"><h2>{{ $order->payment_method==='cod'?'Pembayaran di tempat':($order->payment_method==='credit'?'Termin pembayaran':'Instruksi pembayaran') }}</h2>
 @if($order->status==='cancelled')<p>Pesanan dibatalkan. Silakan lihat rincian status dan pengembalian dana yang tercatat.</p>
 @elseif($order->paid_at)<p>Pembayaran telah diterima. Terima kasih.</p>
 @elseif($order->payment_method==='cod')<p>Siapkan pembayaran sebesar <strong>@rupiah($order->total)</strong> saat paket diterima. Customer Service akan mengonfirmasi pesanan Anda.</p>
+@elseif($order->payment_method==='credit')<p>Pesanan menggunakan termin bisnis. Pembayaran <strong>@rupiah($order->total)</strong> jatuh tempo pada {{ $order->credit_due_at?->format('d M Y H:i') }}. Tim Dthree akan mengonfirmasi pesanan sebelum diproses.</p>
 @else
 <p>Transfer tepat <strong>@rupiah($order->total)</strong> ke salah satu rekening berikut.</p>
 @foreach($order->bank_accounts??[] as $bank)<p><strong>{{ $bank['bank'] }} — {{ $bank['number'] }}</strong><br>a.n. {{ $bank['owner'] }}</p>@endforeach

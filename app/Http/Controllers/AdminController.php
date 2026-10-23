@@ -8,6 +8,7 @@ use App\Models\BundleComponent;
 use App\Models\BusinessAccount;
 use App\Models\BusinessOrderRule;
 use App\Models\Category;
+use App\Models\CommissionEntry;
 use App\Models\ContentEntry;
 use App\Models\ContentRevision;
 use App\Models\CustomQuote;
@@ -180,9 +181,9 @@ class AdminController extends Controller
 
     public function action(Request $r, Order $order, OrderWorkflow $workflow)
     {
-        $d = $r->validate(['action' => 'required|in:approve,reject,cod_confirm,cancel,pack,ship,receive,cod_paid', 'reason' => 'nullable|string|max:1000', 'tracking' => 'nullable|string|max:100']);
+        $d = $r->validate(['action' => 'required|in:approve,reject,cod_confirm,credit_confirm,cancel,pack,ship,receive,cod_paid,credit_paid', 'reason' => 'nullable|string|max:1000', 'tracking' => 'nullable|string|max:100']);
         $permission = match ($d['action']) {
-            'approve','reject','cod_paid' => 'payments.verify','cod_confirm' => 'cod.confirm','cancel' => 'orders.cancel',default => 'shipping.write'
+            'approve','reject','cod_paid','credit_paid','credit_confirm' => 'payments.verify','cod_confirm' => 'cod.confirm','cancel' => 'orders.cancel',default => 'shipping.write'
         };
         abort_unless($r->user()->allowed($permission), 403);
         $workflow->act($order, $d['action'], $d['reason'] ?? null, $d['tracking'] ?? null);
@@ -834,6 +835,7 @@ class AdminController extends Controller
             ->map(fn ($orders) => ['orders' => $orders->count(), 'value' => $orders->sum('shipping_cost')]);
         $analytics = AnalyticsEvent::whereBetween('created_at', $range)->select('event', DB::raw('COUNT(*) AS total'))->groupBy('event')->pluck('total', 'event');
         $visitors = AnalyticsEvent::whereBetween('created_at', $range)->distinct()->count('visitor_hash');
+        $commissionEntries = CommissionEntry::with(['salesUser', 'order'])->whereBetween('created_at', $range)->latest()->get();
 
         return view('admin.reports', [
             'from' => $from, 'to' => $to, 'count' => (clone $q)->count(), 'paidCount' => (clone $paid)->count(),
@@ -841,6 +843,7 @@ class AdminController extends Controller
             'aov' => (clone $paid)->count() ? (int) round($gross / (clone $paid)->count()) : 0,
             'customerCount' => $paidCustomers->count(), 'repeatCustomers' => $paidCustomers->filter(fn ($orders) => $orders->count() > 1)->count(),
             'topProducts' => $topProducts, 'shipping' => $shipping, 'analytics' => $analytics, 'visitors' => $visitors,
+            'commissionEntries' => $commissionEntries, 'commissionTotal' => $commissionEntries->sum('amount'),
             'lowStock' => Variant::whereRaw('stock - reserved <= low_stock')->count(),
             'orders' => $q->withSum('refunds', 'amount')->latest()->paginate(20)->withQueryString(),
         ]);

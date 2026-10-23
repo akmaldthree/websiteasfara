@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class AfterSalesService
 {
-    public function __construct(private LoyaltyService $loyalty) {}
+    public function __construct(private LoyaltyService $loyalty, private CommissionService $commissions) {}
 
     public function policy(): array
     {
@@ -178,6 +178,7 @@ class AfterSalesService
             $order->payment_status = $already + $amount === (int) $order->total ? 'refunded' : 'partially_refunded';
             $order->save();
             $this->loyalty->adjustRefund($order, $refund, $already + $amount);
+            $this->commissions->adjustRefund($order, $refund, $already + $amount);
             Audit::record('refund.recorded', 'refund:'.$refund->id, null, $refund->only('order_id', 'amount', 'method', 'reference', 'paid_at'));
             OrderCommunication::record($order, 'refund-'.$refund->id, 'refund_recorded',
                 'Pengembalian dana sebesar Rp '.number_format($amount, 0, ',', '.').' telah dicatat melalui '.$refund->method.'.');

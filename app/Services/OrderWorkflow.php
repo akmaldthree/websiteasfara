@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 class OrderWorkflow
 {
-    public function __construct(private LoyaltyService $loyalty) {}
+    public function __construct(private LoyaltyService $loyalty, private CommissionService $commissions) {}
 
     public function act(Order $order, string $action, ?string $reason = null, ?string $tracking = null): void
     {
@@ -19,7 +19,7 @@ class OrderWorkflow
             $o = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             $before = $o->only(['status', 'payment_status', 'fulfillment_status', 'inventory_state']);
             $eventKey = $action;
-            if (in_array($action, ['approve', 'cod_confirm'])) {
+            if (in_array($action, ['approve', 'cod_confirm', 'credit_confirm'])) {
                 if ($o->status === 'confirmed') {
                     return;
                 }
@@ -30,8 +30,10 @@ class OrderWorkflow
                     $proof->update(['status' => 'approved', 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
                     $o->payment_status = 'paid';
                     $o->paid_at = now();
-                } else {
+                } elseif ($action === 'cod_confirm') {
                     $this->check($o->payment_method === 'cod' && $o->expires_at->isFuture(), 'COD tidak valid atau sudah kedaluwarsa.');
+                } else {
+                    $this->check($o->payment_method === 'credit' && $o->credit_due_at?->isFuture(), 'Termin kredit tidak valid atau sudah jatuh tempo.');
                 }
                 $this->inventory($o, 'commit');
                 $o->status = 'confirmed';
@@ -76,8 +78,12 @@ class OrderWorkflow
                     $o->status = 'completed';
                     $o->completed_at = now();
                 }
-            } elseif ($action === 'cod_paid') {
-                $this->check($o->payment_method === 'cod' && $o->status === 'confirmed' && in_array($o->fulfillment_status, ['shipped', 'received']), 'COD belum dikirim.');
+            } elseif (in_array($action, ['cod_paid', 'credit_paid'])) {
+                $this->check(
+                    ($action === 'cod_paid' && $o->payment_method === 'cod' && $o->status === 'confirmed' && in_array($o->fulfillment_status, ['shipped', 'received']))
+                    || ($action === 'credit_paid' && $o->payment_method === 'credit' && $o->status === 'confirmed'),
+                    'Pembayaran belum dapat direkonsiliasi.'
+                );
                 if ($o->paid_at !== null) {
                     return;
                 }
@@ -93,6 +99,7 @@ class OrderWorkflow
             $o->save();
             if ($o->status === 'completed') {
                 $this->loyalty->earn($o);
+                $this->commissions->earn($o);
             }
             if ($o->status === 'cancelled') {
                 $this->loyalty->restoreCancelled($o);
@@ -102,12 +109,14 @@ class OrderWorkflow
                 'approve' => 'Pembayaran transfer telah disetujui. Pesanan mulai diproses.',
                 'reject' => 'Bukti transfer ditolak: '.$reason.'. Silakan unggah ulang sebelum batas waktu terbaru.',
                 'cod_confirm' => 'Pesanan COD telah dikonfirmasi dan mulai diproses.',
+                'credit_confirm' => 'Pesanan termin kredit telah disetujui dan mulai diproses.',
                 'cancel' => 'Pesanan dibatalkan: '.$reason,
                 'expire' => 'Pesanan kedaluwarsa karena melewati batas konfirmasi.',
                 'pack' => 'Pesanan selesai dikemas.',
                 'ship' => 'Pesanan dikirim melalui '.$o->shipping['courier'].'. Nomor resi: '.$tracking,
                 'receive' => 'Paket telah ditandai diterima.',
                 'cod_paid' => 'Pembayaran COD telah direkonsiliasi.',
+                'credit_paid' => 'Pembayaran termin kredit telah direkonsiliasi.',
             };
             OrderCommunication::record($o, $eventKey, $action, $message);
         }, 3);
