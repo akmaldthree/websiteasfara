@@ -47,6 +47,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/akun/penawaran/{customQuote}/terima', [Store::class, 'acceptCustomQuote'])->name('custom.accept');
     Route::post('/akun/wishlist/{variant}', [Account::class, 'wishlist'])->name('wishlist.toggle');
     Route::post('/akun/ulasan/{item}', [Account::class, 'review'])->name('review.store');
+    Route::post('/produk/{series}/pertanyaan', [Store::class, 'question'])->middleware('throttle:5,1')->name('product.question');
+    Route::post('/ulasan/{review}/membantu', [Store::class, 'helpful'])->middleware('throttle:20,1')->name('review.helpful');
     Route::post('/akun/preferensi-komunikasi', [Account::class, 'communicationPreferences'])->name('account.communication');
     Route::post('/akun/pesanan/{order}/pesan-ulang', [Account::class, 'reorder'])->name('orders.reorder');
 });
@@ -63,6 +65,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/ulasan', [Admin::class, 'reviews'])->middleware('permission:content.write')->name('reviews');
     Route::get('/konten/{contentEntry}/preview', [Admin::class, 'contentPreview'])->middleware('permission:content.write')->name('content.preview');
     Route::post('/ulasan/{review}', [Admin::class, 'reviewAction'])->middleware('permission:content.write')->name('reviews.update');
+    Route::post('/pertanyaan-produk/{question}', [Admin::class, 'questionAction'])->middleware('permission:content.write')->name('questions.update');
     Route::get('/konten-riwayat/{resource}/{id}', [Admin::class, 'contentHistory'])->middleware('permission:content.write')->whereNumber('id')->name('content.history');
     Route::post('/konten-riwayat/{revision}/pulihkan', [Admin::class, 'restoreContent'])->middleware('permission:content.write')->name('content.restore');
     Route::get('/bukti/{proof}', [Admin::class, 'proof'])->middleware('permission:payments.read')->name('proof');

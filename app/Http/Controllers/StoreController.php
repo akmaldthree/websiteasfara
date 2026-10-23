@@ -7,7 +7,9 @@ use App\Models\ContentEntry;
 use App\Models\CustomQuote;
 use App\Models\Order;
 use App\Models\Page;
+use App\Models\ProductQuestion;
 use App\Models\Review;
+use App\Models\ReviewHelpfulVote;
 use App\Models\Series;
 use App\Models\ShippingRate;
 use App\Models\Variant;
@@ -85,11 +87,37 @@ class StoreController extends Controller
         ])->firstOrFail();
         $priceGroup = $pricing->groupFor($r->user());
         $businessTiers = $series->variants->mapWithKeys(fn (Variant $variant) => [$variant->id => $pricing->tiersFor($variant, $r->user())]);
-        $reviews = Review::where('status', 'approved')->whereHas('variant', fn ($query) => $query->where('series_id', $series->id))->with('user')->latest()->get();
+        $reviews = Review::where('status', 'approved')->whereHas('variant', fn ($query) => $query->where('series_id', $series->id))->with('user')->withCount('helpfulVotes')->latest()->get();
+        $questions = ProductQuestion::where('series_id', $series->id)->where('status', 'answered')->with('user')->latest('answered_at')->get();
+        $helpfulReviewIds = $r->user() ? ReviewHelpfulVote::where('user_id', $r->user()->id)->whereIn('review_id', $reviews->pluck('id'))->pluck('review_id')->all() : [];
         $wishlistIds = $r->user()?->wishlistItems()->whereIn('variant_id', $series->variants->pluck('id'))->pluck('variant_id')->all() ?? [];
         $analytics->record($r, 'view_item', ['series_id' => $series->id, 'variant_id' => $r->integer('variant') ?: null]);
 
-        return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'reviews', 'wishlistIds'));
+        return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'reviews', 'questions', 'helpfulReviewIds', 'wishlistIds'));
+    }
+
+    public function question(Request $request, Series $series)
+    {
+        $data = $request->validate(['question' => 'required|string|min:10|max:1000']);
+        $question = $series->questions()->create($data + ['user_id' => $request->user()->id]);
+        Audit::record('product_question.submitted', 'product_question:'.$question->id, null, ['series_id' => $series->id]);
+
+        return back()->with('success', 'Pertanyaan dikirim dan akan tampil setelah dijawab tim Dthree.');
+    }
+
+    public function helpful(Request $request, Review $review)
+    {
+        abort_unless($review->status === 'approved', 404);
+        $vote = $review->helpfulVotes()->where('user_id', $request->user()->id)->first();
+        if ($vote) {
+            $vote->delete();
+            $message = 'Penilaian membantu dibatalkan.';
+        } else {
+            $review->helpfulVotes()->create(['user_id' => $request->user()->id]);
+            $message = 'Terima kasih atas penilaian Anda.';
+        }
+
+        return back()->with('success', $message);
     }
 
     public function cart(Request $r, CheckoutService $service)

@@ -16,7 +16,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 | Promosi | Voucher nominal/persen/subsidi ongkir, periode, minimum, maksimum, kuota, target kategori/series/SKU, segmentasi pelanggan/grup B2B, prioritas, stacking terkendali, batas per pengguna, ledger dan snapshot | Belum simulasi serta approval campaign berjenjang |
 | Produk custom | Template ukuran dinamis dengan unit/bantuan/batas, biaya tetap atau quotation admin, persetujuan pelanggan, snapshot order, milestone produksi dan gate sebelum packing | Belum upload referensi desain, revisi ukuran dua arah, dan notifikasi khusus per milestone |
 | Bundling | SKU bundle, komposisi dan jumlah per komponen, ketersediaan dari komponen terlangka, berat turunan, reservasi/pengurangan/pembatalan stok komponen, snapshot order | Belum builder bundle di storefront; komposisi ditetapkan admin |
-| Engagement | Wishlist akun; ulasan berbintang hanya untuk item diterima, hingga tiga foto, moderasi approve/reject, label pembelian terverifikasi | Belum pertanyaan produk dan helpful voting |
+| Engagement | Wishlist akun; ulasan berbintang hanya untuk item diterima, hingga tiga foto, moderasi approve/reject, label pembelian terverifikasi, voting membantu, pertanyaan produk dan jawaban termoderasi | Belum notifikasi otomatis saat pertanyaan dijawab |
 | Loyalty | Ledger poin, konfigurasi earn/value/minimum/expiry, saldo akun, redeem checkout, earn setelah selesai, restore pembatalan, adjustment refund proporsional | Belum tier/member level dan kampanye bonus poin |
 | B2B | Pengajuan reseller/dropshipper/grosir, peninjauan admin, masa aktif/suspend, grup harga privat, diskon dasar, minimum global dan bertarget kategori/series/SKU, tier per SKU, snapshot checkout, identitas pengirim dropship pada dokumen paket | Belum dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal |
 | Akun | Registrasi, login email/telepon, reset password, buku alamat, riwayat, invoice, klaim pesanan tamu melalui tautan bertanda tangan, pesan ulang, dan persetujuan promo email/WhatsApp | Verifikasi klaim bergantung pada kepemilikan tautan pesanan dan kecocokan email/telepon |
@@ -34,7 +34,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 1. WhatsApp otomatis dan integrasi penyedia pesan. Email transaksi sudah memakai outbox, tetapi SMTP nyata, reputasi domain, dan alert eksternal harus diuji di staging.
 2. Adapter penyedia tarif POS/JNE dan tracking, retry/cache/fallback otomatis. Tarif manual tetap dapat digunakan.
 3. Otomasi ongkir retur, approval refund berjenjang, dan rekonsiliasi bank. Adjustment loyalty proporsional saat refund sudah tersedia; transfer refund tetap dilakukan manual.
-4. Fitur pertumbuhan lanjutan: tier/member loyalty, kampanye bonus poin, pertanyaan produk, helpful voting, serta kelanjutan B2B berupa dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal.
+4. Fitur pertumbuhan lanjutan: tier/member loyalty, kampanye bonus poin, serta kelanjutan B2B berupa dokumen legal, termin kredit, salesman, komisi, dan portal pesanan massal.
 5. Hardening produksi: 2FA staf, audit sensitif dengan redaksi berdasarkan peran, SLA bukti transfer, retensi data, monitoring, simulasi koneksi eksternal, beban serta konkurensi MySQL dan backup restore.
 6. Integrasi sumber stok/dashboard produksi dua arah. Tidak ada data aplikasi lain yang disalin ke e-commerce.
 

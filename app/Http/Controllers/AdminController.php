@@ -15,6 +15,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentProof;
 use App\Models\PriceGroup;
+use App\Models\ProductQuestion;
 use App\Models\Refund;
 use App\Models\Review;
 use App\Models\Role;
@@ -94,7 +95,9 @@ class AdminController extends Controller
             $query->where('status', $request->string('status')->toString());
         }
 
-        return view('admin.reviews', ['reviews' => $query->latest()->paginate(20)->withQueryString()]);
+        $questions = ProductQuestion::with(['user', 'series', 'answeredBy'])->latest()->paginate(20, ['*'], 'questions_page')->withQueryString();
+
+        return view('admin.reviews', ['reviews' => $query->latest()->paginate(20)->withQueryString(), 'questions' => $questions]);
     }
 
     public function reviewAction(Request $request, Review $review)
@@ -105,6 +108,20 @@ class AdminController extends Controller
         Audit::record('review.moderated', 'review:'.$review->id, $before, $review->only('status', 'moderation_notes'));
 
         return back()->with('success', 'Moderasi ulasan disimpan.');
+    }
+
+    public function questionAction(Request $request, ProductQuestion $question)
+    {
+        $data = $request->validate(['status' => 'required|in:answered,rejected', 'answer' => 'nullable|required_if:status,answered|string|min:3|max:3000']);
+        $before = $question->only('status', 'answer');
+        $question->update($data + [
+            'answer' => $data['status'] === 'answered' ? $data['answer'] : null,
+            'answered_by' => $request->user()->id,
+            'answered_at' => now(),
+        ]);
+        Audit::record('product_question.moderated', 'product_question:'.$question->id, $before, $question->only('status', 'answer'));
+
+        return back()->with('success', 'Pertanyaan produk diperbarui.');
     }
 
     public function customQuoteAction(Request $request, CustomQuote $customQuote, CustomProductService $service)

@@ -27,4 +27,9 @@ class Review extends Model
     {
         return $this->belongsTo(Variant::class);
     }
+
+    public function helpfulVotes()
+    {
+        return $this->hasMany(ReviewHelpfulVote::class);
+    }
 }

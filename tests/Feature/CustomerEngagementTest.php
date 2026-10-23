@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\ProductQuestion;
 use App\Models\Series;
 use App\Models\Setting;
 use App\Models\ShippingRate;
@@ -67,5 +68,31 @@ class CustomerEngagementTest extends TestCase
         $this->actingAs($admin)->post(route('admin.reviews.update', $review), ['status' => 'approved'])->assertRedirect();
         $this->get(route('product', 'dress-review'))->assertSee('Produk ini sangat nyaman')->assertSee('Terverifikasi');
         $this->assertDatabaseHas('audit_logs', ['action' => 'review.moderated']);
+    }
+
+    public function test_product_questions_are_moderated_and_helpful_votes_toggle(): void
+    {
+        $customer = User::factory()->create();
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+
+        $this->actingAs($customer)->post(route('product.question', $this->variant->series), ['question' => 'Apakah bahan produk ini cocok untuk cuaca panas?'])->assertRedirect()->assertSessionHasNoErrors();
+        $question = ProductQuestion::firstOrFail();
+        $this->get(route('product', 'dress-review'))->assertDontSee('Apakah bahan produk ini');
+        $this->actingAs($admin)->post(route('admin.questions.update', $question), ['status' => 'answered', 'answer' => 'Bahannya ringan dan nyaman untuk cuaca panas.'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->get(route('product', 'dress-review'))->assertSee('Apakah bahan produk ini')->assertSee('Bahannya ringan');
+
+        $reviewOwner = User::factory()->create();
+        $order = app(CheckoutService::class)->place([$this->variant->id => 1], $this->checkout, hash('sha256', 'helpful'), $reviewOwner->id);
+        $order->update(['fulfillment_status' => 'received']);
+        $this->actingAs($reviewOwner)->post(route('review.store', $order->items()->first()), ['rating' => 5, 'body' => 'Ulasan produk yang sangat membantu pembeli lain.'])->assertRedirect();
+        $review = $reviewOwner->reviews()->firstOrFail();
+        $review->update(['status' => 'approved']);
+
+        $this->actingAs($customer)->post(route('review.helpful', $review))->assertRedirect();
+        $this->assertDatabaseHas('review_helpful_votes', ['review_id' => $review->id, 'user_id' => $customer->id]);
+        $this->post(route('review.helpful', $review))->assertRedirect();
+        $this->assertDatabaseMissing('review_helpful_votes', ['review_id' => $review->id, 'user_id' => $customer->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'product_question.moderated']);
     }
 }
