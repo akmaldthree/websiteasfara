@@ -33,6 +33,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -138,6 +139,35 @@ class AdminController extends Controller
         $workflow->act($order, $d['action'], $d['reason'] ?? null, $d['tracking'] ?? null);
 
         return back()->with('success', 'Status pesanan diperbarui.');
+    }
+
+    public function overrideShipping(Request $request, Order $order)
+    {
+        $data = $request->validate(['shipping_cost' => 'required|integer|min:0|max:100000000', 'reason' => 'required|string|min:5|max:500']);
+        DB::transaction(function () use ($request, $order, $data) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($order->status !== 'waiting' || $order->payment_status !== 'unpaid' || $order->proofs()->where('status', 'pending')->exists()) {
+                throw ValidationException::withMessages(['shipping_cost' => 'Ongkir hanya dapat diubah sebelum bukti pembayaran atau konfirmasi pesanan.']);
+            }
+            $before = $order->only(['shipping_cost', 'total', 'shipping', 'shipping_override_reason']);
+            $original = $order->shipping_original_cost ?? $order->shipping_cost;
+            $shipping = $order->shipping;
+            $shipping['source'] = 'manual_override';
+            $shipping['override_reason'] = $data['reason'];
+            $order->update([
+                'shipping_original_cost' => $original,
+                'shipping_cost' => $data['shipping_cost'],
+                'total' => max(0, $order->total - $order->shipping_cost + $data['shipping_cost']),
+                'shipping' => $shipping,
+                'shipping_override_reason' => $data['reason'],
+                'shipping_overridden_by' => $request->user()->id,
+                'shipping_overridden_at' => now(),
+            ]);
+            $order->events()->create(['event_key' => 'shipping-override-'.Str::uuid(), 'type' => 'shipping_override', 'message' => 'Ongkir diubah dari Rp '.number_format($before['shipping_cost'], 0, ',', '.').' menjadi Rp '.number_format($data['shipping_cost'], 0, ',', '.').'. '.$data['reason']]);
+            Audit::record('order.shipping_overridden', 'order:'.$order->id, $before, $order->only(['shipping_cost', 'total', 'shipping', 'shipping_override_reason']));
+        }, 3);
+
+        return back()->with('success', 'Ongkir pesanan diperbarui dan dicatat di audit log.');
     }
 
     public function proof(PaymentProof $proof)

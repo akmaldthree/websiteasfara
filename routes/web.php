@@ -56,6 +56,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/pesanan', [Admin::class, 'orders'])->middleware('permission:orders.read')->name('orders');
     Route::get('/pesanan/{order}', [Admin::class, 'order'])->middleware('permission:orders.read')->name('order');
     Route::post('/pesanan/{order}', [Admin::class, 'action'])->middleware('permission:orders.read')->name('order.action');
+    Route::post('/pesanan/{order}/ongkir', [Admin::class, 'overrideShipping'])->middleware('permission:shipping.write')->name('order.shipping');
     Route::post('/produksi/{item}', [Admin::class, 'production'])->middleware('permission:shipping.write')->name('production.update');
     Route::get('/penawaran-custom', [Admin::class, 'customQuotes'])->middleware('permission:catalog.write')->name('custom-quotes');
     Route::post('/penawaran-custom/{customQuote}', [Admin::class, 'customQuoteAction'])->middleware('permission:catalog.write')->name('custom-quotes.update');

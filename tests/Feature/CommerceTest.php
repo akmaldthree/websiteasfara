@@ -79,6 +79,29 @@ class CommerceTest extends TestCase
         $this->assertEquals(300000, $order->items->first()->price);
     }
 
+    public function test_authorized_staff_can_override_shipping_before_payment_with_audit(): void
+    {
+        $order = $this->order('shipping-override');
+        $warehouse = $this->user('warehouse');
+        $this->actingAs($warehouse)->post(route('admin.order.shipping', $order), ['shipping_cost' => 22000, 'reason' => 'Tarif final dikonfirmasi oleh JNE.'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        $order = $order->fresh();
+        $this->assertSame(15000, $order->shipping_original_cost);
+        $this->assertSame(22000, $order->shipping_cost);
+        $this->assertSame(322000, $order->total);
+        $this->assertSame('manual_override', $order->shipping['source']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'order.shipping_overridden', 'subject' => 'order:'.$order->id]);
+
+        $order->update(['payment_status' => 'review']);
+        $this->actingAs($warehouse)->post(route('admin.order.shipping', $order), ['shipping_cost' => 1000, 'reason' => 'Tidak boleh berubah lagi.'])
+            ->assertSessionHasErrors('shipping_cost');
+        $this->assertSame(22000, $order->fresh()->shipping_cost);
+
+        $finance = $this->user('finance');
+        $this->actingAs($finance)->post(route('admin.order.shipping', $order), ['shipping_cost' => 1000, 'reason' => 'Tidak berwenang.'])->assertForbidden();
+    }
+
     public function test_last_stock_cannot_be_reserved_again(): void
     {
         $this->variant->update(['stock' => 1]);
