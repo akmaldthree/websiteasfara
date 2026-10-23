@@ -34,7 +34,7 @@ Website e-commerce Dthree dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. 
 
 ## Instalasi hosting
 
-Ikuti [panduan deploy khusus dthree.co.id](docs/HOSTING.md). Aset Bootstrap disimpan dalam `public/vendor/bootstrap`, sehingga hosting tidak membutuhkan Node.js atau npm build. Dependensi PHP dikunci dalam `composer.lock`.
+Ikuti [panduan deploy khusus dthree.co.id](docs/HOSTING.md). Untuk terminal hosting dengan prompt `[dthreeco@inspire public_html]$`, gunakan [panduan public_html](docs/DEPLOY_PUBLIC_HTML.md). Aset Bootstrap disimpan dalam `public/vendor/bootstrap`, sehingga hosting tidak membutuhkan Node.js atau npm build. Dependensi PHP dikunci dalam `composer.lock`.
 
 ```bash
 composer install
