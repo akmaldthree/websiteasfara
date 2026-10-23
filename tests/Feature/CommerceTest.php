@@ -184,6 +184,36 @@ class CommerceTest extends TestCase
         $this->order();
     }
 
+    public function test_cod_respects_customer_segment_and_risk_lists(): void
+    {
+        $this->input['payment_method'] = 'cod';
+        $rejects = function (string $message, ?User $user = null): void {
+            try {
+                app(CheckoutService::class)->quote([$this->variant->id => 1], $this->input, false, $user);
+                $this->fail('COD seharusnya ditolak.');
+            } catch (ValidationException $exception) {
+                $this->assertStringContainsString($message, $exception->errors()['checkout'][0]);
+            }
+        };
+
+        Setting::put('cod_allowed_segments', ['customer']);
+        $rejects('kelompok pelanggan');
+        $customer = $this->user('customer');
+        $this->assertArrayHasKey('cod_fee', app(CheckoutService::class)->quote([$this->variant->id => 1], $this->input, false, $customer));
+
+        Setting::put('cod_allowed_segments', ['guest', 'customer', 'business']);
+        Setting::put('cod_blocked_phones', ['081234567890']);
+        $rejects('nomor');
+        Setting::put('cod_blocked_phones', []);
+
+        Setting::put('cod_excluded_skus', ['RAF-BLACK-L']);
+        $rejects('SKU');
+        Setting::put('cod_excluded_skus', []);
+
+        Setting::put('cod_excluded_categories', ['abaya']);
+        $rejects('kategori');
+    }
+
     public function test_shipping_discount_cap_and_voucher_quota(): void
     {
         Coupon::create(['code' => 'ONGKIR', 'type' => 'shipping', 'value' => 100000, 'maximum' => 10000, 'minimum' => 200000, 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'usage_limit' => 1]);

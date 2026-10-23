@@ -127,8 +127,16 @@ class CheckoutService
         if (($input['payment_method'] ?? '') === 'cod') {
             $this->check(Setting::get('cod_enabled', false) && $rate->cod, 'COD belum tersedia untuk layanan ini.');
             $this->check($merchandiseTotal >= (int) Setting::get('cod_min', 0) && $merchandiseTotal <= (int) Setting::get('cod_max', 1000000), 'Nilai pesanan di luar batas COD.');
+            $segment = ! $customer ? 'guest' : ($group ? 'business' : 'customer');
+            $this->check(in_array($segment, Setting::get('cod_allowed_segments', ['guest', 'customer', 'business']), true), 'COD tidak tersedia untuk kelompok pelanggan ini.');
+            $phone = preg_replace('/\D+/', '', $input['phone'] ?? '');
+            $this->check(! in_array($phone, Setting::get('cod_blocked_phones', []), true), 'COD tidak tersedia untuk nomor ini. Pilih transfer bank.');
+            $excludedSkus = Setting::get('cod_excluded_skus', []);
+            $excludedCategories = Setting::get('cod_excluded_categories', []);
             foreach ($lines as $l) {
                 $this->check($l['cod_eligible'], 'COD hanya untuk ready stock.');
+                $this->check(! in_array(strtoupper($l['variant']->sku), $excludedSkus, true), 'Salah satu SKU tidak memenuhi aturan COD.');
+                $this->check(! in_array(strtolower($l['variant']->series->category->slug), $excludedCategories, true), 'Salah satu kategori tidak memenuhi aturan COD.');
             }
             $fee = min((int) Setting::get('cod_fee_max', 100000), (int) Setting::get('cod_fee', 0) + (int) ceil($merchandiseTotal * (int) Setting::get('cod_percent', 0) / 100));
         } else {

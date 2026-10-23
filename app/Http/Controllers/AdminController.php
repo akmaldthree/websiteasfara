@@ -490,6 +490,7 @@ class AdminController extends Controller
             'shipping_mode' => 'required|in:manual,api', 'shipping_provider' => 'required|string|max:80', 'shipping_api_url' => 'nullable|url|max:500', 'shipping_api_token_new' => 'nullable|string|max:2000',
             'tracking_mode' => 'required|in:manual,api', 'whatsapp_mode' => 'required|in:manual,api', 'whatsapp_provider' => 'required|string|max:80', 'whatsapp_api_url' => 'nullable|url|max:500', 'whatsapp_api_token_new' => 'nullable|string|max:2000',
             'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0',
+            'cod_blocked_phones_text' => 'nullable|string|max:10000', 'cod_excluded_skus_text' => 'nullable|string|max:10000', 'cod_excluded_categories_text' => 'nullable|string|max:10000',
             'loyalty_spend_per_point' => 'required|integer|min:1', 'loyalty_point_value' => 'required|integer|min:1', 'loyalty_min_redeem' => 'required|integer|min:1', 'loyalty_expiry_days' => 'required|integer|between:1,3650',
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ];
@@ -504,6 +505,13 @@ class AdminController extends Controller
             }
         }
         unset($data['bank_text']);
+        foreach (['cod_blocked_phones', 'cod_excluded_skus', 'cod_excluded_categories'] as $list) {
+            $input = $list.'_text';
+            $values = preg_split('/[,\r\n]+/', $data[$input] ?? '');
+            $data[$list] = collect($values)->map(fn ($value) => trim($value))->filter()->map(fn ($value) => $list === 'cod_blocked_phones' ? preg_replace('/\D+/', '', $value) : ($list === 'cod_excluded_skus' ? strtoupper($value) : strtolower($value)))->filter()->unique()->values()->all();
+            unset($data[$input]);
+        }
+        $data['cod_allowed_segments'] = collect(['guest', 'customer', 'business'])->filter(fn ($segment) => $r->boolean('cod_segment_'.$segment))->values()->all();
         foreach (['logo', 'favicon', 'hero_image'] as $image) {
             unset($data[$image]);
             if ($r->hasFile($image)) {
