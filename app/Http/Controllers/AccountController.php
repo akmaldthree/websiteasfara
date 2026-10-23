@@ -6,6 +6,7 @@ use App\Models\BusinessAccount;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Review;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\Variant;
 use App\Notifications\StaffLoginCode;
@@ -34,7 +35,7 @@ class AccountController extends Controller
             throw ValidationException::withMessages(['login' => 'Email, nomor telepon, atau kata sandi tidak sesuai.']);
         }
         $user = $r->user();
-        if ($user->role !== 'customer' && $user->two_factor_enabled) {
+        if ($user->role !== 'customer' && ($user->two_factor_enabled || Setting::get('staff_two_factor_required', false))) {
             $code = (string) random_int(100000, 999999);
             Auth::logout();
             $r->session()->regenerate();

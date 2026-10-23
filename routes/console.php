@@ -2,6 +2,7 @@
 
 use App\Models\NotificationDelivery;
 use App\Models\Order;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\Audit;
 use App\Services\DeliveryService;
@@ -67,3 +68,9 @@ Artisan::command('notifications:send {--limit=50}', function (DeliveryService $s
     $this->info("{$sent} notifikasi dikirim.");
 })->purpose('Mengirim outbox email transaksi dengan retry terbatas');
 Schedule::command('notifications:send')->everyMinute()->withoutOverlapping(15);
+
+Artisan::command('system:heartbeat', function () {
+    Setting::put('system_scheduler_last_seen', now()->toIso8601String());
+    $this->info('Heartbeat scheduler dicatat.');
+})->purpose('Mencatat heartbeat untuk monitoring scheduler');
+Schedule::command('system:heartbeat')->everyMinute()->withoutOverlapping();

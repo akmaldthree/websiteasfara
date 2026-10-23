@@ -9,6 +9,7 @@ use App\Models\BusinessAccount;
 use App\Models\BusinessOrderRule;
 use App\Models\Category;
 use App\Models\CommissionEntry;
+use App\Models\CommissionPayout;
 use App\Models\ContentEntry;
 use App\Models\ContentRevision;
 use App\Models\CustomQuote;
@@ -31,8 +32,10 @@ use App\Models\VariantPrice;
 use App\Notifications\ProductQuestionAnswered;
 use App\Services\AfterSalesService;
 use App\Services\Audit;
+use App\Services\CommissionPayoutService;
 use App\Services\CustomProductService;
 use App\Services\OrderWorkflow;
+use App\Services\SystemHealthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -209,6 +212,34 @@ class AdminController extends Controller
         $workflow->act($order, $d['action'], $d['reason'] ?? null, $d['tracking'] ?? null);
 
         return back()->with('success', 'Status pesanan diperbarui.');
+    }
+
+    public function bulkOrderAction(Request $request, OrderWorkflow $workflow)
+    {
+        $data = $request->validate([
+            'order_ids' => 'required|array|min:1|max:100',
+            'order_ids.*' => 'required|integer|distinct|exists:orders,id',
+            'action' => 'required|in:pack,receive,cancel',
+            'reason' => 'nullable|required_if:action,cancel|string|min:5|max:1000',
+        ]);
+        $permission = $data['action'] === 'cancel' ? 'orders.cancel' : 'shipping.write';
+        abort_unless($request->user()->allowed($permission), 403);
+        $completed = 0;
+        $failures = [];
+        foreach (Order::whereKey($data['order_ids'])->get() as $order) {
+            try {
+                $workflow->act($order, $data['action'], $data['reason'] ?? null);
+                $completed++;
+            } catch (ValidationException $exception) {
+                $failures[] = $order->number.': '.$exception->getMessage();
+            }
+        }
+        Audit::record('orders.bulk_action', 'orders:bulk', null, [
+            'order_ids' => $data['order_ids'], 'action' => $data['action'], 'completed' => $completed, 'failed' => count($failures),
+        ]);
+
+        return back()->with('success', "{$completed} pesanan berhasil diperbarui.")
+            ->with('bulk_failures', $failures);
     }
 
     public function overrideShipping(Request $request, Order $order)
@@ -592,7 +623,8 @@ class AdminController extends Controller
         if (! Hash::check($data['current_password'], $request->user()->password)) {
             throw ValidationException::withMessages(['current_password' => 'Kata sandi saat ini tidak sesuai.']);
         }
-        $enabled = $request->boolean('two_factor_enabled');
+        $required = (bool) Setting::get('staff_two_factor_required', false);
+        $enabled = $required || $request->boolean('two_factor_enabled');
         $before = $request->user()->only(['two_factor_enabled', 'two_factor_confirmed_at']);
         $request->user()->forceFill([
             'two_factor_enabled' => $enabled,
@@ -600,7 +632,7 @@ class AdminController extends Controller
         ])->save();
         Audit::record('staff.two_factor_updated', 'user:'.$request->user()->id, $before, $request->user()->only(['two_factor_enabled', 'two_factor_confirmed_at']));
 
-        return back()->with('success', $enabled ? 'Verifikasi dua langkah sudah aktif.' : 'Verifikasi dua langkah dinonaktifkan.');
+        return back()->with('success', $required ? 'Verifikasi dua langkah diwajibkan oleh organisasi dan tetap aktif.' : ($enabled ? 'Verifikasi dua langkah sudah aktif.' : 'Verifikasi dua langkah dinonaktifkan.'));
     }
 
     public function saveSettings(Request $r)
@@ -688,6 +720,7 @@ class AdminController extends Controller
         $data['loyalty_enabled'] = $r->boolean('loyalty_enabled');
         $data['analytics_enabled'] = $r->boolean('analytics_enabled');
         $data['checkout_enabled'] = $r->boolean('checkout_enabled');
+        $data['staff_two_factor_required'] = $r->boolean('staff_two_factor_required');
         foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled'] as $toggle) {
             $data[$toggle] = $r->boolean($toggle);
         }
@@ -855,7 +888,11 @@ class AdminController extends Controller
             ->map(fn ($orders) => ['orders' => $orders->count(), 'value' => $orders->sum('shipping_cost')]);
         $analytics = AnalyticsEvent::whereBetween('created_at', $range)->select('event', DB::raw('COUNT(*) AS total'))->groupBy('event')->pluck('total', 'event');
         $visitors = AnalyticsEvent::whereBetween('created_at', $range)->distinct()->count('visitor_hash');
-        $commissionEntries = CommissionEntry::with(['salesUser', 'order'])->whereBetween('created_at', $range)->latest()->get();
+        $commissionEntries = CommissionEntry::with(['salesUser', 'order', 'payout'])->whereBetween('created_at', $range)->latest()->get();
+        $commissionPayouts = CommissionPayout::with(['salesUser', 'creator'])->whereBetween('paid_at', $range)->latest('paid_at')->get();
+        $unpaidCommissions = CommissionEntry::with('salesUser')->whereNull('commission_payout_id')->get()->groupBy('sales_user_id')
+            ->map(fn ($entries) => ['sales_user' => $entries->first()->salesUser, 'amount' => (int) $entries->sum('amount')])
+            ->filter(fn ($summary) => $summary['amount'] > 0)->values();
 
         return view('admin.reports', [
             'from' => $from, 'to' => $to, 'count' => (clone $q)->count(), 'paidCount' => (clone $paid)->count(),
@@ -864,8 +901,51 @@ class AdminController extends Controller
             'customerCount' => $paidCustomers->count(), 'repeatCustomers' => $paidCustomers->filter(fn ($orders) => $orders->count() > 1)->count(),
             'topProducts' => $topProducts, 'shipping' => $shipping, 'analytics' => $analytics, 'visitors' => $visitors,
             'commissionEntries' => $commissionEntries, 'commissionTotal' => $commissionEntries->sum('amount'),
+            'commissionPayouts' => $commissionPayouts, 'unpaidCommissions' => $unpaidCommissions,
             'lowStock' => Variant::whereRaw('stock - reserved <= low_stock')->count(),
             'orders' => $q->withSum('refunds', 'amount')->latest()->paginate(20)->withQueryString(),
+        ]);
+    }
+
+    public function commissionPayout(Request $request, CommissionPayoutService $service)
+    {
+        $data = $request->validate([
+            'sales_user_id' => 'required|integer|exists:users,id',
+            'recipient_name' => 'required|string|max:150',
+            'bank_name' => 'required|string|max:100',
+            'account_number' => 'required|string|max:100',
+            'payment_reference' => 'required|string|max:150|unique:commission_payouts,payment_reference',
+            'paid_at' => 'required|date|before_or_equal:now',
+            'proof' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+        $salesUser = User::whereKey($data['sales_user_id'])->where('role', '!=', 'customer')->firstOrFail();
+        $proofPath = $request->hasFile('proof') ? $request->file('proof')->store('commission-payouts', 'local') : null;
+        unset($data['sales_user_id'], $data['proof']);
+        try {
+            $payout = $service->create($salesUser, $request->user(), $data + ['proof_path' => $proofPath]);
+        } catch (\Throwable $exception) {
+            if ($proofPath) {
+                Storage::disk('local')->delete($proofPath);
+            }
+            throw $exception;
+        }
+
+        return back()->with('success', 'Payout komisi '.$payout->number.' senilai Rp '.number_format($payout->amount, 0, ',', '.').' dicatat.');
+    }
+
+    public function commissionPayoutProof(CommissionPayout $payout)
+    {
+        abort_unless($payout->proof_path && Storage::disk('local')->exists($payout->proof_path), 404);
+
+        return Storage::disk('local')->download($payout->proof_path, 'bukti-'.$payout->number.'.'.pathinfo($payout->proof_path, PATHINFO_EXTENSION), ['Cache-Control' => 'private, no-store']);
+    }
+
+    public function monitoring(SystemHealthService $health)
+    {
+        return view('admin.monitoring', [
+            'checks' => $health->checks(),
+            'recentErrors' => AuditLog::whereIn('action', ['notification.failed', 'notification.uncertain'])->latest()->take(20)->get(),
         ]);
     }
 }

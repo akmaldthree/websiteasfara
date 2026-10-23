@@ -35,6 +35,22 @@
         @forelse($shipping as $service=>$summary)<div class="summary-row"><span>{{ $service }}<br><small>{{ $summary['orders'] }} pesanan</small></span><strong>@rupiah($summary['value'])</strong></div>@empty<p>Belum ada pengiriman pada periode ini.</p>@endforelse
     </div></div>
 </div>
+@if(auth()->user()->allowed('payments.verify'))
+<div class="panel mt-4"><h2>Catat payout komisi</h2><p class="small">Saldo mencakup seluruh komisi yang belum pernah dibayarkan sampai tanggal pembayaran. Penyesuaian refund akan mengurangi saldo payout berikutnya.</p>
+    <form method="post" enctype="multipart/form-data" action="{{ route('admin.commission-payout.store') }}" class="form-grid">@csrf
+        <div><label for="sales-user">Sales / saldo tersedia</label><select id="sales-user" class="form-select" name="sales_user_id" required><option value="">Pilih sales</option>@foreach($unpaidCommissions as $summary)<option value="{{ $summary['sales_user']->id }}">{{ $summary['sales_user']->name }} — Rp {{ number_format($summary['amount'],0,',','.') }}</option>@endforeach</select></div>
+        <div><label for="paid-at">Tanggal pembayaran</label><input id="paid-at" class="form-control" type="datetime-local" name="paid_at" value="{{ now()->format('Y-m-d\TH:i') }}" required></div>
+        <div><label for="recipient-name">Nama penerima</label><input id="recipient-name" class="form-control" name="recipient_name" maxlength="150" required></div>
+        <div><label for="bank-name">Bank</label><input id="bank-name" class="form-control" name="bank_name" maxlength="100" required></div>
+        <div><label for="account-number">Nomor rekening</label><input id="account-number" class="form-control" name="account_number" maxlength="100" required></div>
+        <div><label for="payment-reference">Referensi transfer</label><input id="payment-reference" class="form-control" name="payment_reference" maxlength="150" required></div>
+        <div><label for="payout-proof">Bukti transfer privat</label><input id="payout-proof" class="form-control" type="file" name="proof" accept="image/jpeg,image/png,application/pdf"></div>
+        <div><label for="payout-notes">Catatan</label><input id="payout-notes" class="form-control" name="notes" maxlength="1000"></div>
+        <div class="span-2"><button class="btn btn-dark" @disabled($unpaidCommissions->isEmpty())>Catat payout</button></div>
+    </form>
+</div>
+@endif
+<div class="panel mt-4"><h2>Riwayat payout komisi</h2><div class="table-responsive"><table class="table"><thead><tr><th>Tanggal</th><th>Nomor</th><th>Sales</th><th>Penerima</th><th>Referensi</th><th>Jumlah</th><th>Bukti</th></tr></thead><tbody>@forelse($commissionPayouts as $payout)<tr><td>{{ $payout->paid_at->format('d M Y H:i') }}</td><td>{{ $payout->number }}</td><td>{{ $payout->salesUser?->name }}</td><td>{{ $payout->recipient_name }}<br><small>{{ $payout->bank_name }} · {{ $payout->account_number }}</small></td><td>{{ $payout->payment_reference }}</td><td>@rupiah($payout->amount)</td><td>@if($payout->proof_path && auth()->user()->allowed('payments.read'))<a href="{{ route('admin.commission-payout.proof',$payout) }}">Unduh</a>@else—@endif</td></tr>@empty<tr><td colspan="7">Belum ada payout komisi pada periode ini.</td></tr>@endforelse</tbody></table></div></div>
 <div class="panel mt-4"><div class="section-top"><div><h2>Ledger komisi sales</h2><small>Saldo periode: @rupiah($commissionTotal)</small></div></div><div class="table-responsive"><table class="table"><thead><tr><th>Tanggal</th><th>Sales</th><th>Pesanan</th><th>Jenis</th><th>Basis / rate</th><th>Komisi</th></tr></thead><tbody>@forelse($commissionEntries as $entry)<tr><td>{{ $entry->created_at->format('d M Y') }}</td><td>{{ $entry->salesUser?->name }}</td><td><a href="{{ route('admin.order',$entry->order_id) }}">{{ $entry->order?->number }}</a></td><td>{{ $entry->type==='earned'?'Diperoleh':'Penyesuaian refund' }}</td><td>@rupiah($entry->base_amount) · {{ $entry->commission_percent }}%</td><td>@rupiah($entry->amount)</td></tr>@empty<tr><td colspan="6">Belum ada komisi pada periode ini.</td></tr>@endforelse</tbody></table></div></div>
 <div class="table-panel mt-4"><h2>Pesanan dibuat pada periode</h2>
     <div class="table-responsive"><table class="table"><thead><tr><th>Nomor</th><th>Status</th><th>Total</th><th>Refund</th></tr></thead><tbody>

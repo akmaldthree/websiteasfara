@@ -61,6 +61,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/keamanan', [Admin::class, 'saveSecurity'])->middleware('permission:dashboard')->name('security.save');
     Route::get('/', [Admin::class, 'dashboard'])->middleware('permission:dashboard')->name('dashboard');
     Route::get('/pesanan', [Admin::class, 'orders'])->middleware('permission:orders.read')->name('orders');
+    Route::post('/pesanan/tindakan-massal', [Admin::class, 'bulkOrderAction'])->middleware('permission:orders.read')->name('orders.bulk-action');
     Route::get('/pesanan/{order}', [Admin::class, 'order'])->middleware('permission:orders.read')->name('order');
     Route::post('/pesanan/{order}', [Admin::class, 'action'])->middleware('permission:orders.read')->name('order.action');
     Route::post('/pesanan/{order}/ongkir', [Admin::class, 'overrideShipping'])->middleware('permission:shipping.write')->name('order.shipping');
@@ -105,6 +106,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/tim/{user}', [Admin::class, 'teamUpdate'])->middleware('permission:users.write')->name('team.update');
     Route::post('/peran/{role}', [Admin::class, 'roleSave'])->middleware('permission:users.write')->name('role.save');
     Route::get('/laporan', [Admin::class, 'reports'])->middleware('permission:reports.read')->name('reports');
+    Route::post('/laporan/payout-komisi', [Admin::class, 'commissionPayout'])->middleware('permission:payments.verify')->name('commission-payout.store');
+    Route::get('/laporan/payout-komisi/{payout}/bukti', [Admin::class, 'commissionPayoutProof'])->middleware('permission:payments.read')->name('commission-payout.proof');
+    Route::get('/monitoring', [Admin::class, 'monitoring'])->middleware('permission:audit.read')->name('monitoring');
     Route::middleware('permission:catalog.write')->group(function () {
         Route::get('/import', [Import::class, 'index'])->name('import');
         Route::get('/import/template', [Import::class, 'template'])->name('import.template');

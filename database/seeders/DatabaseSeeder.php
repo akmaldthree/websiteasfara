@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             Setting::firstOrCreate(['key' => $key], ['value' => $value]);
         }
         Setting::firstOrCreate(['key' => 'payment_review_sla_hours'], ['value' => 4]);
+        Setting::firstOrCreate(['key' => 'staff_two_factor_required'], ['value' => false]);
         foreach (['theme_primary_color' => '#343b34', 'theme_accent_color' => '#b8965a', 'theme_background_color' => '#faf8f4', 'theme_surface_color' => '#fffefb', 'theme_text_color' => '#343b34', 'theme_font' => 'classic', 'theme_container_width' => 1520, 'theme_radius' => 0, 'theme_header_style' => 'standard'] as $key => $value) {
             Setting::firstOrCreate(['key' => $key], ['value' => $value]);
         }

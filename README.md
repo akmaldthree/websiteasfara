@@ -28,6 +28,9 @@ Website e-commerce Dthree dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. 
 - Akun staf dapat mengaktifkan verifikasi dua langkah melalui kode email dari menu Keamanan akun.
 - Analytics internal anonim merekam funnel storefront tanpa kata pencarian atau data pribadi, dapat dimatikan admin, dan tampil pada laporan Management.
 - Staf pengiriman dapat mengubah ongkir sebelum bukti pembayaran masuk; nilai awal, alasan, total baru, timeline, dan audit tersimpan.
+- Daftar pesanan mendukung tindakan massal berizin untuk packing, penerimaan, dan pembatalan dengan hasil per pesanan; pengiriman tetap meminta resi unik per paket.
+- Ledger komisi B2B mendukung pencatatan payout, rekening penerima, referensi transfer, bukti privat, dan audit.
+- Admin dapat mewajibkan 2FA email bagi seluruh staf serta memantau heartbeat scheduler, queue, notifikasi gagal, database, storage, dan mode debug.
 
 ## Instalasi hosting
 

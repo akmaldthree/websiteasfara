@@ -22,4 +22,9 @@ class CommissionEntry extends Model
     {
         return $this->belongsTo(Order::class);
     }
+
+    public function payout()
+    {
+        return $this->belongsTo(CommissionPayout::class, 'commission_payout_id');
+    }
 }
