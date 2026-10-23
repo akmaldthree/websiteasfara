@@ -171,6 +171,21 @@ class AdminController extends Controller
         return back()->with('success', 'Penawaran ukuran custom diperbarui.');
     }
 
+    public function customQuoteReference(CustomQuote $customQuote)
+    {
+        abort_unless($customQuote->reference_path && Storage::disk('local')->exists($customQuote->reference_path), 404);
+
+        return Storage::disk('local')->download($customQuote->reference_path, 'referensi-'.$customQuote->number.'.'.pathinfo($customQuote->reference_path, PATHINFO_EXTENSION), ['Cache-Control' => 'private, no-store']);
+    }
+
+    public function orderItemReference(OrderItem $item)
+    {
+        $path = $item->attributes['custom']['reference_path'] ?? null;
+        abort_unless($path && Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->download($path, 'referensi-'.$item->sku.'.'.pathinfo($path, PATHINFO_EXTENSION), ['Cache-Control' => 'private, no-store']);
+    }
+
     public function production(Request $request, OrderItem $item, CustomProductService $service)
     {
         $data = $request->validate(['status' => 'required|in:reviewing,approved,production,quality_check,ready_to_ship', 'note' => 'nullable|string|max:1000']);

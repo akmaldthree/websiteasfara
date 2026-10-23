@@ -13,6 +13,8 @@ use App\Services\CheckoutService;
 use App\Services\CustomProductService;
 use App\Services\OrderWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -96,7 +98,27 @@ class CustomProductTest extends TestCase
             $this->assertStringContainsString('belum selesai', $exception->getMessage());
         }
         $custom->updateProduction($item, 'ready_to_ship', 'QC lulus.');
+        $this->assertDatabaseHas('notification_deliveries', ['channel' => 'email', 'status' => 'pending']);
         app(OrderWorkflow::class)->act($order->fresh(), 'pack');
         $this->assertSame('packed', $order->fresh()->fulfillment_status);
+    }
+
+    public function test_custom_reference_is_stored_privately_and_downloaded_through_authorized_admin(): void
+    {
+        Storage::fake('local');
+        $this->template->update(['pricing_mode' => 'quote']);
+        $user = User::factory()->create();
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+
+        $this->actingAs($user)->post(route('custom.submit', $this->variant), [
+            'request_key' => fake()->uuid(), 'measurements' => ['chest' => 100], 'measurement_approval' => '1',
+            'reference' => UploadedFile::fake()->create('referensi.pdf', 100, 'application/pdf'),
+        ])->assertRedirect(route('account'))->assertSessionHasNoErrors();
+
+        $quote = $user->customQuotes()->firstOrFail();
+        $this->assertNotNull($quote->reference_path);
+        Storage::disk('local')->assertExists($quote->reference_path);
+        $this->actingAs($admin)->get(route('admin.custom-quotes.reference', $quote))->assertOk();
     }
 }

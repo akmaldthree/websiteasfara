@@ -231,16 +231,17 @@ class StoreController extends Controller
 
     public function customize(Request $r, Variant $variant, CustomProductService $service, CartService $cartService)
     {
-        $data = $r->validate(['request_key' => 'required|uuid', 'measurements' => 'required|array', 'measurement_approval' => 'accepted']);
+        $data = $r->validate(['request_key' => 'required|uuid', 'measurements' => 'required|array', 'measurement_approval' => 'accepted', 'reference' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120']);
+        $referencePath = $r->hasFile('reference') ? $r->file('reference')->store('custom-references', 'local') : null;
         if ($variant->measurementTemplate?->pricing_mode === 'quote') {
             if (! $r->user()) {
                 return redirect()->route('login')->withErrors(['custom' => 'Masuk atau daftar untuk meminta penawaran custom.']);
             }
-            $quote = $service->requestQuote($variant, $r->user(), $data['measurements'], $data['request_key']);
+            $quote = $service->requestQuote($variant, $r->user(), $data['measurements'], $data['request_key'], $referencePath);
 
             return redirect()->route('account')->with('success', 'Permintaan penawaran '.$quote->number.' dikirim.');
         }
-        $customization = $service->fixedCustomization($variant, $data['measurements']);
+        $customization = $service->fixedCustomization($variant, $data['measurements'], $referencePath);
         $cart = $r->session()->get('cart', []);
         $customizations = $r->session()->get('cart_customizations', []);
         $cart[$variant->id] = 1;

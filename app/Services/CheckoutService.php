@@ -67,7 +67,8 @@ class CheckoutService
                 } else {
                     $this->check($v->measurementTemplate?->active === true && $v->measurementTemplate->pricing_mode === 'fixed', 'Template custom berubah. Isi ulang ukuran sebelum checkout.');
                     $approvedAt = $customization['approved_at'] ?? null;
-                    $customization = $this->customProducts->fixedCustomization($v, $customization['measurements'] ?? []);
+                    $referencePath = $customization['reference_path'] ?? null;
+                    $customization = $this->customProducts->fixedCustomization($v, $customization['measurements'] ?? [], $referencePath);
                     $customization['approved_at'] = $approvedAt;
                 }
             }

@@ -42,21 +42,21 @@ class CustomProductService
     }
 
     /** @return array<string, mixed> */
-    public function fixedCustomization(Variant $variant, array $input): array
+    public function fixedCustomization(Variant $variant, array $input, ?string $referencePath = null): array
     {
         $template = $this->templateFor($variant);
         $this->check($template->pricing_mode === 'fixed', 'Produk ini memerlukan penawaran harga terlebih dahulu.');
 
-        return $this->snapshot($template, $this->validateMeasurements($template, $input), null);
+        return $this->snapshot($template, $this->validateMeasurements($template, $input), null) + ['reference_path' => $referencePath];
     }
 
-    public function requestQuote(Variant $variant, User $user, array $input, string $requestKey): CustomQuote
+    public function requestQuote(Variant $variant, User $user, array $input, string $requestKey, ?string $referencePath = null): CustomQuote
     {
         $template = $this->templateFor($variant);
         $this->check($template->pricing_mode === 'quote', 'Produk ini menggunakan tarif custom tetap dan tidak memerlukan penawaran.');
         $measurements = $this->validateMeasurements($template, $input);
 
-        return DB::transaction(function () use ($variant, $user, $requestKey, $template, $measurements) {
+        return DB::transaction(function () use ($variant, $user, $requestKey, $template, $measurements, $referencePath) {
             if ($existing = CustomQuote::where('request_key', $requestKey)->first()) {
                 $this->check($existing->user_id === $user->id && $existing->variant_id === $variant->id, 'Permintaan penawaran tidak valid.');
 
@@ -65,7 +65,7 @@ class CustomProductService
             $quote = CustomQuote::create([
                 'request_key' => $requestKey, 'number' => 'CQ-'.strtoupper(Str::random(10)),
                 'user_id' => $user->id, 'variant_id' => $variant->id, 'measurement_template_id' => $template->id,
-                'template_snapshot' => $this->templateSnapshot($template), 'measurements' => $measurements,
+                'template_snapshot' => $this->templateSnapshot($template), 'measurements' => $measurements, 'reference_path' => $referencePath,
             ]);
             Audit::record('custom_quote.submitted', 'custom_quote:'.$quote->id, null, $quote->only('number', 'user_id', 'variant_id', 'measurements'));
 
@@ -99,7 +99,7 @@ class CustomProductService
             $quote->update(['status' => 'accepted', 'accepted_at' => now()]);
             Audit::record('custom_quote.accepted', 'custom_quote:'.$quote->id, ['status' => 'quoted'], ['status' => 'accepted']);
 
-            return $this->snapshotData($quote->template_snapshot, $quote->measurements, $quote->surcharge, $quote->lead_time, $quote->id);
+            return $this->snapshotData($quote->template_snapshot, $quote->measurements, $quote->surcharge, $quote->lead_time, $quote->id) + ['reference_path' => $quote->reference_path];
         });
     }
 
@@ -111,8 +111,9 @@ class CustomProductService
             $item = OrderItem::whereKey($item->id)->lockForUpdate()->firstOrFail();
             $before = $item->production_status;
             $item->update(['production_status' => $status]);
-            $item->productionMilestones()->create(['user_id' => auth()->id(), 'status' => $status, 'note' => $note]);
+            $milestone = $item->productionMilestones()->create(['user_id' => auth()->id(), 'status' => $status, 'note' => $note]);
             Audit::record('production.updated', 'order_item:'.$item->id, ['status' => $before], ['status' => $status, 'note' => $note]);
+            OrderCommunication::record($item->order, 'production-'.$milestone->id, 'production_'.$status, 'Produksi '.$item->name.' ('.$item->sku.') diperbarui menjadi '.str_replace('_', ' ', $status).($note ? '. '.$note : '.'));
         });
     }
 

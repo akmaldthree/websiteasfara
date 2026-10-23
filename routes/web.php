@@ -67,6 +67,8 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/produksi/{item}', [Admin::class, 'production'])->middleware('permission:shipping.write')->name('production.update');
     Route::get('/penawaran-custom', [Admin::class, 'customQuotes'])->middleware('permission:catalog.write')->name('custom-quotes');
     Route::post('/penawaran-custom/{customQuote}', [Admin::class, 'customQuoteAction'])->middleware('permission:catalog.write')->name('custom-quotes.update');
+    Route::get('/penawaran-custom/{customQuote}/referensi', [Admin::class, 'customQuoteReference'])->middleware('permission:catalog.write')->name('custom-quotes.reference');
+    Route::get('/item-pesanan/{item}/referensi', [Admin::class, 'orderItemReference'])->middleware('permission:orders.read')->name('order-item.reference');
     Route::get('/ulasan', [Admin::class, 'reviews'])->middleware('permission:content.write')->name('reviews');
     Route::get('/konten/{contentEntry}/preview', [Admin::class, 'contentPreview'])->middleware('permission:content.write')->name('content.preview');
     Route::post('/ulasan/{review}', [Admin::class, 'reviewAction'])->middleware('permission:content.write')->name('reviews.update');
