@@ -81,6 +81,10 @@ class ContentManagementTest extends TestCase
             ['type' => 'heading', 'text' => 'Kisah Dthree'],
             ['type' => 'paragraph', 'text' => '<script>alert("x")</script> Tetap aman.'],
             ['type' => 'button', 'url' => '/koleksi', 'label' => 'Lihat koleksi'],
+            ['type' => 'columns', 'items' => [
+                ['heading' => 'Bahan', 'text' => 'Katun pilihan.'],
+                ['heading' => 'Proses', 'text' => 'Dibuat dengan teliti.'],
+            ]],
         ];
 
         $this->actingAs($admin)->post(route('admin.update', ['pages', $page->id]), [
@@ -92,7 +96,9 @@ class ContentManagementTest extends TestCase
         $this->get(route('page', $page->slug))->assertOk()
             ->assertSee('Kisah Dthree')
             ->assertSee('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; Tetap aman.', false)
-            ->assertSee('href="/koleksi"', false);
+            ->assertSee('href="/koleksi"', false)
+            ->assertSee('Katun pilihan.')
+            ->assertSee('Dibuat dengan teliti.');
 
         $blocks[2]['url'] = 'javascript:alert(1)';
         $this->actingAs($admin)->post(route('admin.update', ['pages', $page->id]), [

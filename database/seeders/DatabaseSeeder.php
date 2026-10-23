@@ -25,6 +25,9 @@ class DatabaseSeeder extends Seeder
         foreach (['theme_primary_color' => '#343b34', 'theme_accent_color' => '#b8965a', 'theme_background_color' => '#faf8f4', 'theme_surface_color' => '#fffefb', 'theme_text_color' => '#343b34', 'theme_font' => 'classic', 'theme_container_width' => 1520, 'theme_radius' => 0, 'theme_header_style' => 'standard'] as $key => $value) {
             Setting::firstOrCreate(['key' => $key], ['value' => $value]);
         }
+        foreach (['header_announcement_enabled' => true, 'header_categories_enabled' => true, 'header_tracking_enabled' => true, 'header_sticky' => false, 'footer_pages_enabled' => true, 'footer_social_enabled' => true, 'footer_copyright' => ''] as $key => $value) {
+            Setting::firstOrCreate(['key' => $key], ['value' => $value]);
+        }
         foreach (['loyalty_enabled' => false, 'loyalty_spend_per_point' => 10000, 'loyalty_point_value' => 100, 'loyalty_min_redeem' => 100, 'loyalty_expiry_days' => 365, 'loyalty_tiers' => [['name' => 'Member', 'minimum' => 0], ['name' => 'Silver', 'minimum' => 500], ['name' => 'Gold', 'minimum' => 1500]], 'loyalty_bonus_name' => '', 'loyalty_bonus_multiplier' => 1, 'loyalty_bonus_start' => '', 'loyalty_bonus_end' => '', 'analytics_enabled' => true, 'cod_allowed_segments' => ['guest', 'customer', 'business'], 'cod_blocked_phones' => [], 'cod_excluded_skus' => [], 'cod_excluded_categories' => []] as $key => $value) {
             Setting::firstOrCreate(['key' => $key], ['value' => $value]);
         }

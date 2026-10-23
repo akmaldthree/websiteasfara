@@ -432,7 +432,7 @@ class AdminController extends Controller
         if (! is_array($blocks) || count($blocks) > 50) {
             throw ValidationException::withMessages(['blocks' => 'Konten dibatasi maksimal 50 blok.']);
         }
-        $allowed = ['heading', 'paragraph', 'quote', 'button', 'image'];
+        $allowed = ['heading', 'paragraph', 'quote', 'button', 'image', 'columns'];
         foreach ($blocks as $index => &$block) {
             if (! is_array($block) || ! in_array($block['type'] ?? '', $allowed, true)) {
                 throw ValidationException::withMessages(['blocks' => 'Tipe blok ke-'.($index + 1).' tidak didukung.']);
@@ -444,6 +444,19 @@ class AdminController extends Controller
             if (isset($block['text']) && mb_strlen($block['text']) > 10000) {
                 throw ValidationException::withMessages(['blocks' => 'Isi salah satu blok terlalu panjang.']);
             }
+            if ($block['type'] === 'columns') {
+                $items = $block['items'] ?? [];
+                if (! is_array($items) || count($items) < 2 || count($items) > 4) {
+                    throw ValidationException::withMessages(['blocks' => 'Blok kolom harus memiliki dua sampai empat kolom.']);
+                }
+                foreach ($items as &$item) {
+                    if (! is_array($item) || empty(trim($item['heading'] ?? '')) || empty(trim($item['text'] ?? '')) || mb_strlen($item['heading']) > 200 || mb_strlen($item['text']) > 3000) {
+                        throw ValidationException::withMessages(['blocks' => 'Setiap kolom wajib memiliki judul dan isi.']);
+                    }
+                    $item = ['heading' => trim($item['heading']), 'text' => trim($item['text'])];
+                }
+                $block['items'] = array_values($items);
+            }
             if (in_array($block['type'], ['button', 'image'], true)) {
                 if (empty($block['url']) || ! $this->safeContentUrl($block['url'])) {
                     throw ValidationException::withMessages(['blocks' => 'Tautan blok ke-'.($index + 1).' harus berupa URL https atau path internal.']);
@@ -452,7 +465,7 @@ class AdminController extends Controller
                     throw ValidationException::withMessages(['blocks' => 'Label atau alt text blok ke-'.($index + 1).' wajib diisi dan maksimal 200 karakter.']);
                 }
             }
-            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label']));
+            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label', 'items']));
         }
 
         return array_values($blocks);
@@ -537,6 +550,7 @@ class AdminController extends Controller
             'default_seo_title' => 'nullable|string|max:200', 'default_seo_description' => 'nullable|string|max:300',
             'theme_primary_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_accent_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_background_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_surface_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_text_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'theme_font' => 'required|in:classic,modern,system', 'theme_container_width' => 'required|integer|between:960,1800', 'theme_radius' => 'required|integer|between:0,32', 'theme_header_style' => 'required|in:standard,compact,centered',
+            'footer_copyright' => 'nullable|string|max:200',
             'shipping_mode' => 'required|in:manual,api', 'shipping_provider' => 'required|string|max:80', 'shipping_api_url' => 'nullable|url|max:500', 'shipping_api_token_new' => 'nullable|string|max:2000',
             'tracking_mode' => 'required|in:manual,api', 'whatsapp_mode' => 'required|in:manual,api', 'whatsapp_provider' => 'required|string|max:80', 'whatsapp_api_url' => 'nullable|url|max:500', 'whatsapp_api_token_new' => 'nullable|string|max:2000',
             'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0',
@@ -595,6 +609,9 @@ class AdminController extends Controller
         $data['loyalty_enabled'] = $r->boolean('loyalty_enabled');
         $data['analytics_enabled'] = $r->boolean('analytics_enabled');
         $data['checkout_enabled'] = $r->boolean('checkout_enabled');
+        foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled'] as $toggle) {
+            $data[$toggle] = $r->boolean($toggle);
+        }
         if ($data['checkout_enabled'] && ! count($banks)) {
             throw ValidationException::withMessages(['bank_text' => 'Isi rekening sebelum membuka checkout.']);
         }

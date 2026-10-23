@@ -41,6 +41,13 @@ class AdminWebsiteSettingsTest extends TestCase
             'theme_container_width' => 1400,
             'theme_radius' => 12,
             'theme_header_style' => 'compact',
+            'header_announcement_enabled' => '1',
+            'header_categories_enabled' => '1',
+            'header_tracking_enabled' => '1',
+            'header_sticky' => '1',
+            'footer_pages_enabled' => '1',
+            'footer_social_enabled' => '1',
+            'footer_copyright' => 'Hak cipta Dthree.',
         ];
         $payload['brand_name'] = 'Dthree Baru';
         $payload['hero_title'] = 'Judul dari dashboard';
