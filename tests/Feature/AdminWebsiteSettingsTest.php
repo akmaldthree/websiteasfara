@@ -32,6 +32,15 @@ class AdminWebsiteSettingsTest extends TestCase
             'cod_excluded_categories_text' => 'Abaya',
             'loyalty_tiers_text' => "Member | 0\nSilver | 500\nGold | 1500",
             'payment_review_sla_hours' => 4,
+            'theme_primary_color' => '#112233',
+            'theme_accent_color' => '#C49A6C',
+            'theme_background_color' => '#F8F4EE',
+            'theme_surface_color' => '#FFFFFF',
+            'theme_text_color' => '#202020',
+            'theme_font' => 'modern',
+            'theme_container_width' => 1400,
+            'theme_radius' => 12,
+            'theme_header_style' => 'compact',
         ];
         $payload['brand_name'] = 'Dthree Baru';
         $payload['hero_title'] = 'Judul dari dashboard';
@@ -44,6 +53,6 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertSame(['name' => 'Silver', 'minimum' => 500], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));
-        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertDontSee('shipping-secret');
+        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('--ink:#112233', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
     }
 }

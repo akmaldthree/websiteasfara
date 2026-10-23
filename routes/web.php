@@ -65,6 +65,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/ulasan', [Admin::class, 'reviews'])->middleware('permission:content.write')->name('reviews');
     Route::get('/konten/{contentEntry}/preview', [Admin::class, 'contentPreview'])->middleware('permission:content.write')->name('content.preview');
     Route::post('/ulasan/{review}', [Admin::class, 'reviewAction'])->middleware('permission:content.write')->name('reviews.update');
+    Route::get('/media', [Admin::class, 'mediaLibrary'])->middleware('permission:content.write')->name('media');
+    Route::post('/media', [Admin::class, 'mediaUpload'])->middleware('permission:content.write')->name('media.upload');
+    Route::post('/media/{asset}', [Admin::class, 'mediaUpdate'])->middleware('permission:content.write')->name('media.update');
     Route::post('/pertanyaan-produk/{question}', [Admin::class, 'questionAction'])->middleware('permission:content.write')->name('questions.update');
     Route::get('/konten-riwayat/{resource}/{id}', [Admin::class, 'contentHistory'])->middleware('permission:content.write')->whereNumber('id')->name('content.history');
     Route::post('/konten-riwayat/{revision}/pulihkan', [Admin::class, 'restoreContent'])->middleware('permission:content.write')->name('content.restore');

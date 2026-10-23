@@ -11,6 +11,7 @@ use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\ContentRevision;
 use App\Models\CustomQuote;
+use App\Models\MediaAsset;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentProof;
@@ -90,6 +91,32 @@ class AdminController extends Controller
     public function contentPreview(ContentEntry $contentEntry)
     {
         return view('store.content', ['entry' => $contentEntry, 'preview' => true]);
+    }
+
+    public function mediaLibrary()
+    {
+        return view('admin.media', ['assets' => MediaAsset::with('user')->latest()->paginate(30)]);
+    }
+
+    public function mediaUpload(Request $request)
+    {
+        $data = $request->validate(['image' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120', 'alt_text' => 'required|string|max:200']);
+        $file = $request->file('image');
+        $path = $file->store('cms-media/'.now()->format('Y/m'), 'public');
+        $asset = MediaAsset::create(['user_id' => $request->user()->id, 'name' => $file->getClientOriginalName(), 'path' => $path, 'mime' => $file->getMimeType(), 'size' => $file->getSize(), 'alt_text' => $data['alt_text']]);
+        Audit::record('media.uploaded', 'media_asset:'.$asset->id, null, $asset->only('name', 'path', 'alt_text'));
+
+        return back()->with('success', 'Gambar ditambahkan ke media library.');
+    }
+
+    public function mediaUpdate(Request $request, MediaAsset $asset)
+    {
+        $data = $request->validate(['alt_text' => 'required|string|max:200', 'active' => 'nullable|boolean']);
+        $before = $asset->only('alt_text', 'active');
+        $asset->update(['alt_text' => $data['alt_text'], 'active' => $request->boolean('active')]);
+        Audit::record('media.updated', 'media_asset:'.$asset->id, $before, $asset->only('alt_text', 'active'));
+
+        return back()->with('success', 'Media diperbarui.');
     }
 
     public function reviews(Request $request)
@@ -508,6 +535,8 @@ class AdminController extends Controller
             'footer_text' => 'nullable|string|max:500', 'store_location' => 'nullable|string|max:150', 'contact_email' => 'nullable|email|max:150',
             'whatsapp' => ['nullable', 'regex:/^62[0-9]{8,13}$/'], 'instagram_url' => 'nullable|url|max:500', 'tiktok_url' => 'nullable|url|max:500', 'facebook_url' => 'nullable|url|max:500',
             'default_seo_title' => 'nullable|string|max:200', 'default_seo_description' => 'nullable|string|max:300',
+            'theme_primary_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_accent_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_background_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_surface_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_text_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_font' => 'required|in:classic,modern,system', 'theme_container_width' => 'required|integer|between:960,1800', 'theme_radius' => 'required|integer|between:0,32', 'theme_header_style' => 'required|in:standard,compact,centered',
             'shipping_mode' => 'required|in:manual,api', 'shipping_provider' => 'required|string|max:80', 'shipping_api_url' => 'nullable|url|max:500', 'shipping_api_token_new' => 'nullable|string|max:2000',
             'tracking_mode' => 'required|in:manual,api', 'whatsapp_mode' => 'required|in:manual,api', 'whatsapp_provider' => 'required|string|max:80', 'whatsapp_api_url' => 'nullable|url|max:500', 'whatsapp_api_token_new' => 'nullable|string|max:2000',
             'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0',
