@@ -10,12 +10,12 @@ class ContentEntry extends Model
 
     protected function casts(): array
     {
-        return ['active' => 'boolean', 'starts_at' => 'datetime', 'ends_at' => 'datetime', 'blocks' => 'array'];
+        return ['active' => 'boolean', 'starts_at' => 'datetime', 'ends_at' => 'datetime', 'blocks' => 'array', 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime'];
     }
 
     public function scopePublished($query)
     {
-        return $query->where('active', true)->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>', now()));
+        return $query->where('editorial_status', 'approved')->where('active', true)->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>', now()));
     }
 
     public function getImageUrlAttribute(): ?string

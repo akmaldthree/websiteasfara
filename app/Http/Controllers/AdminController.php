@@ -318,6 +318,27 @@ class AdminController extends Controller
         }
         if (in_array($resource, ['pages', 'content'], true)) {
             $data['blocks'] = $this->validatedContentBlocks($data['blocks'] ?? null);
+            $status = $data['editorial_status'];
+            if ($status === 'approved' && ! $r->user()->allowed('content.approve')) {
+                throw ValidationException::withMessages(['editorial_status' => 'Akun Anda dapat menulis dan mengajukan konten, tetapi tidak dapat menyetujuinya.']);
+            }
+            if ($status === 'draft') {
+                $data += ['submitted_by' => null, 'submitted_at' => null, 'reviewed_by' => null, 'reviewed_at' => null];
+            } elseif ($status === 'review') {
+                $data += [
+                    'submitted_by' => $record->editorial_status === 'review' ? $record->submitted_by : $r->user()->id,
+                    'submitted_at' => $record->editorial_status === 'review' ? $record->submitted_at : now(),
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                ];
+            } else {
+                $data += [
+                    'submitted_by' => $record->submitted_by ?: $r->user()->id,
+                    'submitted_at' => $record->submitted_at ?: now(),
+                    'reviewed_by' => $r->user()->id,
+                    'reviewed_at' => now(),
+                ];
+            }
         }
         if ($resource === 'measurement-templates') {
             try {

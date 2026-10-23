@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ContentEntry;
 use App\Models\ContentRevision;
 use App\Models\Page;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -56,7 +57,7 @@ class ContentManagementTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.update', ['pages', $page->id]), [
             'title' => 'Kebijakan Baru', 'slug' => $page->slug, 'body' => 'Isi versi kedua.', 'seo_title' => '', 'seo_description' => '',
-            'starts_at' => '', 'ends_at' => '', 'active' => '1',
+            'editorial_status' => 'approved', 'review_note' => '', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
         ])->assertRedirect(route('admin.resources', 'pages'))->assertSessionHasNoErrors();
 
         $revision = ContentRevision::firstOrFail();
@@ -89,7 +90,7 @@ class ContentManagementTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.update', ['pages', $page->id]), [
             'title' => $page->title, 'slug' => $page->slug, 'body' => $page->body, 'blocks' => json_encode($blocks),
-            'seo_title' => '', 'seo_description' => '', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
+            'seo_title' => '', 'seo_description' => '', 'editorial_status' => 'approved', 'review_note' => '', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
         ])->assertSessionHasNoErrors();
 
         $this->assertIsArray($page->fresh()->blocks);
@@ -103,7 +104,36 @@ class ContentManagementTest extends TestCase
         $blocks[2]['url'] = 'javascript:alert(1)';
         $this->actingAs($admin)->post(route('admin.update', ['pages', $page->id]), [
             'title' => $page->title, 'slug' => $page->slug, 'body' => $page->body, 'blocks' => json_encode($blocks),
-            'seo_title' => '', 'seo_description' => '', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
+            'seo_title' => '', 'seo_description' => '', 'editorial_status' => 'approved', 'review_note' => '', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
         ])->assertSessionHasErrors('blocks');
+    }
+
+    public function test_editor_submits_content_and_only_approver_can_publish_it(): void
+    {
+        Role::create(['name' => 'editor', 'permissions' => ['content.write']]);
+        $editor = User::factory()->create();
+        $editor->forceFill(['role' => 'editor'])->save();
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $page = Page::create(['title' => 'Editorial', 'slug' => 'editorial', 'body' => 'Menunggu review.', 'active' => true]);
+        $payload = [
+            'title' => 'Editorial', 'slug' => 'editorial', 'body' => 'Menunggu review.', 'template' => 'standard',
+            'blocks' => '', 'seo_title' => '', 'seo_description' => '', 'editorial_status' => 'review',
+            'review_note' => 'Mohon diperiksa.', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
+        ];
+
+        $this->actingAs($editor)->post(route('admin.update', ['pages', $page->id]), $payload)->assertSessionHasNoErrors();
+        $this->assertSame('review', $page->fresh()->editorial_status);
+        $this->assertSame($editor->id, $page->fresh()->submitted_by);
+        $this->get(route('page', $page->slug))->assertNotFound();
+
+        $payload['editorial_status'] = 'approved';
+        $this->actingAs($editor)->post(route('admin.update', ['pages', $page->id]), $payload)->assertSessionHasErrors('editorial_status');
+        $this->actingAs($admin)->post(route('admin.update', ['pages', $page->id]), $payload)->assertSessionHasNoErrors();
+
+        $this->assertSame('approved', $page->fresh()->editorial_status);
+        $this->assertSame($admin->id, $page->fresh()->reviewed_by);
+        $this->assertNotNull($page->fresh()->reviewed_at);
+        $this->get(route('page', $page->slug))->assertOk()->assertSee('Menunggu review.');
     }
 }

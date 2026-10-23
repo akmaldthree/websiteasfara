@@ -13,6 +13,7 @@
                 @elseif($resource==='variant-prices' && $key==='price_group_id'){{ $row->priceGroup?->name }}
                 @elseif($resource==='product-media' && $key==='series_id'){{ $row->series?->name }}
                 @elseif($resource==='product-media' && $key==='variant_id'){{ $row->variant?->sku ?: 'Semua varian' }}
+                @elseif($key==='editorial_status'){{ ['draft'=>'Draft','review'=>'Menunggu review','approved'=>'Disetujui'][$row->$key] ?? $row->$key }}
                 @elseif(in_array($key,['active','cod'])){{ $row->$key?'Ya':'Tidak' }}
                 @elseif(in_array($key,['price','minimum_order_amount']))@rupiah($row->$key)
                 @else{{ $row->$key }}

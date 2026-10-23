@@ -34,8 +34,9 @@
                     @php($options=is_object($options)?$options->all():$options)
                     @php($options=str_contains($field[2],'nullable')&&!array_key_exists('',$options)?[''=>'— Semua / tidak dibatasi —']+$options:$options)
                     <select id="{{ $key }}" name="{{ $key }}" class="form-select">
-                        @foreach($options as $k=>$label)<option value="{{ $k }}" @selected((string)$value===(string)$k)>{{ $label }}</option>@endforeach
+                        @foreach($options as $k=>$label)<option value="{{ $k }}" @selected((string)$value===(string)$k) @disabled($key==='editorial_status' && $k==='approved' && !auth()->user()->allowed('content.approve'))>{{ $label }}</option>@endforeach
                     </select>
+                    @if($key==='editorial_status' && !auth()->user()->allowed('content.approve'))<small>Anda dapat menyimpan draft atau mengajukannya untuk review. Persetujuan dilakukan oleh pengguna dengan izin persetujuan konten.</small>@endif
                 @elseif($field[1]==='checkbox')
                     <input id="{{ $key }}" type="checkbox" name="{{ $key }}" value="1" @checked($value)>
                 @elseif($field[1]==='file')
