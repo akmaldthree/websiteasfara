@@ -583,8 +583,9 @@ class AdminController extends Controller
     public function customers()
     {
         return view('admin.customers', [
-            'users' => User::where('role', 'customer')->with(['businessAccount.priceGroup'])->withCount('orders')->latest()->paginate(20),
+            'users' => User::where('role', 'customer')->with(['businessAccount.priceGroup', 'businessAccount.salesUser'])->withCount('orders')->latest()->paginate(20),
             'priceGroups' => PriceGroup::where('active', true)->orderBy('name')->get(),
+            'salesUsers' => User::where('role', '!=', 'customer')->where('active', true)->orderBy('name')->get(),
         ]);
     }
 
@@ -595,10 +596,17 @@ class AdminController extends Controller
             'price_group_id' => 'nullable|required_if:status,approved|exists:price_groups,id',
             'review_notes' => 'nullable|required_if:status,rejected|string|max:2000',
             'expires_at' => 'nullable|date|after:today',
+            'sales_user_id' => 'nullable|exists:users,id',
+            'credit_terms_days' => 'required|integer|between:0,365',
+            'credit_limit' => 'required|integer|min:0|max:100000000000',
+            'commission_percent' => 'required|numeric|between:0,100',
         ]);
         $group = isset($data['price_group_id']) ? PriceGroup::findOrFail($data['price_group_id']) : null;
         if ($data['status'] === 'approved' && (! $group?->active || $group->business_type !== $businessAccount->business_type)) {
             throw ValidationException::withMessages(['price_group_id' => 'Pilih grup aktif yang sesuai dengan jenis bisnis pelanggan.']);
+        }
+        if (! empty($data['sales_user_id']) && ! User::whereKey($data['sales_user_id'])->where('role', '!=', 'customer')->where('active', true)->exists()) {
+            throw ValidationException::withMessages(['sales_user_id' => 'Pilih anggota tim aktif sebagai penanggung jawab sales.']);
         }
 
         DB::transaction(function () use ($r, $data, $group, $businessAccount) {
@@ -611,11 +619,22 @@ class AdminController extends Controller
                 'review_notes' => $data['review_notes'] ?? null,
                 'reviewed_at' => now(),
                 'expires_at' => $data['status'] === 'approved' ? ($data['expires_at'] ?? null) : $account->expires_at,
+                'sales_user_id' => $data['sales_user_id'] ?? null,
+                'credit_terms_days' => $data['credit_terms_days'],
+                'credit_limit' => $data['credit_limit'],
+                'commission_percent' => $data['commission_percent'],
             ]);
             Audit::record('business.application_reviewed', 'business_account:'.$account->id, $before, $account->toArray());
         });
 
         return back()->with('success', 'Pengajuan akun bisnis diperbarui.');
+    }
+
+    public function businessDocument(BusinessAccount $businessAccount)
+    {
+        abort_unless($businessAccount->legal_document_path && Storage::disk('local')->exists($businessAccount->legal_document_path), 404);
+
+        return Storage::disk('local')->download($businessAccount->legal_document_path, $businessAccount->legal_document_name ?: 'dokumen-usaha');
     }
 
     public function cases()

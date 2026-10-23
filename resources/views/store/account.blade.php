@@ -64,12 +64,13 @@
         @endif
         @if(!$businessAccount || $businessAccount->status!=='approved')
             <details @if(!$businessAccount) open @endif><summary>{{ $businessAccount?'Perbarui dan kirim ulang pengajuan':'Ajukan akun bisnis' }}</summary>
-                <form method="post" action="{{ route('business.apply') }}" class="mt-4">@csrf
+                <form method="post" enctype="multipart/form-data" action="{{ route('business.apply') }}" class="mt-4">@csrf
                     <div class="form-grid">
                         <div><label for="business-type">Jenis bisnis</label><select id="business-type" name="business_type" class="form-select" required><option value="reseller" @selected(old('business_type',$businessAccount?->business_type)==='reseller')>Reseller</option><option value="dropshipper" @selected(old('business_type',$businessAccount?->business_type)==='dropshipper')>Dropshipper</option><option value="wholesale" @selected(old('business_type',$businessAccount?->business_type)==='wholesale')>Grosir</option></select></div>
                         <div><label for="business-name">Nama toko / usaha</label><input id="business-name" name="business_name" class="form-control" value="{{ old('business_name',$businessAccount?->business_name) }}" required maxlength="150"></div>
                         <div><label for="sales-channel">Kanal penjualan</label><input id="sales-channel" name="sales_channel" class="form-control" value="{{ old('sales_channel',$businessAccount?->sales_channel) }}" placeholder="Contoh: toko fisik, Instagram, marketplace" required maxlength="150"></div>
                         <div><label for="business-notes">Catatan (opsional)</label><textarea id="business-notes" name="notes" class="form-control" maxlength="2000">{{ old('notes',$businessAccount?->notes) }}</textarea></div>
+                        <div><label for="legal-document">Dokumen usaha (PDF/JPG/PNG, maks. 5 MB)</label><input id="legal-document" type="file" name="legal_document" class="form-control" accept="application/pdf,image/jpeg,image/png">@if($businessAccount?->legal_document_name)<small>Tersimpan: {{ $businessAccount->legal_document_name }}. Unggah file baru untuk mengganti.</small>@endif</div>
                     </div>
                     <button class="btn btn-dark mt-3">Kirim pengajuan</button>
                 </form>

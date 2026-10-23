@@ -15,7 +15,7 @@ class BusinessAccount extends Model
 
     protected function casts(): array
     {
-        return ['submitted_at' => 'datetime', 'reviewed_at' => 'datetime', 'expires_at' => 'datetime'];
+        return ['submitted_at' => 'datetime', 'reviewed_at' => 'datetime', 'expires_at' => 'datetime', 'credit_terms_days' => 'integer', 'credit_limit' => 'integer', 'commission_percent' => 'decimal:2'];
     }
 
     public function user()
@@ -31,5 +31,10 @@ class BusinessAccount extends Model
     public function reviewer()
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function salesUser()
+    {
+        return $this->belongsTo(User::class, 'sales_user_id');
     }
 }

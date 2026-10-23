@@ -162,15 +162,20 @@ class AccountController extends Controller
             'business_name' => 'required|string|max:150',
             'sales_channel' => 'required|string|max:150',
             'notes' => 'nullable|string|max:2000',
+            'legal_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
         $existing = $r->user()->businessAccount;
         if ($existing?->status === 'approved') {
             throw ValidationException::withMessages(['business_type' => 'Akun bisnis yang sudah disetujui tidak dapat diajukan ulang. Hubungi Dthree untuk perubahan grup.']);
         }
 
-        DB::transaction(function () use ($r, $data, $existing) {
+        $document = $r->file('legal_document');
+        $documentPath = $document?->store('business-documents', 'local');
+        unset($data['legal_document']);
+        DB::transaction(function () use ($r, $data, $existing, $document, $documentPath) {
             $before = $existing?->toArray();
-            $account = BusinessAccount::updateOrCreate(['user_id' => $r->user()->id], $data + [
+            $documentData = $document ? ['legal_document_path' => $documentPath, 'legal_document_name' => $document->getClientOriginalName()] : [];
+            $account = BusinessAccount::updateOrCreate(['user_id' => $r->user()->id], $data + $documentData + [
                 'status' => 'pending', 'price_group_id' => null, 'reviewed_by' => null,
                 'review_notes' => null, 'submitted_at' => now(), 'reviewed_at' => null,
             ]);

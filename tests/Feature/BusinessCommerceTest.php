@@ -14,6 +14,8 @@ use App\Models\Variant;
 use App\Models\VariantPrice;
 use App\Services\CheckoutService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -53,10 +55,12 @@ class BusinessCommerceTest extends TestCase
 
     public function test_customer_can_apply_and_admin_can_assign_a_matching_price_group(): void
     {
+        Storage::fake('local');
         $customer = User::factory()->create();
         $this->actingAs($customer)->post(route('business.apply'), [
             'business_type' => 'reseller', 'business_name' => 'Toko Mitra',
             'sales_channel' => 'Instagram', 'notes' => 'Berjualan dari Tasikmalaya.',
+            'legal_document' => UploadedFile::fake()->create('nib.pdf', 100, 'application/pdf'),
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         $account = $customer->businessAccount()->firstOrFail();
@@ -66,10 +70,17 @@ class BusinessCommerceTest extends TestCase
         $admin->forceFill(['role' => 'admin'])->save();
         $this->actingAs($admin)->post(route('admin.business.review', $account), [
             'status' => 'approved', 'price_group_id' => $this->group->id,
+            'sales_user_id' => $admin->id, 'credit_terms_days' => 30,
+            'credit_limit' => 5000000, 'commission_percent' => 2.5,
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         $this->assertSame('approved', $account->fresh()->status);
         $this->assertSame($this->group->id, $account->fresh()->price_group_id);
+        $this->assertSame(30, $account->fresh()->credit_terms_days);
+        $this->assertSame(5000000, $account->fresh()->credit_limit);
+        $this->assertSame($admin->id, $account->fresh()->sales_user_id);
+        Storage::disk('local')->assertExists($account->fresh()->legal_document_path);
+        $this->get(route('admin.business.document', $account))->assertOk();
         $this->assertDatabaseHas('audit_logs', ['action' => 'business.application_reviewed']);
     }
 
@@ -83,6 +94,7 @@ class BusinessCommerceTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.business.review', $account), [
             'status' => 'approved', 'price_group_id' => $wholesale->id,
+            'credit_terms_days' => 0, 'credit_limit' => 0, 'commission_percent' => 0,
         ])->assertSessionHasErrors('price_group_id');
 
         $this->assertSame('pending', $account->fresh()->status);
