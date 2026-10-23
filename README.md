@@ -47,7 +47,7 @@ Password admin diminta secara tersembunyi. Tidak ada akun atau password bawaan. 
 
 ## Data demonstrasi lokal
 
-Gunakan database development terpisah, `APP_ENV=local`. Jalankan `php artisan db:seed --class=DemoSeeder` jika memerlukan contoh Raffah/Arcelia. Semua SKU diawali `DEMO-`; ilustrasi bukan foto produk Dthree. Seeder demo tidak membuka checkout atau membuat akun admin. Jangan menjalankannya pada database penjualan.
+Gunakan database development terpisah, `APP_ENV=local`. Jalankan `php artisan db:seed --class=DemoSeeder` untuk membuat contoh katalog, varian, tarif, voucher `DEMO10`, konten CMS, rekening demo, dan halaman kebijakan. Semua SKU diawali `DEMO-`; ilustrasi bukan foto produk Dthree. Seeder demo membuka checkout lokal agar alur transaksi dapat diuji, tetapi tidak membuat akun admin. Jangan menjalankannya pada database penjualan.
 
 ## Pembaruan
 
