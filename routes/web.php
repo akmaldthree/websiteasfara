@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountController as Account;
 use App\Http\Controllers\AdminController as Admin;
 use App\Http\Controllers\ImportController as Import;
 use App\Http\Controllers\OperationsController as Operations;
+use App\Http\Controllers\ProductWorkspaceController as Products;
 use App\Http\Controllers\StoreController as Store;
 use Illuminate\Support\Facades\Route;
 
@@ -109,6 +110,18 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/laporan/payout-komisi', [Admin::class, 'commissionPayout'])->middleware('permission:payments.verify')->name('commission-payout.store');
     Route::get('/laporan/payout-komisi/{payout}/bukti', [Admin::class, 'commissionPayoutProof'])->middleware('permission:payments.read')->name('commission-payout.proof');
     Route::get('/monitoring', [Admin::class, 'monitoring'])->middleware('permission:audit.read')->name('monitoring');
+    Route::middleware('permission:catalog.write')->group(function () {
+        Route::get('/produk', [Products::class, 'index'])->name('products');
+        Route::get('/produk/baru', [Products::class, 'create'])->name('products.create');
+        Route::post('/produk', [Products::class, 'store'])->name('products.store');
+        Route::get('/produk/{series}/ubah', [Products::class, 'edit'])->name('products.edit');
+        Route::post('/produk/{series}', [Products::class, 'update'])->name('products.update');
+        Route::post('/produk/{series}/varian', [Products::class, 'addVariant'])->name('products.variants.add');
+        Route::post('/produk/{series}/varian-massal', [Products::class, 'saveVariants'])->name('products.variants.save');
+        Route::post('/produk/{series}/generator-varian', [Products::class, 'generateVariants'])->name('products.variants.generate');
+        Route::post('/produk/{series}/foto', [Products::class, 'uploadMedia'])->name('products.media.upload');
+        Route::post('/produk/{series}/duplikat', [Products::class, 'duplicate'])->name('products.duplicate');
+    });
     Route::get('/import', [Import::class, 'index'])->name('import');
     Route::get('/import/template', [Import::class, 'template'])->name('import.template');
     Route::get('/import/export', [Import::class, 'export'])->name('import.export');

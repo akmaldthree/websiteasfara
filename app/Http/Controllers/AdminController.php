@@ -54,7 +54,7 @@ class AdminController extends Controller
         $paymentSlaHours = max(1, (int) Setting::get('payment_review_sla_hours', 4));
         $setup = [
             ['label' => 'Identitas dan tampilan toko', 'description' => 'Logo, hero, kontak, warna, dan teks beranda.', 'complete' => (bool) Setting::get('logo') && (bool) Setting::get('hero_image'), 'route' => 'admin.settings'],
-            ['label' => 'Kategori dan produk', 'description' => 'Minimal satu produk aktif dengan SKU.', 'complete' => Category::where('active', true)->exists() && Series::where('active', true)->whereHas('variants', fn ($query) => $query->where('active', true))->exists(), 'route' => 'admin.resources', 'params' => ['series']],
+            ['label' => 'Kategori dan produk', 'description' => 'Minimal satu produk aktif dengan SKU.', 'complete' => Category::where('active', true)->exists() && Series::where('active', true)->whereHas('variants', fn ($query) => $query->where('active', true))->exists(), 'route' => 'admin.products'],
             ['label' => 'Rekening pembayaran', 'description' => 'Rekening tujuan transfer pelanggan.', 'complete' => count(Setting::get('bank_accounts', [])) > 0, 'route' => 'admin.settings'],
             ['label' => 'Tarif pengiriman', 'description' => 'Minimal satu tarif aktif untuk checkout.', 'complete' => ShippingRate::where('active', true)->exists(), 'route' => 'admin.resources', 'params' => ['shipping-rates']],
             ['label' => 'Halaman kebijakan', 'description' => 'Syarat, privasi, pengiriman, dan retur.', 'complete' => Page::where('active', true)->count() >= 4, 'route' => 'admin.resources', 'params' => ['pages']],
