@@ -19,7 +19,7 @@
         @if(auth()->user()->allowed('catalog.write'))
         <div class="admin-nav-group"><p>Katalog produk</p>
             <a href="{{ route('admin.products') }}" @class(['active'=>request()->routeIs('admin.products*')])>Kelola produk</a>
-            @foreach(['categories','variants','product-media','bundle-components','measurement-templates'] as $key)@php($item=config('admin_resources.'.$key))<a href="{{ route('admin.resources',$key) }}" @class(['active'=>request()->route('resource')===$key])>{{ $item['title'] }}</a>@endforeach
+            @foreach(['categories','bundle-components','measurement-templates'] as $key)@php($item=config('admin_resources.'.$key))<a href="{{ route('admin.resources',$key) }}" @class(['active'=>request()->route('resource')===$key])>{{ $item['title'] }}</a>@endforeach
             <a href="{{ route('admin.custom-quotes') }}" @class(['active'=>request()->routeIs('admin.custom-quotes*')])>Penawaran custom</a>
         </div>
         @endif

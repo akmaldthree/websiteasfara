@@ -143,6 +143,14 @@ class ProductWorkspaceTest extends TestCase
         $this->assertSame(3, $product->media()->count());
         $this->assertSame(2, $product->media()->where('color', 'Sage')->count());
         $this->assertSame($product->media()->first()->image, $product->fresh()->image);
+
+        $withoutPhotos = $this->product(['name' => 'Naira Tanpa Foto', 'slug' => 'naira-tanpa-foto']);
+        $this->post(route('admin.products.variants-media.create', $withoutPhotos), [
+            'sku_prefix' => 'NFP', 'price' => 300000, 'stock' => 0, 'weight' => 500, 'low_stock' => 2, 'fulfillment' => 'ready_stock',
+            'groups' => [['color' => 'Black', 'sizes' => 'M, L', 'alt_text' => '']],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(2, $withoutPhotos->variants()->count());
+        $this->assertSame(0, $withoutPhotos->media()->count());
     }
 
     public function test_multiple_photos_can_be_uploaded_and_product_can_be_duplicated_safely(): void

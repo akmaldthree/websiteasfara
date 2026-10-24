@@ -250,10 +250,10 @@ class ProductWorkspaceController extends Controller
             'groups.*.color' => 'required|string|max:80',
             'groups.*.sizes' => 'required|string|max:1000',
             'groups.*.alt_text' => 'nullable|string|max:160',
-            'groups.*.images' => 'required|array|min:1|max:10',
+            'groups.*.images' => 'nullable|array|max:10',
             'groups.*.images.*' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
-        $totalImages = collect($data['groups'])->sum(fn (array $group) => count($group['images']));
+        $totalImages = collect($data['groups'])->sum(fn (array $group) => count($group['images'] ?? []));
         if ($totalImages > 20) {
             throw ValidationException::withMessages(['groups' => 'Maksimal 20 foto dalam satu proses.']);
         }
@@ -312,7 +312,7 @@ class ProductWorkspaceController extends Controller
                 $order = ((int) $series->media()->max('sort_order')) + 1;
                 $firstMedia = null;
                 foreach ($data['groups'] as $group) {
-                    foreach ($group['images'] as $image) {
+                    foreach ($group['images'] ?? [] as $image) {
                         $path = $image->store('product-gallery', 'public');
                         $storedPaths[] = $path;
                         $media = $series->media()->create([

@@ -51,6 +51,8 @@ class AdminUsabilityTest extends TestCase
         $this->actingAs($this->admin)->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('Apa yang ingin Anda kelola?')
+            ->assertDontSee('Varian &amp; SKU', false)
+            ->assertDontSee('Galeri produk')
             ->assertSee('css/dthree.css?v=', false)
             ->assertSee('class="admin-sidebar-backdrop" data-sidebar-close hidden', false);
         $this->get(route('admin.settings'))->assertOk()->assertSee('Lompat ke:')->assertSee('Banner & konten website');
