@@ -3,16 +3,17 @@
 <span class="visually-hidden">Konfirmasi import Perbaiki file</span>
 @section('content')
 <div class="admin-heading">
-    <div><span class="eyebrow">IMPORT MASSAL</span><h1>Import data CMS</h1><p>Unggah CSV atau XLSX, periksa semua baris, lalu simpan dalam satu transaksi. Maksimal {{ \App\Services\BulkImportService::MAXIMUM_ROWS }} baris.</p></div>
+    <div><span class="eyebrow">DATA MASSAL</span><h1>Import & export Excel</h1><p>Tambahkan atau perbarui banyak data sekaligus. Maksimal {{ \App\Services\BulkImportService::MAXIMUM_ROWS }} baris per file.</p></div>
 </div>
 
 @if(!$definition)
     <div class="alert alert-warning">Akun ini belum memiliki izin untuk modul import.</div>
 @else
+<div class="import-steps mb-4"><div><b>1</b><span><strong>Pilih jenis data</strong>Mulai dari data induk seperti kategori sebelum produk dan varian.</span></div><div><b>2</b><span><strong>Unduh dan isi template</strong>Jangan mengubah nama kolom pada baris pertama.</span></div><div><b>3</b><span><strong>Validasi lalu konfirmasi</strong>Data baru disimpan setelah pratinjau bebas error.</span></div></div>
 <div class="panel mb-4">
     <form method="get" action="{{ route('admin.import') }}" class="row g-3 align-items-end">
         <div class="col-lg-7"><label for="type">Jenis data</label><select id="type" name="type" class="form-select">@foreach($definitions as $key=>$item)<option value="{{ $key }}" @selected($selectedType===$key)>{{ $item['label'] }}</option>@endforeach</select></div>
-        <div class="col-lg-5 d-flex gap-2"><button class="btn btn-dark">Pilih modul</button><a class="btn btn-outline-dark" href="{{ route('admin.import.template',['type'=>$selectedType]) }}">Unduh template XLSX</a>@if($selectedType!=='stock-adjustments')<a class="btn btn-outline-dark" href="{{ route('admin.import.export',['type'=>$selectedType]) }}">Export data</a>@endif</div>
+        <div class="col-lg-5 d-flex gap-2 flex-wrap"><button class="btn btn-dark">Tampilkan</button><a class="btn btn-outline-dark" href="{{ route('admin.import.template',['type'=>$selectedType]) }}">Unduh template</a>@if($selectedType!=='stock-adjustments')<a class="btn btn-outline-dark" href="{{ route('admin.import.export',['type'=>$selectedType]) }}">Export data saat ini</a>@endif</div>
     </form>
 </div>
 
@@ -29,7 +30,7 @@
             @error('csv')<div class="alert alert-danger">{{ $message }}</div>@enderror
             <label for="mode">Mode import</label>
             <select id="mode" name="mode" class="form-select mb-3"><option value="create">Hanya data baru</option><option value="upsert">Buat atau perbarui berdasarkan kunci</option></select>
-            <button class="btn btn-dark">Validasi dan pratinjau</button>
+            <button class="btn btn-dark">Periksa file & lihat pratinjau</button>
         </form>
     </div>
     @if($selectedType==='variants')

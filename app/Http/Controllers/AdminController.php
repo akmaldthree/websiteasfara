@@ -16,6 +16,7 @@ use App\Models\CustomQuote;
 use App\Models\MediaAsset;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Page;
 use App\Models\PaymentProof;
 use App\Models\PriceGroup;
 use App\Models\ProductQuestion;
@@ -25,6 +26,7 @@ use App\Models\Role;
 use App\Models\Series;
 use App\Models\ServiceCase;
 use App\Models\Setting;
+use App\Models\ShippingRate;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Variant;
@@ -50,6 +52,14 @@ class AdminController extends Controller
     public function dashboard()
     {
         $paymentSlaHours = max(1, (int) Setting::get('payment_review_sla_hours', 4));
+        $setup = [
+            ['label' => 'Identitas dan tampilan toko', 'description' => 'Logo, hero, kontak, warna, dan teks beranda.', 'complete' => (bool) Setting::get('logo') && (bool) Setting::get('hero_image'), 'route' => 'admin.settings'],
+            ['label' => 'Kategori dan produk', 'description' => 'Minimal satu produk aktif dengan SKU.', 'complete' => Category::where('active', true)->exists() && Series::where('active', true)->whereHas('variants', fn ($query) => $query->where('active', true))->exists(), 'route' => 'admin.resources', 'params' => ['series']],
+            ['label' => 'Rekening pembayaran', 'description' => 'Rekening tujuan transfer pelanggan.', 'complete' => count(Setting::get('bank_accounts', [])) > 0, 'route' => 'admin.settings'],
+            ['label' => 'Tarif pengiriman', 'description' => 'Minimal satu tarif aktif untuk checkout.', 'complete' => ShippingRate::where('active', true)->exists(), 'route' => 'admin.resources', 'params' => ['shipping-rates']],
+            ['label' => 'Halaman kebijakan', 'description' => 'Syarat, privasi, pengiriman, dan retur.', 'complete' => Page::where('active', true)->count() >= 4, 'route' => 'admin.resources', 'params' => ['pages']],
+            ['label' => 'Buka checkout', 'description' => 'Aktifkan setelah semua konfigurasi diperiksa.', 'complete' => (bool) Setting::get('checkout_enabled', false), 'route' => 'admin.settings'],
+        ];
 
         return view('admin.dashboard', [
             'revenue' => max(0, Order::whereNotNull('paid_at')->whereMonth('paid_at', now()->month)->whereYear('paid_at', now()->year)->sum('total')
@@ -58,7 +68,7 @@ class AdminController extends Controller
             'paymentOverdue' => Order::where('payment_status', 'review')->whereHas('proofs', fn ($query) => $query->where('created_at', '<=', now()->subHours($paymentSlaHours)))->count(),
             'paymentSlaHours' => $paymentSlaHours,
             'packing' => Order::where('status', 'confirmed')->where('fulfillment_status', 'processing')->count(),
-            'low' => Variant::whereRaw('stock - reserved <= low_stock')->count(), 'recent' => Order::latest()->take(8)->get(),
+            'low' => Variant::whereRaw('stock - reserved <= low_stock')->count(), 'recent' => Order::latest()->take(8)->get(), 'setup' => $setup,
         ]);
     }
 
@@ -289,6 +299,25 @@ class AdminController extends Controller
     {
         $schema = $this->resource($resource);
         $query = $schema['model']::latest();
+        $searchFields = match ($resource) {
+            'categories', 'series', 'price-groups' => ['name', 'slug'],
+            'measurement-templates' => ['name', 'product_type'],
+            'variants' => ['sku', 'product_type', 'color', 'size'],
+            'product-media' => ['color', 'alt_text', 'image'],
+            'shipping-rates' => ['courier', 'service', 'province', 'city'],
+            'coupons' => ['code', 'type', 'segment'],
+            'content', 'pages' => ['title', 'slug'],
+            default => [],
+        };
+        if ($r->filled('q') && $searchFields) {
+            $term = mb_substr(trim((string) $r->input('q')), 0, 100);
+            $query->where(function ($search) use ($searchFields, $term) {
+                foreach ($searchFields as $index => $field) {
+                    $method = $index === 0 ? 'where' : 'orWhere';
+                    $search->{$method}($field, 'like', '%'.$term.'%');
+                }
+            });
+        }
         if ($resource === 'variant-prices') {
             $query->with('variant', 'priceGroup');
         }
@@ -296,7 +325,7 @@ class AdminController extends Controller
             $query->with('series', 'variant');
         }
 
-        return view('admin.resources', ['resource' => $resource, 'schema' => $schema, 'rows' => $query->paginate(20)]);
+        return view('admin.resources', ['resource' => $resource, 'schema' => $schema, 'rows' => $query->paginate(20)->withQueryString(), 'searchable' => (bool) $searchFields]);
     }
 
     public function form(string $resource, ?int $id = null)
@@ -490,7 +519,11 @@ class AdminController extends Controller
             Audit::record($resource.'.saved', $resource.':'.$record->id, $before, $record->toArray());
         });
 
-        return redirect()->route('admin.resources', $resource)->with('success', 'Data berhasil disimpan.');
+        return match ($r->input('after_save')) {
+            'edit' => redirect()->route('admin.edit', [$resource, $record->id])->with('success', 'Perubahan berhasil disimpan. Anda dapat melanjutkan pengeditan.'),
+            'new' => redirect()->route('admin.create', $resource)->with('success', 'Data berhasil disimpan. Form baru sudah disiapkan.'),
+            default => redirect()->route('admin.resources', $resource)->with('success', 'Data berhasil disimpan.'),
+        };
     }
 
     private function validatedContentBlocks(?string $json): ?array

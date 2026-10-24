@@ -1,11 +1,65 @@
 <!doctype html>
-<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>@yield('title','Dashboard') · Dthree Admin</title><link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}"><link rel="stylesheet" href="{{ asset('css/dthree.css') }}"></head>
-<body class="admin-body"><div class="admin-shell"><aside class="admin-sidebar"><a class="wordmark" href="{{ route('admin.dashboard') }}">dthree<span>BUSINESS DESK</span></a><small>WORKSPACE</small><nav aria-label="Dashboard">
-@foreach(['admin.dashboard'=>['Ringkasan','dashboard'],'admin.orders'=>['Pesanan','orders.read'],'admin.inventory'=>['Inventori','inventory.read'],'admin.customers'=>['Pelanggan','customers.read'],'admin.cases'=>['Layanan pelanggan','orders.read'],'admin.notifications'=>['Notifikasi transaksi','cases.write'],'admin.reports'=>['Laporan','reports.read']] as $route=>$nav)@if(auth()->user()->allowed($nav[1]))<a href="{{ route($route) }}" @class(['active'=>request()->routeIs($route)])>{{ $nav[0] }}</a>@endif @endforeach
-@if(auth()->user()->allowed('catalog.write'))<a href="{{ route('admin.custom-quotes') }}" @class(['active'=>request()->routeIs('admin.custom-quotes*')])>Penawaran custom</a>@endif
-@if(auth()->user()->allowed('content.write'))<a href="{{ route('admin.reviews') }}" @class(['active'=>request()->routeIs('admin.reviews*')])>Moderasi ulasan</a>@endif
-@if(auth()->user()->allowed('content.write'))<a href="{{ route('admin.media') }}" @class(['active'=>request()->routeIs('admin.media*')])>Media library</a>@endif
-@foreach(config('admin_resources') as $key=>$resource)@if(auth()->user()->allowed($resource['permission']))<a href="{{ route('admin.resources',$key) }}" @class(['active'=>request()->route('resource')===$key])>{{ $resource['title'] }}</a>@endif @endforeach
-@if(collect(['catalog.write','inventory.write','settings.write','promotions.write','content.write'])->contains(fn($permission)=>auth()->user()->allowed($permission)))<a href="{{ route('admin.import') }}">Import Excel</a>@endif
-@foreach(['admin.settings'=>['Pengaturan toko','settings.write'],'admin.team'=>['Tim & hak akses','users.write'],'admin.security'=>['Keamanan akun','dashboard'],'admin.monitoring'=>['Monitoring sistem','audit.read'],'admin.audit'=>['Audit log','audit.read']] as $route=>$nav)@if(auth()->user()->allowed($nav[1]))<a href="{{ route($route) }}" @class(['active'=>request()->routeIs($route)])>{{ $nav[0] }}</a>@endif @endforeach
-</nav><footer>DTHREE OPERATIONS<br><span>Ruang kerja tim Anda.</span></footer></aside><div class="admin-main"><header class="admin-topbar"><span>Dthree / @yield('title','Ringkasan')</span><div class="d-flex align-items-center gap-3"><a href="{{ route('home') }}" target="_blank">Lihat toko ↗</a><span>{{ auth()->user()->name }} · {{ auth()->user()->role }}</span><form method="post" action="{{ route('logout') }}">@csrf<button class="btn btn-outline-dark btn-sm">Keluar</button></form></div></header>@include('partials.alerts')<main class="admin-content">@yield('content')</main></div></div><script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>@stack('scripts')</body></html>
+<html lang="id">
+<head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+    <title>@yield('title','Dashboard') · Dthree Admin</title>
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}"><link rel="stylesheet" href="{{ asset('css/dthree.css') }}">
+</head>
+<body class="admin-body">
+<a class="skip-link visually-hidden-focusable" href="#main-content">Lewati navigasi</a>
+<div class="admin-shell">
+<aside class="admin-sidebar" id="admin-sidebar">
+    <div class="admin-sidebar-brand"><a class="wordmark" href="{{ route('admin.dashboard') }}">dthree<span>BUSINESS DESK</span></a><button class="admin-sidebar-close" type="button" aria-label="Tutup menu" data-sidebar-close>×</button></div>
+    <nav aria-label="Navigasi CMS">
+        <div class="admin-nav-group"><p>Operasional</p>
+            @foreach(['admin.dashboard'=>['Ringkasan','dashboard'],'admin.orders'=>['Pesanan','orders.read'],'admin.inventory'=>['Stok & inventori','inventory.read'],'admin.customers'=>['Pelanggan','customers.read'],'admin.cases'=>['Retur & layanan','orders.read'],'admin.notifications'=>['Notifikasi','cases.write'],'admin.reports'=>['Laporan','reports.read']] as $route=>$nav)
+                @if(auth()->user()->allowed($nav[1]))<a href="{{ route($route) }}" @class(['active'=>request()->routeIs($route)])>{{ $nav[0] }}</a>@endif
+            @endforeach
+        </div>
+        @if(auth()->user()->allowed('catalog.write'))
+        <div class="admin-nav-group"><p>Katalog produk</p>
+            @foreach(['categories','series','variants','product-media','bundle-components','measurement-templates'] as $key)@php($item=config('admin_resources.'.$key))<a href="{{ route('admin.resources',$key) }}" @class(['active'=>request()->route('resource')===$key])>{{ $item['title'] }}</a>@endforeach
+            <a href="{{ route('admin.custom-quotes') }}" @class(['active'=>request()->routeIs('admin.custom-quotes*')])>Penawaran custom</a>
+        </div>
+        @endif
+        @if(auth()->user()->allowed('content.write') || auth()->user()->allowed('promotions.write'))
+        <div class="admin-nav-group"><p>Website & promosi</p>
+            @if(auth()->user()->allowed('content.write'))
+                @foreach(['content','pages'] as $key)@php($item=config('admin_resources.'.$key))<a href="{{ route('admin.resources',$key) }}" @class(['active'=>request()->route('resource')===$key])>{{ $item['title'] }}</a>@endforeach
+                <a href="{{ route('admin.media') }}" @class(['active'=>request()->routeIs('admin.media*')])>Pustaka media</a>
+                <a href="{{ route('admin.reviews') }}" @class(['active'=>request()->routeIs('admin.reviews*')])>Ulasan & pertanyaan</a>
+            @endif
+            @if(auth()->user()->allowed('promotions.write'))@php($item=config('admin_resources.coupons'))<a href="{{ route('admin.resources','coupons') }}" @class(['active'=>request()->route('resource')==='coupons'])>{{ $item['title'] }}</a>@endif
+        </div>
+        @endif
+        @if(auth()->user()->allowed('catalog.write'))
+        <div class="admin-nav-group"><p>Penjualan bisnis</p>
+            @foreach(['price-groups','variant-prices','business-order-rules'] as $key)@php($item=config('admin_resources.'.$key))<a href="{{ route('admin.resources',$key) }}" @class(['active'=>request()->route('resource')===$key])>{{ $item['title'] }}</a>@endforeach
+        </div>
+        @endif
+        @if(auth()->user()->allowed('settings.write'))
+        <div class="admin-nav-group"><p>Pengiriman & kebijakan</p>
+            @php($shipping=config('admin_resources.shipping-rates'))<a href="{{ route('admin.resources','shipping-rates') }}" @class(['active'=>request()->route('resource')==='shipping-rates'])>{{ $shipping['title'] }}</a>
+            <a href="{{ route('admin.service.policy') }}" @class(['active'=>request()->routeIs('admin.service.policy*')])>Aturan retur & garansi</a>
+        </div>
+        @endif
+        <div class="admin-nav-group"><p>Alat & pengaturan</p>
+            @if(collect(['catalog.write','inventory.write','settings.write','promotions.write','content.write'])->contains(fn($permission)=>auth()->user()->allowed($permission)))<a href="{{ route('admin.import') }}" @class(['active'=>request()->routeIs('admin.import*')])>Import & export Excel</a>@endif
+            @foreach(['admin.settings'=>['Pengaturan website','settings.write'],'admin.team'=>['Tim & hak akses','users.write'],'admin.security'=>['Keamanan akun','dashboard'],'admin.monitoring'=>['Monitoring sistem','audit.read'],'admin.audit'=>['Audit log','audit.read']] as $route=>$nav)@if(auth()->user()->allowed($nav[1]))<a href="{{ route($route) }}" @class(['active'=>request()->routeIs($route)])>{{ $nav[0] }}</a>@endif @endforeach
+        </div>
+    </nav>
+    <footer>DTHREE OPERATIONS<br><span>Ruang kerja tim Anda.</span></footer>
+</aside>
+<div class="admin-sidebar-backdrop" data-sidebar-close></div>
+<div class="admin-main">
+    <header class="admin-topbar"><div class="d-flex align-items-center gap-3"><button class="admin-menu-button" type="button" aria-controls="admin-sidebar" aria-expanded="false" data-sidebar-open>☰</button><div><small>CMS Dthree</small><strong>@yield('title','Ringkasan')</strong></div></div><div class="admin-topbar-actions"><a href="{{ route('home') }}" target="_blank" rel="noopener">Lihat website ↗</a><span class="admin-user">{{ auth()->user()->name }}<small>{{ auth()->user()->role }}</small></span><form method="post" action="{{ route('logout') }}">@csrf<button class="btn btn-outline-dark btn-sm">Keluar</button></form></div></header>
+    @include('partials.alerts')
+    <main class="admin-content" id="main-content" tabindex="-1">@yield('content')</main>
+</div>
+</div>
+<script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
+<script>
+const adminBody=document.body;const menuButton=document.querySelector('[data-sidebar-open]');const closeMenu=()=>{adminBody.classList.remove('admin-menu-open');menuButton?.setAttribute('aria-expanded','false')};menuButton?.addEventListener('click',()=>{adminBody.classList.toggle('admin-menu-open');menuButton.setAttribute('aria-expanded',adminBody.classList.contains('admin-menu-open')?'true':'false')});document.querySelectorAll('[data-sidebar-close]').forEach(button=>button.addEventListener('click',closeMenu));document.querySelectorAll('.admin-sidebar nav a').forEach(link=>link.addEventListener('click',()=>{if(window.innerWidth<768)closeMenu()}));
+</script>
+@stack('scripts')
+</body></html>

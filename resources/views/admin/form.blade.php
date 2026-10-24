@@ -1,17 +1,35 @@
 @extends('layouts.admin')
 @section('title',$schema['title'])
 @section('content')
+@php
+$hints=[
+    'slug'=>'Alamat singkat untuk URL. Gunakan huruf kecil, angka, dan tanda hubung. Bisa dibuat otomatis dari nama atau judul.',
+    'sku'=>'Kode unik varian untuk stok dan pesanan. Contoh: RAF-BLK-M.',
+    'uses_product_type'=>'Aktifkan untuk produk seperti sarimbit yang memiliki jenis Ayah, Ibu, atau Anak.',
+    'featured'=>'Produk aktif yang ditandai akan diprioritaskan di beranda.',
+    'active'=>'Data nonaktif tetap tersimpan tetapi tidak ditampilkan kepada pelanggan.',
+    'editorial_status'=>'Simpan sebagai Draft saat mengerjakan, Menunggu review saat siap diperiksa, atau Disetujui untuk diterbitkan.',
+    'starts_at'=>'Kosongkan jika konten boleh tampil segera setelah aktif dan disetujui.',
+    'ends_at'=>'Kosongkan jika tidak memiliki tanggal berakhir.',
+    'image'=>'Upload JPG, PNG, atau WebP. Gunakan gambar terkompresi agar website tetap cepat.',
+    'sort_order'=>'Angka lebih kecil ditampilkan lebih dahulu.',
+    'target_id'=>'Masukkan ID sesuai jenis target. ID terlihat pada URL halaman edit data terkait.',
+    'fields'=>'Format JSON untuk field ukuran. Gunakan template contoh dari Import Excel jika datanya banyak.',
+    'minimum_quantity'=>'Tier berlaku mulai jumlah item ini.',
+];
+@endphp
 <div class="admin-heading">
-    <div><span class="eyebrow">{{ $record->exists?'PERBARUI DATA':'DATA BARU' }}</span><h1>{{ $schema['title'] }}</h1></div>
-    <a href="{{ route('admin.resources',$resource) }}">← Kembali</a>
+    <div><span class="eyebrow">{{ $record->exists?'EDIT DATA':'DATA BARU' }}</span><h1>{{ $record->exists?'Edit':'Tambah' }} {{ strtolower($schema['title']) }}</h1><p>Kolom bertanda <span class="required-mark">*</span> wajib diisi. Anda dapat menyimpan tanpa keluar untuk melanjutkan pekerjaan.</p></div>
+    <a class="btn btn-outline-dark" href="{{ route('admin.resources',$resource) }}">← Kembali ke daftar</a>
 </div>
-<form method="post" enctype="multipart/form-data" action="{{ $record->exists?route('admin.update',[$resource,$record->id]):route('admin.store',$resource) }}" class="panel">
+<form id="admin-record-form" method="post" enctype="multipart/form-data" action="{{ $record->exists?route('admin.update',[$resource,$record->id]):route('admin.store',$resource) }}" class="panel">
     @csrf
     <div class="form-grid">
         @foreach($schema['fields'] as $key=>$field)
             @php($value=old($key,$record->$key))
-            <div class="{{ $field[1]==='textarea'?'span-2':'' }}">
-                <label for="{{ $key }}">{{ $field[0] }}</label>
+            @php($required=str_contains($field[2],'required'))
+            <div @class(['field-wrap','span-2'=>in_array($field[1],['textarea','blocks'])])>
+                <label for="{{ $key }}">{{ $field[0] }}@if($required)<span class="required-mark" aria-label="wajib">*</span>@endif</label>
                 @if($field[1]==='textarea')
                     <textarea id="{{ $key }}" name="{{ $key }}" class="form-control" rows="5">{{ is_array($value) ? json_encode($value, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE) : $value }}</textarea>
                 @elseif($field[1]==='blocks')
@@ -38,18 +56,26 @@
                     </select>
                     @if($key==='editorial_status' && !auth()->user()->allowed('content.approve'))<small>Anda dapat menyimpan draft atau mengajukannya untuk review. Persetujuan dilakukan oleh pengguna dengan izin persetujuan konten.</small>@endif
                 @elseif($field[1]==='checkbox')
-                    <input id="{{ $key }}" type="checkbox" name="{{ $key }}" value="1" @checked($value)>
+                    <div class="checkbox-card"><input id="{{ $key }}" type="checkbox" name="{{ $key }}" value="1" @checked($value)><span>{{ $value?'Saat ini aktif.':'Saat ini nonaktif.' }} Klik untuk mengubah status.</span></div>
                 @elseif($field[1]==='file')
                     <input class="form-control" id="{{ $key }}" name="{{ $key }}" type="file" accept="image/png,image/jpeg,image/webp">
+                    @if($record->exists && $value)<div class="mt-2 d-flex align-items-center gap-2"><img src="{{ asset('storage/'.$value) }}" alt="Pratinjau gambar saat ini" width="64" height="64" style="object-fit:cover"><small>Gambar saat ini. Pilih file baru hanya jika ingin menggantinya.</small></div>@endif
                 @else
-                    <input id="{{ $key }}" name="{{ $key }}" type="{{ $field[1] }}" class="form-control" value="{{ $value instanceof \Carbon\CarbonInterface ? $value->format('Y-m-d\TH:i') : $value }}" {{ str_contains($field[2],'required')?'required':'' }}>
+                    <input id="{{ $key }}" name="{{ $key }}" type="{{ $field[1] }}" class="form-control" value="{{ $value instanceof \Carbon\CarbonInterface ? $value->format('Y-m-d\TH:i') : $value }}" @required($required)>
                 @endif
+                @if(isset($hints[$key]))<small class="field-help">{{ $hints[$key] }}</small>@endif
+                @error($key)<div class="text-danger small mt-1">{{ $message }}</div>@enderror
             </div>
         @endforeach
     </div>
-    <button class="btn btn-dark mt-4">Simpan perubahan</button>
+    <div class="form-actions"><a href="{{ route('admin.resources',$resource) }}">Batal</a><div><button class="btn btn-outline-dark" name="after_save" value="new">Simpan & tambah lagi</button><button class="btn btn-outline-dark" name="after_save" value="edit">Simpan tanpa keluar</button><button class="btn btn-dark" name="after_save" value="list">Simpan & kembali</button></div></div>
 </form>
 @endsection
+@push('scripts')
+<script>
+const slugInput=document.getElementById('slug');const slugSource=document.getElementById('name')||document.getElementById('title');if(slugInput&&slugSource&&!slugInput.value){slugSource.addEventListener('input',()=>{slugInput.value=slugSource.value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')})}
+</script>
+@endpush
 @if(array_key_exists('blocks',$schema['fields']))
 @php($availableMedia=\App\Models\MediaAsset::where('active',true)->latest()->get()->map(fn($asset)=>['url'=>$asset->url,'alt'=>$asset->alt_text,'name'=>$asset->name])->values()->all())
 @push('scripts')
