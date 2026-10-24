@@ -37,6 +37,7 @@ class StoreController extends Controller
             'collections' => Series::published()
                 ->with(['category', 'media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
                 ->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')
+                ->withCount('reviews')->withAvg('reviews', 'rating')
                 ->orderByDesc('featured')
                 ->latest()
                 ->take(16)
@@ -51,7 +52,7 @@ class StoreController extends Controller
             'category',
             'media' => fn ($query) => $query->where('active', true),
             'variants' => fn ($query) => $query->where('active', true),
-        ])->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price');
+        ])->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price')->withCount('reviews')->withAvg('reviews', 'rating');
         $currentCategory = null;
         if ($r->filled('q')) {
             $q->where(function ($q) use ($r) {
@@ -62,6 +63,9 @@ class StoreController extends Controller
         if ($r->filled('category')) {
             $currentCategory = Category::where('active', true)->where('slug', $r->input('category'))->firstOrFail();
             $q->where('category_id', $currentCategory->id);
+        }
+        if ($r->boolean('sale')) {
+            $q->where('compare_at_price', '>', 0);
         }
         $q->whereHas('variants', function ($v) use ($r) {
             $v->where('active', true);
@@ -88,7 +92,9 @@ class StoreController extends Controller
             $analytics->record($r, 'view_category', ['category' => $currentCategory?->slug ?: 'all', 'results' => $collections->total()]);
         }
 
-        return view('store.catalog', compact('collections', 'currentCategory'));
+        $recentlyViewed = $this->recentlyViewed($r);
+
+        return view('store.catalog', compact('collections', 'currentCategory', 'recentlyViewed'));
     }
 
     public function product(Request $r, string $slug, PricingService $pricing, Analytics $analytics)
@@ -104,6 +110,8 @@ class StoreController extends Controller
         $questions = ProductQuestion::where('series_id', $series->id)->where('status', 'answered')->with('user')->latest('answered_at')->get();
         $helpfulReviewIds = $r->user() ? ReviewHelpfulVote::where('user_id', $r->user()->id)->whereIn('review_id', $reviews->pluck('id'))->pluck('review_id')->all() : [];
         $wishlistIds = $r->user()?->wishlistItems()->whereIn('variant_id', $series->variants->pluck('id'))->pluck('variant_id')->all() ?? [];
+        $recentlyViewedIds = collect($r->session()->get('recently_viewed', []))->prepend($series->id)->unique()->take(8)->values()->all();
+        $r->session()->put('recently_viewed', $recentlyViewedIds);
         $analytics->record($r, 'view_item', ['series_id' => $series->id, 'variant_id' => $r->integer('variant') ?: null]);
 
         return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'reviews', 'questions', 'helpfulReviewIds', 'wishlistIds'));
@@ -137,13 +145,14 @@ class StoreController extends Controller
     {
         $cart = $r->session()->get('cart', []);
         $lines = $cart ? $service->lines($cart, false, $r->user(), $r->session()->get('cart_customizations', [])) : [];
+        $recentlyViewed = $this->recentlyViewed($r);
 
-        return view('store.cart', compact('cart', 'lines'));
+        return view('store.cart', compact('cart', 'lines', 'recentlyViewed'));
     }
 
     public function add(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics)
     {
-        $d = $r->validate(['variant_id' => 'required|integer|exists:variants,id', 'quantity' => 'required|integer|min:1|max:100']);
+        $d = $r->validate(['variant_id' => 'required|integer|exists:variants,id', 'quantity' => 'required|integer|min:1|max:100', 'buy_now' => 'nullable|boolean']);
         $variant = Variant::findOrFail($d['variant_id']);
         if ($variant->fulfillment === 'custom_made') {
             throw ValidationException::withMessages(['variant_id' => 'Gunakan formulir ukuran custom pada halaman produk.']);
@@ -158,7 +167,21 @@ class StoreController extends Controller
         $r->session()->forget('checkout_key');
         $analytics->record($r, 'add_to_cart', ['variant_id' => $variant->id, 'sku' => $variant->sku, 'quantity' => $d['quantity'], 'value' => $variant->price * $d['quantity']]);
 
-        return redirect()->route('cart')->with('success', 'Pilihan Anda sudah ditambahkan.');
+        return redirect()->route($r->boolean('buy_now') ? 'checkout' : 'cart')->with('success', 'Pilihan Anda sudah ditambahkan.');
+    }
+
+    private function recentlyViewed(Request $request)
+    {
+        $ids = collect($request->session()->get('recently_viewed', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        return Series::published()->whereIn('id', $ids)->with([
+            'category',
+            'media' => fn ($query) => $query->where('active', true),
+            'variants' => fn ($query) => $query->where('active', true),
+        ])->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')->withCount('reviews')->withAvg('reviews', 'rating')->get()->sortBy(fn ($series) => $ids->search($series->id))->values();
     }
 
     public function updateCart(Request $r, CartService $cartService)

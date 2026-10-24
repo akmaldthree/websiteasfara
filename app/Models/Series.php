@@ -40,6 +40,11 @@ class Series extends Model
         return $this->hasMany(ProductQuestion::class);
     }
 
+    public function reviews()
+    {
+        return $this->hasManyThrough(Review::class, Variant::class)->where('reviews.status', 'approved');
+    }
+
     public function scopePublished($q)
     {
         return $q->where('active', true)->whereHas('category', fn ($c) => $c->where('active', true));

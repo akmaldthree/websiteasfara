@@ -47,8 +47,10 @@
                     @endforeach
                 </select>
                 <div class="variant-info" id="variant-info" aria-live="polite">Pilih varian untuk melihat harga dan ketersediaan.</div>
-                <div class="d-flex gap-3 mt-4"><div><label for="qty">Jumlah</label><input class="form-control quantity" type="number" name="quantity" id="qty" min="1" max="100" value="1" required></div><button class="btn btn-dark align-self-end flex-grow-1">Tambahkan ke keranjang ↗</button></div>
+                <div class="product-purchase"><div><label for="qty">Jumlah</label><div class="quantity-stepper"><button type="button" data-qty-change="-1" aria-label="Kurangi jumlah">−</button><input class="form-control quantity" type="number" name="quantity" id="qty" min="1" max="100" value="1" required><button type="button" data-qty-change="1" aria-label="Tambah jumlah">+</button></div></div><button class="btn btn-dark">ADD TO CART</button><button class="btn btn-outline-dark" name="buy_now" value="1">BELI SEKARANG</button></div>
             </form>@endif
+            <details class="payment-methods"><summary>PAYMENT METHOD</summary><p>Transfer bank manual, COD sesuai wilayah, dan termin untuk akun bisnis yang disetujui. Total akhir serta ongkir ditampilkan sebelum pesanan dibuat.</p></details>
+            @if(!empty($shop['whatsapp']))<a class="product-whatsapp" href="https://wa.me/{{ $shop['whatsapp'] }}?text={{ urlencode('Assalamualaikum, saya ingin bertanya tentang '.$series->name) }}" target="_blank" rel="noopener">VIA WHATSAPP ↗</a>@endif
             @foreach($series->variants->where('fulfillment','custom_made') as $v)
                 @if($v->measurementTemplate?->active)
                 @php($template=$v->measurementTemplate)
@@ -98,6 +100,7 @@ function update(){const o=select.selectedOptions[0];if(!o.value){document.getEle
 thumbnails.forEach(button=>button.addEventListener('click',()=>showImage(button)));
 variantChoices.forEach(button=>button.addEventListener('click',()=>{selectedVariantValues[button.dataset.kind]=button.dataset.value;variantChoices.filter(choice=>choice.dataset.kind===button.dataset.kind).forEach(choice=>choice.classList.toggle('active',choice===button));const match=[...select.options].find(option=>option.value&&!option.disabled&&(!selectedVariantValues.type||option.dataset.type===selectedVariantValues.type)&&(!selectedVariantValues.color||option.dataset.color===selectedVariantValues.color)&&(!selectedVariantValues.size||option.dataset.size===selectedVariantValues.size));select.value=match?.value||'';update();}));
 if(select){select.addEventListener('change',update);qty.addEventListener('input',update);update();}
+document.querySelectorAll('[data-qty-change]').forEach(button=>button.addEventListener('click',()=>{qty.value=Math.min(Number(qty.max),Math.max(Number(qty.min),Number(qty.value)+Number(button.dataset.qtyChange)));qty.dispatchEvent(new Event('input'))}));
 const lightbox=document.getElementById('product-lightbox');const lightboxImage=document.getElementById('product-lightbox-image');document.getElementById('open-product-zoom')?.addEventListener('click',()=>{lightboxImage.src=mainImage.src;lightboxImage.alt=mainImage.alt;lightbox.showModal()});document.getElementById('close-product-zoom')?.addEventListener('click',()=>lightbox.close());lightbox?.addEventListener('click',event=>{if(event.target===lightbox)lightbox.close()});
 document.getElementById('share-product').addEventListener('click',async()=>{const data={title:@json($series->name),text:@json('Lihat '.$series->name.' dari '.($shop['brand_name'] ?? 'Dthree')),url:window.location.href};try{if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(data.url);document.getElementById('share-status').textContent='Tautan disalin.'}}catch(error){if(error.name!=='AbortError')document.getElementById('share-status').textContent='Salin alamat halaman dari browser Anda.'}});
 </script>

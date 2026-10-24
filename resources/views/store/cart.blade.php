@@ -5,7 +5,7 @@
     <span class="eyebrow">PILIHAN ANDA</span>
     <h1 class="mt-3 mb-4">Keranjang belanja</h1>
     @if(empty($lines))
-        <div class="empty-state"><h2>Cerita Anda dimulai di sini.</h2><p>Temukan koleksi yang Anda suka dan tambahkan ke keranjang.</p><a class="btn btn-dark" href="{{ route('catalog') }}">Jelajahi koleksi ↗</a></div>
+        <div class="empty-state cart-empty"><h2>KERANJANG</h2><p>Keranjang Anda kosong</p><a class="btn btn-dark" href="{{ route('catalog') }}">CONTINUE SHOPPING</a></div>
     @else
         @if($lines[0]['price_group'])
             <div class="alert alert-success">Harga akun <strong>{{ $lines[0]['price_group']->name }}</strong> diterapkan. Tier dihitung per SKU berdasarkan jumlah di keranjang.</div>
@@ -46,4 +46,5 @@
         </div>
     @endif
 </section>
+@if($recentlyViewed->isNotEmpty())<section class="recently-viewed container-xxl"><h2>RECENTLY VIEWED PRODUCTS</h2><div class="product-carousel" data-drag-scroll>@foreach($recentlyViewed as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div></section>@endif
 @endsection

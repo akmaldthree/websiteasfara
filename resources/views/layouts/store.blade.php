@@ -28,11 +28,11 @@
         <nav class="desktop-nav" aria-label="Utama">
             <a href="{{ route('home') }}">HOME</a>
             <a href="{{ route('catalog') }}">CATALOG</a>
-            @if($shop['header_categories_enabled'] ?? true)@foreach($categories->take(2) as $category)<a href="{{ route('catalog',['category'=>$category->slug]) }}">{{ strtoupper($category->name) }}</a>@endforeach @endif
+            <a href="{{ route('catalog',['sale'=>1]) }}">SALE</a>
             @foreach($cmsMenus->take(2) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ strtoupper($menu->title) }}</a>@endforeach
         </nav>
         <div class="header-actions">
-            <a href="{{ route('catalog') }}" aria-label="Cari produk"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></a>
+            <button type="button" class="header-search-button" id="open-search" aria-label="Cari produk"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
             @auth<a href="{{ route('account') }}" aria-label="Wishlist dan akun"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5a5.5 5.5 0 0 0 1-8.9z"/></svg></a>@endauth
             <a href="{{ route('cart') }}" aria-label="Keranjang"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l2 14H3L5 8zM8 8V5a4 4 0 0 1 8 0v3"/></svg>@if(array_sum(session('cart',[]))>0)<span>{{ array_sum(session('cart',[])) }}</span>@endif</a>
             <a href="{{ route('account') }}" aria-label="Akun saya"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg></a>
@@ -45,8 +45,10 @@
         @if($shop['header_tracking_enabled'] ?? true)<a href="{{ route('track') }}">Lacak pesanan</a>@endif
     </nav>
 </header>
+<dialog class="search-drawer" id="search-drawer"><button type="button" id="close-search" aria-label="Tutup pencarian">×</button><form action="{{ route('catalog') }}" method="get"><label for="global-search">CARI PRODUK</label><div><input id="global-search" name="q" placeholder="Ketik nama produk atau SKU" autocomplete="off"><button type="submit" aria-label="Mulai mencari">→</button></div></form><p>Produk, warna, ukuran, atau SKU.</p></dialog>
 <main id="main">@include('partials.alerts')@yield('content')</main>
 @if(!empty($shop['whatsapp']))<a class="floating-whatsapp" href="https://wa.me/{{ $shop['whatsapp'] }}" target="_blank" rel="noopener" aria-label="Chat Dthree melalui WhatsApp">WA</a>@endif
+<section class="store-benefits"><div><strong>◎</strong><span><b>FREE SHIPPING</b>Gratis pengiriman sesuai promo</span></div><div><strong>◷</strong><span><b>READY STOCK</b>Produk siap dipesan</span></div><div><strong>◇</strong><span><b>BEST PRICE</b>Dapatkan harga terbaik</span></div><div><strong>⌾</strong><span><b>SECURE & GUARANTEED</b>Pembayaran aman dan terjamin</span></div></section>
 <footer class="site-footer">
     <div class="container-xxl">
         <div class="row gy-5">
@@ -62,6 +64,7 @@
 <script>
 (()=>{const header=document.querySelector('.site-header');const syncHeader=()=>header?.classList.toggle('is-scrolled',scrollY>24);syncHeader();addEventListener('scroll',syncHeader,{passive:true});
 const notices=[...document.querySelectorAll('.announcement span')];let notice=0;if(notices.length>1&&!matchMedia('(prefers-reduced-motion: reduce)').matches)setInterval(()=>{notices[notice].classList.remove('is-active');notice=(notice+1)%notices.length;notices[notice].classList.add('is-active')},4000);
+const searchDrawer=document.getElementById('search-drawer');document.getElementById('open-search')?.addEventListener('click',()=>{searchDrawer.showModal();setTimeout(()=>document.getElementById('global-search')?.focus(),50)});document.getElementById('close-search')?.addEventListener('click',()=>searchDrawer.close());searchDrawer?.addEventListener('click',event=>{if(event.target===searchDrawer)searchDrawer.close()});
 const observer='IntersectionObserver'in window?new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target)}}),{threshold:.12}):null;document.querySelectorAll('.reveal').forEach(element=>observer?observer.observe(element):element.classList.add('is-visible'));
 const slides=[...document.querySelectorAll('[data-hero-slide]')],dots=[...document.querySelectorAll('[data-hero-dot]')];let active=0,timer;const show=index=>{active=(index+slides.length)%slides.length;slides.forEach((slide,i)=>{slide.classList.toggle('is-active',i===active);slide.setAttribute('aria-hidden',i===active?'false':'true')});dots.forEach((dot,i)=>dot.classList.toggle('is-active',i===active))};const autoplay=()=>{if(slides.length>1&&!matchMedia('(prefers-reduced-motion: reduce)').matches)timer=setInterval(()=>show(active+1),6500)};dots.forEach(dot=>dot.addEventListener('click',()=>{clearInterval(timer);show(Number(dot.dataset.heroDot));autoplay()}));autoplay();
 document.querySelectorAll('[data-drag-scroll]').forEach(track=>{let down=false,startX=0,startLeft=0;track.addEventListener('pointerdown',event=>{if(event.pointerType==='mouse'){down=true;startX=event.clientX;startLeft=track.scrollLeft;track.classList.add('is-dragging')}});addEventListener('pointerup',()=>{down=false;track.classList.remove('is-dragging')});track.addEventListener('pointermove',event=>{if(down)track.scrollLeft=startLeft-(event.clientX-startX)})});})();

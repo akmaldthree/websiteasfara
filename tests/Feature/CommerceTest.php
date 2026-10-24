@@ -278,6 +278,14 @@ class CommerceTest extends TestCase
         $this->assertDatabaseCount('orders', 1);
     }
 
+    public function test_buy_now_adds_the_selected_variant_and_opens_checkout(): void
+    {
+        $this->post('/keranjang', ['variant_id' => $this->variant->id, 'quantity' => 1, 'buy_now' => 1])
+            ->assertRedirect(route('checkout'));
+
+        $this->assertSame(1, session('cart')[$this->variant->id]);
+    }
+
     public function test_import_requires_preview_and_rejects_duplicates(): void
     {
         $this->actingAs($this->user('admin'));
