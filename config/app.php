@@ -41,6 +41,8 @@ return [
 
     'debug' => (bool) env('APP_DEBUG', false),
 
+    'demo_seeding_enabled' => filter_var(env('ALLOW_DEMO_SEEDING', false), FILTER_VALIDATE_BOOL),
+
     /*
     |--------------------------------------------------------------------------
     | Application URL

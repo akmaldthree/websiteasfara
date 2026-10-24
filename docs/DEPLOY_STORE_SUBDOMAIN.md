@@ -246,7 +246,16 @@ Sebelum membuka checkout:
 5. Uji transfer, COD, email, packing, resi, penerimaan, retur, refund, B2B, loyalty, dan payout komisi.
 6. Pastikan `APP_DEBUG=false` dan backup tersedia.
 
-Jangan menjalankan `DemoSeeder` pada database produksi.
+Untuk memasang katalog demonstrasi lengkap beserta gambar pada tahap pratinjau, buat backup database lalu jalankan satu kali:
+
+```bash
+cd ~/store.dthree.co.id
+ALLOW_DEMO_SEEDING=true php artisan db:seed --class=DemoSeeder --force
+php artisan optimize:clear
+php artisan optimize
+```
+
+Seeder aman dijalankan ulang: kategori, produk, varian, konten, voucher, dan tarif yang sama akan diperbarui tanpa digandakan. Nilai `ALLOW_DEMO_SEEDING` hanya diberikan pada perintah tersebut sehingga tidak perlu disimpan di `.env`. Ganti seluruh informasi contoh, rekening demo, kontak, harga, stok, serta gambar dari CMS sebelum toko menerima transaksi nyata.
 
 ## 12. Update setelah perubahan GitHub
 
