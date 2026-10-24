@@ -2,7 +2,7 @@
 @section('title','Kelola '.$product->name)
 @section('content')
 @php
-$hasPhoto=(bool)$product->image || $product->media->isNotEmpty();$hasVariant=$product->variants->isNotEmpty();$hasDescription=filled($product->description);$ready=collect([$hasPhoto,$hasVariant,$hasDescription])->filter()->count();$variantMap=$product->variants->keyBy('id');
+$hasPhoto=(bool)$product->image || $product->media->isNotEmpty();$hasVariant=$product->variants->isNotEmpty();$hasDescription=filled($product->description);$ready=collect([$hasPhoto,$hasVariant,$hasDescription])->filter()->count();$variantMap=$product->variants->keyBy('id');$batchGroups=old('groups',[['color'=>'','sizes'=>'','alt_text'=>'']]);
 @endphp
 <div class="admin-heading">
     <div><span class="eyebrow">PRODUCT WORKSPACE</span><h1>{{ $product->name }}</h1><p>{{ $product->category?->name }} · {{ $product->variants->count() }} varian · {{ $product->active?'Tayang':'Draft' }}</p></div>
@@ -37,6 +37,44 @@ $hasPhoto=(bool)$product->image || $product->media->isNotEmpty();$hasVariant=$pr
 <td><input type="hidden" name="variants[{{ $index }}][active]" value="0"><label class="checkbox-card"><input type="checkbox" name="variants[{{ $index }}][active]" value="1" @checked($variant->active)><span>Aktif</span></label></td></tr>@endforeach
 </tbody></table></div><div class="workspace-save"><button class="btn btn-dark">Simpan semua varian</button></div></form>
 @else<div class="admin-help">Belum ada varian. Tambahkan satu varian atau gunakan generator kombinasi di bawah.</div>@endif
+
+<details class="panel workspace-batch-builder mt-4" @if(!$hasVariant || old('sku_prefix')) open @endif>
+<summary><span><strong>+ Buat varian dan foto sekaligus</strong><small>Satu proses untuk banyak warna, ukuran, SKU, stok, dan foto.</small></span><b>Direkomendasikan</b></summary>
+<form method="post" enctype="multipart/form-data" action="{{ route('admin.products.variants-media.create',$product) }}" class="mt-4">@csrf
+    <div class="workspace-batch-basics form-grid">
+        <div><label>Awalan SKU</label><input class="form-control" name="sku_prefix" value="{{ old('sku_prefix') }}" required placeholder="{{ strtoupper(Str::limit($product->slug,12,'')) }}"></div>
+        @if($product->uses_product_type)<div><label>Jenis produk, pisahkan koma</label><input class="form-control" name="product_types" value="{{ old('product_types') }}" required placeholder="Ayah, Ibu, Anak"></div>@endif
+        <div><label>Harga jual semua varian</label><input class="form-control" type="number" min="1" name="price" value="{{ old('price') }}" required></div>
+        <div><label>Stok awal per SKU</label><input class="form-control" type="number" min="0" name="stock" value="{{ old('stock',0) }}" required></div>
+        <div><label>Berat per SKU (gram)</label><input class="form-control" type="number" min="1" name="weight" value="{{ old('weight',500) }}" required></div>
+        <div><label>Batas stok rendah</label><input class="form-control" type="number" min="0" name="low_stock" value="{{ old('low_stock',5) }}" required></div>
+        <div><label>Metode</label><select class="form-select" name="fulfillment"><option value="ready_stock" @selected(old('fulfillment')==='ready_stock')>Ready stock</option><option value="pre_order" @selected(old('fulfillment')==='pre_order')>Pre-order</option></select></div>
+        <div><label>Lead time</label><input class="form-control" name="lead_time" value="{{ old('lead_time') }}" placeholder="Opsional"></div>
+    </div>
+    <div class="batch-color-heading"><div><h3>Kelompok warna</h3><p class="small mb-0">Masukkan ukuran dan semua foto yang sesuai untuk setiap warna.</p></div><button type="button" class="btn btn-outline-dark btn-sm" data-add-color>+ Tambah warna</button></div>
+    <div class="batch-color-groups" data-color-groups>
+        @foreach($batchGroups as $batchIndex=>$batchGroup)<article class="batch-color-group" data-color-group>
+            <div class="batch-color-number">Warna <span>{{ $loop->iteration }}</span></div>
+            <div><label>Nama warna</label><input class="form-control" name="groups[{{ $batchIndex }}][color]" value="{{ $batchGroup['color'] ?? '' }}" required placeholder="Contoh: Sage"></div>
+            <div><label>Ukuran, pisahkan koma</label><input class="form-control" name="groups[{{ $batchIndex }}][sizes]" value="{{ $batchGroup['sizes'] ?? '' }}" required placeholder="S, M, L, XL"></div>
+            <div class="batch-file-field"><label>Pilih semua foto warna ini</label><input class="form-control" type="file" name="groups[{{ $batchIndex }}][images][]" accept="image/jpeg,image/png,image/webp" multiple required data-group-images><small>Maksimal 10 foto per warna.</small></div>
+            <div><label>Deskripsi foto</label><input class="form-control" name="groups[{{ $batchIndex }}][alt_text]" value="{{ $batchGroup['alt_text'] ?? '' }}" placeholder="Contoh: {{ $product->name }} warna Sage"></div>
+            <div class="batch-image-preview" data-group-preview hidden></div>
+            <button type="button" class="batch-remove-color" data-remove-color @if(count($batchGroups)===1) hidden @endif>Hapus warna</button>
+        </article>@endforeach
+    </div>
+    <template id="batch-color-template"><article class="batch-color-group" data-color-group>
+        <div class="batch-color-number">Warna <span>__NUMBER__</span></div>
+        <div><label>Nama warna</label><input class="form-control" name="groups[__INDEX__][color]" required placeholder="Contoh: Broken White"></div>
+        <div><label>Ukuran, pisahkan koma</label><input class="form-control" name="groups[__INDEX__][sizes]" required placeholder="S, M, L, XL"></div>
+        <div class="batch-file-field"><label>Pilih semua foto warna ini</label><input class="form-control" type="file" name="groups[__INDEX__][images][]" accept="image/jpeg,image/png,image/webp" multiple required data-group-images><small>Maksimal 10 foto per warna.</small></div>
+        <div><label>Deskripsi foto</label><input class="form-control" name="groups[__INDEX__][alt_text]" placeholder="Deskripsi warna ini"></div>
+        <div class="batch-image-preview" data-group-preview hidden></div>
+        <button type="button" class="batch-remove-color" data-remove-color>Hapus warna</button>
+    </article></template>
+    <div class="workspace-save"><label class="checkbox-card mb-0"><input type="checkbox" name="set_first_as_main" value="1" @checked(!$product->image)><span>Jadikan foto pertama sebagai foto utama</span></label><button class="btn btn-dark">Buat semua varian & unggah foto</button></div>
+</form>
+</details>
 
 <div class="workspace-tools">
 <details class="panel" @if(!$hasVariant) open @endif><summary><strong>+ Tambah satu varian</strong><span>Cocok untuk produk sederhana</span></summary><form method="post" action="{{ route('admin.products.variants.add',$product) }}" class="form-grid mt-4">@csrf
@@ -90,4 +128,7 @@ const section=new URLSearchParams(location.search).get('section');if(section)doc
 const mediaInput=document.getElementById('images');const mediaPreview=document.getElementById('media-upload-preview');let mediaPreviewUrls=[];
 mediaInput?.addEventListener('change',()=>{mediaPreviewUrls.forEach(URL.revokeObjectURL);mediaPreviewUrls=[];mediaPreview.replaceChildren();const files=[...mediaInput.files];mediaPreview.hidden=!files.length;files.forEach((file,index)=>{const url=URL.createObjectURL(file);mediaPreviewUrls.push(url);const item=document.createElement('div');const img=document.createElement('img');const text=document.createElement('span');img.src=url;img.alt='Pratinjau '+(index+1);text.textContent=(index+1)+'. '+file.name;item.append(img,text);mediaPreview.append(item)})});
 document.querySelectorAll('.workspace-media-row .media-delete input').forEach(input=>input.addEventListener('change',()=>input.closest('.workspace-media-row').classList.toggle('is-deleting',input.checked)));
+const colorGroups=document.querySelector('[data-color-groups]');const colorTemplate=document.getElementById('batch-color-template');const previewUrls=new WeakMap();
+function bindColorGroup(group){const input=group.querySelector('[data-group-images]');const preview=group.querySelector('[data-group-preview]');input?.addEventListener('change',()=>{(previewUrls.get(input)||[]).forEach(URL.revokeObjectURL);const urls=[];preview.replaceChildren();preview.hidden=!input.files.length;[...input.files].forEach(file=>{const url=URL.createObjectURL(file);urls.push(url);const img=document.createElement('img');img.src=url;img.alt=file.name;img.title=file.name;preview.append(img)});previewUrls.set(input,urls)});group.querySelector('[data-remove-color]')?.addEventListener('click',()=>group.remove())}
+colorGroups?.querySelectorAll('[data-color-group]').forEach(bindColorGroup);document.querySelector('[data-add-color]')?.addEventListener('click',()=>{const index=Date.now();const number=colorGroups.children.length+1;colorGroups.insertAdjacentHTML('beforeend',colorTemplate.innerHTML.replaceAll('__INDEX__',index).replaceAll('__NUMBER__',number));bindColorGroup(colorGroups.lastElementChild)});
 </script>@endpush

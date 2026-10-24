@@ -120,6 +120,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::post('/produk/{series}/varian', [Products::class, 'addVariant'])->name('products.variants.add');
         Route::post('/produk/{series}/varian-massal', [Products::class, 'saveVariants'])->name('products.variants.save');
         Route::post('/produk/{series}/generator-varian', [Products::class, 'generateVariants'])->name('products.variants.generate');
+        Route::post('/produk/{series}/varian-dan-foto', [Products::class, 'createVariantsWithMedia'])->name('products.variants-media.create');
         Route::post('/produk/{series}/foto', [Products::class, 'uploadMedia'])->name('products.media.upload');
         Route::post('/produk/{series}/foto-kelola', [Products::class, 'manageMedia'])->name('products.media.manage');
         Route::post('/produk/{series}/duplikat', [Products::class, 'duplicate'])->name('products.duplicate');

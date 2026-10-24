@@ -116,6 +116,35 @@ class ProductWorkspaceTest extends TestCase
         $this->assertSame(480000, $product->fresh()->compare_at_price);
     }
 
+    public function test_colors_sizes_and_photos_can_be_created_in_one_process(): void
+    {
+        Storage::fake('public');
+        $product = $this->product();
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
+
+        $this->actingAs($this->admin)->post(route('admin.products.variants-media.create', $product), [
+            'sku_prefix' => 'NAIRA',
+            'price' => 408000,
+            'stock' => 5,
+            'weight' => 500,
+            'low_stock' => 2,
+            'fulfillment' => 'ready_stock',
+            'set_first_as_main' => '1',
+            'groups' => [
+                ['color' => 'Sage', 'sizes' => 'S, M', 'alt_text' => 'Naira warna sage', 'images' => [UploadedFile::fake()->createWithContent('sage-depan.png', $png), UploadedFile::fake()->createWithContent('sage-belakang.png', $png)]],
+                ['color' => 'Mocca', 'sizes' => 'S, M', 'alt_text' => 'Naira warna mocca', 'images' => [UploadedFile::fake()->createWithContent('mocca-depan.png', $png)]],
+            ],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame(4, $product->variants()->count());
+        $this->assertDatabaseHas('variants', ['series_id' => $product->id, 'sku' => 'NAIRA-SAGE-S', 'color' => 'Sage', 'size' => 'S', 'price' => 408000, 'stock' => 5]);
+        $this->assertDatabaseHas('variants', ['series_id' => $product->id, 'sku' => 'NAIRA-MOCCA-M', 'color' => 'Mocca', 'size' => 'M']);
+        $this->assertSame(4, StockMovement::whereIn('variant_id', $product->variants()->pluck('id'))->count());
+        $this->assertSame(3, $product->media()->count());
+        $this->assertSame(2, $product->media()->where('color', 'Sage')->count());
+        $this->assertSame($product->media()->first()->image, $product->fresh()->image);
+    }
+
     public function test_multiple_photos_can_be_uploaded_and_product_can_be_duplicated_safely(): void
     {
         Storage::fake('public');

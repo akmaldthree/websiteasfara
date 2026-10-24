@@ -12,6 +12,7 @@ use App\Models\Variant;
 use App\Services\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -231,6 +232,111 @@ class ProductWorkspaceController extends Controller
         });
 
         return redirect()->route('admin.products.edit', ['series' => $series, 'section' => 'variants'])->with('success', count($combinations).' kombinasi varian berhasil dibuat.');
+    }
+
+    public function createVariantsWithMedia(Request $request, Series $series)
+    {
+        $data = $request->validate([
+            'sku_prefix' => ['required', 'string', 'max:30', 'regex:/^[A-Za-z0-9._-]+$/'],
+            'product_types' => 'nullable|string|max:1000',
+            'price' => 'required|integer|min:1|max:100000000',
+            'weight' => 'required|integer|min:1|max:100000',
+            'stock' => 'required|integer|min:0|max:1000000',
+            'low_stock' => 'required|integer|min:0|max:100000',
+            'fulfillment' => 'required|in:ready_stock,pre_order',
+            'lead_time' => 'nullable|string|max:150',
+            'set_first_as_main' => 'nullable|boolean',
+            'groups' => 'required|array|min:1|max:10',
+            'groups.*.color' => 'required|string|max:80',
+            'groups.*.sizes' => 'required|string|max:1000',
+            'groups.*.alt_text' => 'nullable|string|max:160',
+            'groups.*.images' => 'required|array|min:1|max:10',
+            'groups.*.images.*' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+        ]);
+        $totalImages = collect($data['groups'])->sum(fn (array $group) => count($group['images']));
+        if ($totalImages > 20) {
+            throw ValidationException::withMessages(['groups' => 'Maksimal 20 foto dalam satu proses.']);
+        }
+        $types = $series->uses_product_type ? $this->list($data['product_types'] ?? '') : [''];
+        if ($series->uses_product_type && $types === []) {
+            throw ValidationException::withMessages(['product_types' => 'Isi jenis produk untuk series sarimbit.']);
+        }
+        $combinations = [];
+        $groupKeys = [];
+        foreach ($data['groups'] as $groupIndex => $group) {
+            $color = trim($group['color']);
+            $colorKey = mb_strtolower($color);
+            if (isset($groupKeys[$colorKey])) {
+                throw ValidationException::withMessages(['groups.'.$groupIndex.'.color' => 'Warna tidak boleh diulang dalam proses yang sama.']);
+            }
+            $groupKeys[$colorKey] = true;
+            $sizes = $this->list($group['sizes']);
+            if ($sizes === []) {
+                throw ValidationException::withMessages(['groups.'.$groupIndex.'.sizes' => 'Isi minimal satu ukuran.']);
+            }
+            foreach ($types as $type) {
+                foreach ($sizes as $size) {
+                    $sku = strtoupper(implode('-', array_filter([$data['sku_prefix'], Str::slug($type), Str::slug($color), Str::slug($size)])));
+                    if (mb_strlen($sku) > 80) {
+                        throw ValidationException::withMessages(['groups.'.$groupIndex.'.sizes' => 'SKU hasil kombinasi terlalu panjang. Pendekkan awalan SKU, warna, jenis, atau ukuran.']);
+                    }
+                    $row = $data + compact('sku', 'color', 'size') + ['product_type' => $type, 'active' => true, 'group_index' => $groupIndex];
+                    $this->assertVariant($series, null, $row, 'groups.'.$groupIndex.'.');
+                    $combinationKey = mb_strtolower(implode('|', [$type, $color, $size]));
+                    if (isset($combinations[$combinationKey])) {
+                        throw ValidationException::withMessages(['groups.'.$groupIndex.'.sizes' => 'Kombinasi varian berulang dalam proses yang sama.']);
+                    }
+                    $combinations[$combinationKey] = $row;
+                }
+            }
+        }
+        if (count($combinations) > 100) {
+            throw ValidationException::withMessages(['groups' => 'Maksimal 100 kombinasi varian dalam satu proses.']);
+        }
+        $existingMinimum = $series->variants()->min('price');
+        $minimumPrice = min(array_filter([$existingMinimum, (int) $data['price']]) ?: [(int) $data['price']]);
+        $this->assertCompareAtPrice($series, $minimumPrice, 'price');
+
+        $storedPaths = [];
+        $setFirstAsMain = $request->boolean('set_first_as_main');
+        try {
+            DB::transaction(function () use ($combinations, $data, $series, $setFirstAsMain, &$storedPaths) {
+                foreach ($combinations as $row) {
+                    $variant = $series->variants()->create($this->variantAttributes($row) + ['stock' => $row['stock']]);
+                    if ($row['stock'] > 0) {
+                        StockMovement::create(['variant_id' => $variant->id, 'user_id' => auth()->id(), 'stock_delta' => $row['stock'], 'reserved_delta' => 0, 'reason' => 'Stok awal dari varian dan foto sekaligus']);
+                    }
+                    Audit::record('variant.workspace_created', 'variant:'.$variant->id, null, $variant->toArray());
+                }
+
+                $order = ((int) $series->media()->max('sort_order')) + 1;
+                $firstMedia = null;
+                foreach ($data['groups'] as $group) {
+                    foreach ($group['images'] as $image) {
+                        $path = $image->store('product-gallery', 'public');
+                        $storedPaths[] = $path;
+                        $media = $series->media()->create([
+                            'image' => $path,
+                            'alt_text' => ($group['alt_text'] ?? null) ?: $series->name.' '.$group['color'].' - '.$image->getClientOriginalName(),
+                            'color' => trim($group['color']),
+                            'sort_order' => $order++,
+                            'active' => true,
+                        ]);
+                        $firstMedia ??= $media;
+                        Audit::record('product_media.workspace_created', 'product-media:'.$media->id, null, $media->toArray());
+                    }
+                }
+                if ($setFirstAsMain && $firstMedia) {
+                    $series->update(['image' => $firstMedia->image]);
+                }
+            });
+        } catch (\Throwable $exception) {
+            Storage::disk('public')->delete($storedPaths);
+
+            throw $exception;
+        }
+
+        return redirect()->route('admin.products.edit', ['series' => $series, 'section' => 'variants'])->with('success', count($combinations).' varian dan '.$totalImages.' foto berhasil dibuat dalam satu proses.');
     }
 
     public function uploadMedia(Request $request, Series $series)
