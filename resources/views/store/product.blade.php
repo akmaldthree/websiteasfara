@@ -14,7 +14,7 @@
     <nav class="breadcrumb"><a href="{{ route('catalog') }}">Koleksi</a> / {{ $series->category->name }} / {{ $series->name }}</nav>
     <div class="row g-5 product-layout">
         <div class="col-lg-7 product-gallery-column">
-            <div class="detail-image product-gallery-main"><img id="product-main-image" src="{{ $mainImage }}" alt="{{ $gallery->first()?->alt_text ?? $series->name }}"></div>
+            <div class="detail-image product-gallery-main"><img id="product-main-image" src="{{ $mainImage }}" alt="{{ $gallery->first()?->alt_text ?? $series->name }}"><button type="button" class="product-zoom-button" id="open-product-zoom" aria-label="Perbesar foto">⌕</button></div>
             @if($gallery->isNotEmpty())
                 <div class="product-thumbnails" aria-label="Galeri foto produk">
                     @foreach($gallery as $media)<button type="button" class="product-thumbnail {{ $loop->first?'active':'' }}" data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text }}" data-variant="{{ $media->variant_id }}" data-color="{{ mb_strtolower($media->color ?? '') }}" aria-label="Tampilkan {{ $media->alt_text }}"><img src="{{ $media->image_url }}" alt="{{ $media->alt_text }}"></button>@endforeach
@@ -88,6 +88,7 @@
 @forelse($questions as $question)<article class="panel mb-3"><p class="mb-2"><strong>{{ $question->user->name }}</strong> bertanya:</p><p>{{ $question->question }}</p><div class="border-top pt-3"><strong>Jawaban Dthree</strong><p class="mb-0 mt-2">{{ $question->answer }}</p></div></article>@empty<p>Belum ada pertanyaan yang dijawab untuk series ini.</p>@endforelse
 @auth<form class="panel mt-4" method="post" action="{{ route('product.question',$series) }}">@csrf<label for="product-question"><strong>Ajukan pertanyaan</strong></label><textarea id="product-question" class="form-control mt-2" name="question" rows="3" minlength="10" maxlength="1000" required>{{ old('question') }}</textarea><button class="btn btn-dark mt-3">Kirim pertanyaan</button></form>@else<p><a href="{{ route('login') }}">Masuk</a> untuk mengajukan pertanyaan produk.</p>@endauth
 </section>
+<dialog class="product-lightbox" id="product-lightbox"><button type="button" id="close-product-zoom" aria-label="Tutup foto">×</button><img id="product-lightbox-image" src="{{ $mainImage }}" alt="{{ $series->name }} diperbesar"></dialog>
 @endsection
 @push('scripts')
 <script>
@@ -97,6 +98,7 @@ function update(){const o=select.selectedOptions[0];if(!o.value){document.getEle
 thumbnails.forEach(button=>button.addEventListener('click',()=>showImage(button)));
 variantChoices.forEach(button=>button.addEventListener('click',()=>{selectedVariantValues[button.dataset.kind]=button.dataset.value;variantChoices.filter(choice=>choice.dataset.kind===button.dataset.kind).forEach(choice=>choice.classList.toggle('active',choice===button));const match=[...select.options].find(option=>option.value&&!option.disabled&&(!selectedVariantValues.type||option.dataset.type===selectedVariantValues.type)&&(!selectedVariantValues.color||option.dataset.color===selectedVariantValues.color)&&(!selectedVariantValues.size||option.dataset.size===selectedVariantValues.size));select.value=match?.value||'';update();}));
 if(select){select.addEventListener('change',update);qty.addEventListener('input',update);update();}
+const lightbox=document.getElementById('product-lightbox');const lightboxImage=document.getElementById('product-lightbox-image');document.getElementById('open-product-zoom')?.addEventListener('click',()=>{lightboxImage.src=mainImage.src;lightboxImage.alt=mainImage.alt;lightbox.showModal()});document.getElementById('close-product-zoom')?.addEventListener('click',()=>lightbox.close());lightbox?.addEventListener('click',event=>{if(event.target===lightbox)lightbox.close()});
 document.getElementById('share-product').addEventListener('click',async()=>{const data={title:@json($series->name),text:@json('Lihat '.$series->name.' dari '.($shop['brand_name'] ?? 'Dthree')),url:window.location.href};try{if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(data.url);document.getElementById('share-status').textContent='Tautan disalin.'}}catch(error){if(error.name!=='AbortError')document.getElementById('share-status').textContent='Salin alamat halaman dari browser Anda.'}});
 </script>
 @endpush

@@ -47,7 +47,11 @@ class StoreController extends Controller
 
     public function catalog(Request $r, Analytics $analytics)
     {
-        $q = Series::published()->with('category')->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price');
+        $q = Series::published()->with([
+            'category',
+            'media' => fn ($query) => $query->where('active', true),
+            'variants' => fn ($query) => $query->where('active', true),
+        ])->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price');
         $currentCategory = null;
         if ($r->filled('q')) {
             $q->where(function ($q) use ($r) {

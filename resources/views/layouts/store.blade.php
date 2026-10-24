@@ -10,14 +10,14 @@
     <link rel="canonical" href="@yield('canonical',url()->current())">
     @if(!empty($shop['favicon']))<link rel="icon" href="{{ asset('storage/'.$shop['favicon']) }}">@endif
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/dthree.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/dthree.css') }}?v={{ filemtime(public_path('css/dthree.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}?v={{ filemtime(public_path('css/storefront.css')) }}">
     <style>:root{--ink:{{ $shop['theme_primary_color'] ?? '#252652' }};--gold:{{ $shop['theme_accent_color'] ?? '#b48249' }};--paper:{{ $shop['theme_background_color'] ?? '#ffffff' }};--surface:{{ $shop['theme_surface_color'] ?? '#ffffff' }};--text:{{ $shop['theme_text_color'] ?? '#252652' }};--theme-radius:{{ (int)($shop['theme_radius'] ?? 8) }}px;--theme-container:{{ (int)($shop['theme_container_width'] ?? 1440) }}px;--body-font:{!! $themeFont[0] !!};--heading-font:{!! $themeFont[1] !!}}body{color:var(--text);font-family:var(--body-font)}h1,h2,h3,.wordmark{font-family:var(--heading-font)}.container-xxl{max-width:var(--theme-container)}.panel,.btn,.form-control,.form-select,.alert,.product-image{border-radius:var(--theme-radius)}.panel,.form-control,.form-select{background-color:var(--surface)}.wordmark img{display:block;max-width:160px;max-height:58px;object-fit:contain}</style>
     @stack('head')
 </head>
 <body class="store-body theme-header-{{ $shop['theme_header_style'] ?? 'standard' }} @yield('body_class')">
 <a href="#main" class="visually-hidden-focusable skip-link">Langsung ke konten</a>
-@if($shop['header_announcement_enabled'] ?? true)<div class="announcement">{{ $shop['tagline'] ?? '' }}</div>@endif
+@if($shop['header_announcement_enabled'] ?? true)<div class="announcement"><span class="is-active">{{ $shop['tagline'] ?? '' }}</span><span>WORLDWIDE SHIPPING</span></div>@endif
 <header @class(['site-header','sticky-top'=>($shop['header_sticky'] ?? true)])>
     <div class="container-xxl header-row">
         <button class="menu-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#mobile-nav" aria-label="Buka menu" aria-controls="mobile-nav" aria-expanded="false"><span></span><span></span><span></span></button>
@@ -59,6 +59,13 @@
     </div>
 </footer>
 <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
+<script>
+(()=>{const header=document.querySelector('.site-header');const syncHeader=()=>header?.classList.toggle('is-scrolled',scrollY>24);syncHeader();addEventListener('scroll',syncHeader,{passive:true});
+const notices=[...document.querySelectorAll('.announcement span')];let notice=0;if(notices.length>1&&!matchMedia('(prefers-reduced-motion: reduce)').matches)setInterval(()=>{notices[notice].classList.remove('is-active');notice=(notice+1)%notices.length;notices[notice].classList.add('is-active')},4000);
+const observer='IntersectionObserver'in window?new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target)}}),{threshold:.12}):null;document.querySelectorAll('.reveal').forEach(element=>observer?observer.observe(element):element.classList.add('is-visible'));
+const slides=[...document.querySelectorAll('[data-hero-slide]')],dots=[...document.querySelectorAll('[data-hero-dot]')];let active=0,timer;const show=index=>{active=(index+slides.length)%slides.length;slides.forEach((slide,i)=>{slide.classList.toggle('is-active',i===active);slide.setAttribute('aria-hidden',i===active?'false':'true')});dots.forEach((dot,i)=>dot.classList.toggle('is-active',i===active))};const autoplay=()=>{if(slides.length>1&&!matchMedia('(prefers-reduced-motion: reduce)').matches)timer=setInterval(()=>show(active+1),6500)};dots.forEach(dot=>dot.addEventListener('click',()=>{clearInterval(timer);show(Number(dot.dataset.heroDot));autoplay()}));autoplay();
+document.querySelectorAll('[data-drag-scroll]').forEach(track=>{let down=false,startX=0,startLeft=0;track.addEventListener('pointerdown',event=>{if(event.pointerType==='mouse'){down=true;startX=event.clientX;startLeft=track.scrollLeft;track.classList.add('is-dragging')}});addEventListener('pointerup',()=>{down=false;track.classList.remove('is-dragging')});track.addEventListener('pointermove',event=>{if(down)track.scrollLeft=startLeft-(event.clientX-startX)})});})();
+</script>
 @stack('scripts')
 </body>
 </html>
