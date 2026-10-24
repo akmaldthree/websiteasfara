@@ -3,13 +3,13 @@
 <head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
     <title>@yield('title','Dashboard') · Dthree Admin</title>
-    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}"><link rel="stylesheet" href="{{ asset('css/dthree.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}"><link rel="stylesheet" href="{{ asset('css/dthree.css') }}?v={{ filemtime(public_path('css/dthree.css')) }}">
 </head>
 <body class="admin-body">
 <a class="skip-link visually-hidden-focusable" href="#main-content">Lewati navigasi</a>
 <div class="admin-shell">
 <aside class="admin-sidebar" id="admin-sidebar">
-    <div class="admin-sidebar-brand"><a class="wordmark" href="{{ route('admin.dashboard') }}">dthree<span>BUSINESS DESK</span></a><button class="admin-sidebar-close" type="button" aria-label="Tutup menu" data-sidebar-close>×</button></div>
+    <div class="admin-sidebar-brand"><a class="wordmark" href="{{ route('admin.dashboard') }}">dthree<span>BUSINESS DESK</span></a><button class="admin-sidebar-close" type="button" aria-label="Tutup menu" data-sidebar-close hidden>×</button></div>
     <nav aria-label="Navigasi CMS">
         <div class="admin-nav-group"><p>Operasional</p>
             @foreach(['admin.dashboard'=>['Ringkasan','dashboard'],'admin.orders'=>['Pesanan','orders.read'],'admin.inventory'=>['Stok & inventori','inventory.read'],'admin.customers'=>['Pelanggan','customers.read'],'admin.cases'=>['Retur & layanan','orders.read'],'admin.notifications'=>['Notifikasi','cases.write'],'admin.reports'=>['Laporan','reports.read']] as $route=>$nav)
@@ -50,16 +50,16 @@
     </nav>
     <footer>DTHREE OPERATIONS<br><span>Ruang kerja tim Anda.</span></footer>
 </aside>
-<div class="admin-sidebar-backdrop" data-sidebar-close></div>
+<div class="admin-sidebar-backdrop" data-sidebar-close hidden></div>
 <div class="admin-main">
-    <header class="admin-topbar"><div class="d-flex align-items-center gap-3"><button class="admin-menu-button" type="button" aria-controls="admin-sidebar" aria-expanded="false" data-sidebar-open>☰</button><div><small>CMS Dthree</small><strong>@yield('title','Ringkasan')</strong></div></div><div class="admin-topbar-actions"><a href="{{ route('home') }}" target="_blank" rel="noopener">Lihat website ↗</a><span class="admin-user">{{ auth()->user()->name }}<small>{{ auth()->user()->role }}</small></span><form method="post" action="{{ route('logout') }}">@csrf<button class="btn btn-outline-dark btn-sm">Keluar</button></form></div></header>
+    <header class="admin-topbar"><div class="d-flex align-items-center gap-3"><button class="admin-menu-button" type="button" aria-controls="admin-sidebar" aria-expanded="false" data-sidebar-open hidden>☰</button><div><small>CMS Dthree</small><strong>@yield('title','Ringkasan')</strong></div></div><div class="admin-topbar-actions"><a href="{{ route('home') }}" target="_blank" rel="noopener">Lihat website ↗</a><span class="admin-user">{{ auth()->user()->name }}<small>{{ auth()->user()->role }}</small></span><form method="post" action="{{ route('logout') }}">@csrf<button class="btn btn-outline-dark btn-sm">Keluar</button></form></div></header>
     @include('partials.alerts')
     <main class="admin-content" id="main-content" tabindex="-1">@yield('content')</main>
 </div>
 </div>
 <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
 <script>
-const adminBody=document.body;const menuButton=document.querySelector('[data-sidebar-open]');const closeMenu=()=>{adminBody.classList.remove('admin-menu-open');menuButton?.setAttribute('aria-expanded','false')};menuButton?.addEventListener('click',()=>{adminBody.classList.toggle('admin-menu-open');menuButton.setAttribute('aria-expanded',adminBody.classList.contains('admin-menu-open')?'true':'false')});document.querySelectorAll('[data-sidebar-close]').forEach(button=>button.addEventListener('click',closeMenu));document.querySelectorAll('.admin-sidebar nav a').forEach(link=>link.addEventListener('click',()=>{if(window.innerWidth<768)closeMenu()}));
+const adminBody=document.body;const menuButton=document.querySelector('[data-sidebar-open]');const sidebarClose=document.querySelector('.admin-sidebar-close');const sidebarBackdrop=document.querySelector('.admin-sidebar-backdrop');const syncAdminMenu=()=>{const mobile=window.innerWidth<768;menuButton.hidden=!mobile;sidebarClose.hidden=!mobile;if(!mobile){adminBody.classList.remove('admin-menu-open');sidebarBackdrop.hidden=true}};const closeMenu=()=>{adminBody.classList.remove('admin-menu-open');sidebarBackdrop.hidden=true;menuButton?.setAttribute('aria-expanded','false')};menuButton?.addEventListener('click',()=>{const open=!adminBody.classList.contains('admin-menu-open');adminBody.classList.toggle('admin-menu-open',open);sidebarBackdrop.hidden=!open;menuButton.setAttribute('aria-expanded',open?'true':'false')});document.querySelectorAll('[data-sidebar-close]').forEach(button=>button.addEventListener('click',closeMenu));document.querySelectorAll('.admin-sidebar nav a').forEach(link=>link.addEventListener('click',()=>{if(window.innerWidth<768)closeMenu()}));window.addEventListener('resize',syncAdminMenu);syncAdminMenu();
 </script>
 @stack('scripts')
 </body></html>

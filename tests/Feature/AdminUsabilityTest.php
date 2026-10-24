@@ -48,7 +48,11 @@ class AdminUsabilityTest extends TestCase
 
     public function test_key_cms_pages_render_with_guided_workflows(): void
     {
-        $this->actingAs($this->admin)->get(route('admin.dashboard'))->assertOk()->assertSee('Apa yang ingin Anda kelola?');
+        $this->actingAs($this->admin)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Apa yang ingin Anda kelola?')
+            ->assertSee('css/dthree.css?v=', false)
+            ->assertSee('class="admin-sidebar-backdrop" data-sidebar-close hidden', false);
         $this->get(route('admin.settings'))->assertOk()->assertSee('Lompat ke:')->assertSee('Banner & konten website');
         $this->get(route('admin.media'))->assertOk()->assertSee('Cara menggunakan gambar');
         $this->get(route('admin.import'))->assertOk()->assertSee('Unduh dan isi template');
