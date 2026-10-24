@@ -30,6 +30,11 @@ class Series extends Model
         return $this->hasMany(ProductMedia::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    public function orderItems()
+    {
+        return $this->hasManyThrough(OrderItem::class, Variant::class, 'series_id', 'variant_id');
+    }
+
     public function questions()
     {
         return $this->hasMany(ProductQuestion::class);

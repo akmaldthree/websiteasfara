@@ -114,6 +114,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('/produk', [Products::class, 'index'])->name('products');
         Route::get('/produk/baru', [Products::class, 'create'])->name('products.create');
         Route::post('/produk', [Products::class, 'store'])->name('products.store');
+        Route::post('/produk-tindakan-massal', [Products::class, 'bulkAction'])->name('products.bulk');
         Route::get('/produk/{series}/ubah', [Products::class, 'edit'])->name('products.edit');
         Route::post('/produk/{series}', [Products::class, 'update'])->name('products.update');
         Route::post('/produk/{series}/varian', [Products::class, 'addVariant'])->name('products.variants.add');

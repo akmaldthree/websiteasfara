@@ -31,7 +31,7 @@ class ProductWorkspaceTest extends TestCase
 
     public function test_admin_can_create_and_find_a_product_in_the_workspace(): void
     {
-        $this->actingAs($this->admin)->get(route('admin.products'))->assertOk()->assertSee('Kelola produk');
+        $this->actingAs($this->admin)->get(route('admin.products'))->assertOk()->assertSee('Produk saya')->assertSee('Perlu diperbaiki')->assertSee('Pengaturan massal');
         $this->get(route('admin.products.create'))->assertOk()->assertSee('Buat produk baru');
 
         $response = $this->post(route('admin.products.store'), [
@@ -75,6 +75,21 @@ class ProductWorkspaceTest extends TestCase
         $this->assertCount(8, $product->variants);
         $this->assertDatabaseHas('variants', ['sku' => 'SAR-AYAH-BLACK-M', 'product_type' => 'Ayah']);
         $this->assertSame(8, StockMovement::count());
+    }
+
+    public function test_products_can_be_filtered_and_updated_in_bulk(): void
+    {
+        $first = $this->product();
+        $second = Series::create(['category_id' => $this->category->id, 'name' => 'Produk Kedua', 'slug' => 'produk-kedua', 'description' => 'Lengkap', 'active' => false]);
+
+        $this->actingAs($this->admin)->get(route('admin.products', ['status' => 'action']))
+            ->assertOk()->assertSee('Naira')->assertSee('Produk Kedua');
+        $this->post(route('admin.products.bulk'), ['product_ids' => [$first->id, $second->id], 'action' => 'activate'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertTrue($first->fresh()->active);
+        $this->assertTrue($second->fresh()->active);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'products.bulk_activate', 'subject' => 'series:'.$first->id]);
     }
 
     public function test_multiple_photos_can_be_uploaded_and_product_can_be_duplicated_safely(): void

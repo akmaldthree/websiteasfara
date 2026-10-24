@@ -20,7 +20,12 @@ class ProductWorkspaceController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Series::with(['category', 'media'])->withCount('variants')->withMin('variants', 'price')->withSum('variants', 'stock')->withSum('variants', 'reserved');
+        $needsAction = fn ($query) => $query->where(function ($incomplete) {
+            $incomplete->whereNull('description')->orWhere('description', '')->orWhereDoesntHave('variants')->orWhere(function ($photos) {
+                $photos->whereNull('image')->whereDoesntHave('media');
+            });
+        });
+        $query = Series::with(['category', 'media', 'variants:id,series_id,sku'])->withCount('variants')->withMin('variants', 'price')->withMax('variants', 'price')->withSum('variants', 'stock')->withSum('variants', 'reserved')->withSum('orderItems', 'quantity');
         if ($request->filled('q')) {
             $term = mb_substr(trim((string) $request->input('q')), 0, 100);
             $query->where(fn ($search) => $search->where('name', 'like', '%'.$term.'%')->orWhere('slug', 'like', '%'.$term.'%')->orWhereHas('variants', fn ($variants) => $variants->where('sku', 'like', '%'.$term.'%')));
@@ -28,10 +33,14 @@ class ProductWorkspaceController extends Controller
         if ($request->filled('category')) {
             $query->where('category_id', $request->integer('category'));
         }
-        if ($request->input('status') === 'active') {
+        if ($request->input('status') === 'live') {
             $query->where('active', true);
         } elseif ($request->input('status') === 'draft') {
             $query->where('active', false);
+        } elseif ($request->input('status') === 'action') {
+            $needsAction($query);
+        } elseif ($request->input('status') === 'out') {
+            $query->whereHas('variants')->whereDoesntHave('variants', fn ($variants) => $variants->whereRaw('stock - reserved > 0'));
         }
         if ($request->input('stock') === 'low') {
             $query->whereHas('variants', fn ($variants) => $variants->whereRaw('stock - reserved <= low_stock'));
@@ -42,7 +51,29 @@ class ProductWorkspaceController extends Controller
         return view('admin.products.index', [
             'products' => $query->latest()->paginate(20)->withQueryString(),
             'categories' => Category::orderBy('name')->get(),
+            'statusCounts' => [
+                'all' => Series::count(), 'live' => Series::where('active', true)->count(), 'action' => Series::where($needsAction)->count(),
+                'out' => Series::whereHas('variants')->whereDoesntHave('variants', fn ($variants) => $variants->whereRaw('stock - reserved > 0'))->count(), 'draft' => Series::where('active', false)->count(),
+            ],
         ]);
+    }
+
+    public function bulkAction(Request $request)
+    {
+        $data = $request->validate(['product_ids' => 'required|array|min:1|max:100', 'product_ids.*' => 'required|integer|distinct|exists:series,id', 'action' => 'required|in:activate,deactivate,feature,unfeature']);
+        $changes = match ($data['action']) {
+            'activate' => ['active' => true], 'deactivate' => ['active' => false], 'feature' => ['featured' => true], 'unfeature' => ['featured' => false],
+        };
+        $products = Series::whereKey($data['product_ids'])->get();
+        DB::transaction(function () use ($products, $changes, $data) {
+            foreach ($products as $product) {
+                $before = $product->only(array_keys($changes));
+                $product->update($changes);
+                Audit::record('products.bulk_'.$data['action'], 'series:'.$product->id, $before, $changes);
+            }
+        });
+
+        return back()->with('success', $products->count().' produk berhasil diperbarui.');
     }
 
     public function create()
