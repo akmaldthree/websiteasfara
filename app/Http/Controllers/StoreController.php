@@ -33,7 +33,16 @@ class StoreController extends Controller
     {
         $analytics->record($request, 'view_home');
 
-        return view('store.home', ['collections' => Series::published()->with('category')->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price')->orderByDesc('featured')->latest()->take(4)->get(), 'contentEntries' => ContentEntry::published()->whereIn('type', ['banner', 'home_section'])->orderBy('sort_order')->get()]);
+        return view('store.home', [
+            'collections' => Series::published()
+                ->with(['category', 'media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
+                ->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')
+                ->orderByDesc('featured')
+                ->latest()
+                ->take(16)
+                ->get(),
+            'contentEntries' => ContentEntry::published()->whereIn('type', ['banner', 'home_section'])->orderBy('sort_order')->get(),
+        ]);
     }
 
     public function catalog(Request $r, Analytics $analytics)

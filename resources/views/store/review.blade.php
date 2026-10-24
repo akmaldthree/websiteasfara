@@ -1,7 +1,7 @@
 @extends('layouts.store')
 @section('title','Tinjau pesanan — Dthree')
 @section('content')
-<section class="container-xxl section page-narrow">
+<section class="container-xxl section page-narrow checkout-review-page">
     <span class="eyebrow">02 TINJAU PESANAN</span><h1 class="my-4">Satu langkah lagi.</h1>
     @if($quote['price_group'])<div class="alert alert-success">Harga akun <strong>{{ $quote['price_group']->name }}</strong> sudah diterapkan dan akan disimpan pada pesanan.</div>@endif
     <div class="panel"><h2>Pastikan pilihan Anda</h2>

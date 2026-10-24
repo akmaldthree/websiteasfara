@@ -1,7 +1,7 @@
 @extends('layouts.store')
 @section('title','Keranjang — Dthree')
 @section('content')
-<section class="container-xxl section">
+<section class="container-xxl section cart-page">
     <span class="eyebrow">PILIHAN ANDA</span>
     <h1 class="mt-3 mb-4">Keranjang belanja</h1>
     @if(empty($lines))
@@ -10,7 +10,7 @@
         @if($lines[0]['price_group'])
             <div class="alert alert-success">Harga akun <strong>{{ $lines[0]['price_group']->name }}</strong> diterapkan. Tier dihitung per SKU berdasarkan jumlah di keranjang.</div>
         @endif
-        <div class="row g-5">
+        <div class="row g-5 cart-layout">
             <div class="col-lg-8">
                 @foreach($lines as $line)
                     @php($v=$line['variant'])
@@ -33,7 +33,7 @@
                     </div>
                 @endforeach
             </div>
-            <div class="col-lg-4"><aside class="panel">
+            <div class="col-lg-4"><aside class="panel cart-summary">
                 <h2>Ringkasan belanja</h2>
                 <div class="summary-row"><span>Subtotal</span><strong>@rupiah(array_sum(array_column($lines,'total')))</strong></div>
                 @if($lines[0]['price_group'])
