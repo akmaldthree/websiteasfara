@@ -18,7 +18,8 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
-        if (! app()->environment(['local', 'testing']) && ! config('app.demo_seeding_enabled')) {
+        $demoSeedingEnabled = config('app.demo_seeding_enabled') || filter_var(env('ALLOW_DEMO_SEEDING', false), FILTER_VALIDATE_BOOL);
+        if (! app()->environment(['local', 'testing']) && ! $demoSeedingEnabled) {
             throw new \RuntimeException('Aktifkan ALLOW_DEMO_SEEDING=true untuk memasang data demonstrasi di luar local/testing.');
         }
 

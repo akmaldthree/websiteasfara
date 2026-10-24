@@ -250,8 +250,8 @@ Untuk memasang katalog demonstrasi lengkap beserta gambar pada tahap pratinjau, 
 
 ```bash
 cd ~/store.dthree.co.id
-ALLOW_DEMO_SEEDING=true php artisan db:seed --class=DemoSeeder --force
 php artisan optimize:clear
+ALLOW_DEMO_SEEDING=true php artisan db:seed --class=DemoSeeder --force
 php artisan optimize
 ```
 
