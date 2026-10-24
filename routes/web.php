@@ -109,13 +109,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/laporan/payout-komisi', [Admin::class, 'commissionPayout'])->middleware('permission:payments.verify')->name('commission-payout.store');
     Route::get('/laporan/payout-komisi/{payout}/bukti', [Admin::class, 'commissionPayoutProof'])->middleware('permission:payments.read')->name('commission-payout.proof');
     Route::get('/monitoring', [Admin::class, 'monitoring'])->middleware('permission:audit.read')->name('monitoring');
-    Route::middleware('permission:catalog.write')->group(function () {
-        Route::get('/import', [Import::class, 'index'])->name('import');
-        Route::get('/import/template', [Import::class, 'template'])->name('import.template');
-        Route::post('/import/preview', [Import::class, 'preview'])->name('import.preview');
-        Route::post('/import/generate', [Import::class, 'generate'])->name('import.generate');
-        Route::post('/import/commit', [Import::class, 'commit'])->name('import.commit');
-    });
+    Route::get('/import', [Import::class, 'index'])->name('import');
+    Route::get('/import/template', [Import::class, 'template'])->name('import.template');
+    Route::get('/import/export', [Import::class, 'export'])->name('import.export');
+    Route::post('/import/preview', [Import::class, 'preview'])->name('import.preview');
+    Route::post('/import/generate', [Import::class, 'generate'])->name('import.generate');
+    Route::post('/import/commit', [Import::class, 'commit'])->name('import.commit');
     Route::get('/master/{resource}', [Admin::class, 'resources'])->name('resources');
     Route::get('/master/{resource}/baru', [Admin::class, 'form'])->name('create');
     Route::get('/master/{resource}/{id}/ubah', [Admin::class, 'form'])->whereNumber('id')->name('edit');

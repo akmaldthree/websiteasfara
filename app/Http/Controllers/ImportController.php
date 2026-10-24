@@ -3,194 +3,176 @@
 namespace App\Http\Controllers;
 
 use App\Models\Series;
-use App\Models\StockMovement;
-use App\Models\Variant;
-use App\Services\Audit;
+use App\Services\BulkImportService;
+use App\Support\SimpleXlsx;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-use ZipArchive;
 
 class ImportController extends Controller
 {
     public const COLUMNS = ['series_slug', 'sku', 'product_type', 'color', 'size', 'price', 'stock', 'weight', 'fulfillment', 'lead_time'];
 
-    public function index()
+    public function __construct(private BulkImportService $imports, private SimpleXlsx $xlsx) {}
+
+    public function index(Request $request)
     {
-        return view('admin.import', ['seriesOptions' => Series::orderBy('name')->get()]);
+        $definitions = collect($this->imports->definitions())->filter(fn (array $definition) => $request->user()->allowed($definition['permission']))->all();
+
+        return view('admin.import', $this->viewData($request->query('type', array_key_first($definitions) ?: 'variants'), $definitions));
     }
 
-    public function template()
+    public function template(Request $request)
     {
-        return response(implode(',', self::COLUMNS)."\n", 200, ['Content-Type' => 'text/csv', 'Content-Disposition' => 'attachment; filename="template-sku.csv"']);
+        [$type, $definition] = $this->selected($request);
+        $path = tempnam(sys_get_temp_dir(), 'dthree-template-');
+        $this->xlsx->create($path, $definition['label'], $definition['columns']);
+
+        return response()->download($path, 'template-'.$type.'.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend(true);
     }
 
-    public function preview(Request $r)
+    public function export(Request $request)
     {
-        $r->validate(['csv' => 'required|file|max:5120', 'mode' => 'nullable|in:create,upsert']);
-        $mode = $r->input('mode', 'create');
-        $rows = strtolower($r->file('csv')->getClientOriginalExtension()) === 'xlsx' ? $this->xlsx($r->file('csv')->getRealPath()) : $this->csv($r->file('csv')->getRealPath());
-        [, $errors] = $this->validateRows($rows, $mode);
-        $r->session()->put('import_preview', compact('rows', 'mode'));
+        [$type, $definition] = $this->selected($request);
+        $path = tempnam(sys_get_temp_dir(), 'dthree-export-');
+        $this->xlsx->create($path, $definition['label'], $definition['columns'], $this->imports->exportRows($type));
 
-        return view('admin.import', ['preview' => $rows, 'rowErrors' => $errors, 'mode' => $mode, 'seriesOptions' => Series::orderBy('name')->get()]);
+        return response()->download($path, 'data-'.$type.'-'.now()->format('Ymd-His').'.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend(true);
     }
 
-    public function generate(Request $r)
+    public function preview(Request $request)
     {
-        $d = $r->validate(['series_id' => 'required|exists:series,id', 'sku_prefix' => 'required|regex:/^[A-Za-z0-9._-]+$/|max:40', 'product_types' => 'nullable|string|max:1000', 'colors' => 'required|string|max:2000', 'sizes' => 'required|string|max:1000', 'price' => 'required|integer|between:1,100000000', 'stock' => 'required|integer|between:0,1000000', 'weight' => 'required|integer|between:1,100000', 'fulfillment' => 'required|in:ready_stock,pre_order', 'lead_time' => 'nullable|string|max:150', 'mode' => 'required|in:create,upsert']);
-        $series = Series::findOrFail($d['series_id']);
-        $split = fn ($v) => collect(preg_split('/[,\r\n]+/', $v ?? ''))->map(fn ($x) => trim($x))->filter()->unique()->values()->all();
-        $types = $series->uses_product_type ? $split($d['product_types'] ?? '') : [''];
-        $colors = $split($d['colors']);
-        $sizes = $split($d['sizes']);
-        if (! $types || ! $colors || ! $sizes || count($types) * count($colors) * count($sizes) > 200) {
-            throw ValidationException::withMessages(['colors' => 'Kombinasi harus lengkap dan maksimal 200 SKU.']);
+        [$type, $definition] = $this->selected($request);
+        $request->validate(['file' => 'nullable|file|max:10240', 'csv' => 'nullable|file|max:10240', 'mode' => 'nullable|in:create,upsert']);
+        $file = $request->file('file') ?: $request->file('csv');
+        if (! $file) {
+            throw ValidationException::withMessages(['file' => 'Pilih file CSV atau XLSX.']);
+        }
+        $extension = strtolower($file->getClientOriginalExtension());
+        if (! in_array($extension, ['csv', 'xlsx'], true)) {
+            throw ValidationException::withMessages(['file' => 'Format file harus CSV atau XLSX.']);
+        }
+        $rows = $extension === 'xlsx'
+            ? $this->xlsx->read($file->getRealPath(), $definition['columns'], BulkImportService::MAXIMUM_ROWS)
+            : $this->csv($file->getRealPath(), $definition['columns'], $type === 'variants' ? self::COLUMNS : null);
+        $rows = $this->defaults($type, $rows);
+        $mode = $request->input('mode', 'create');
+        [, $errors] = $this->imports->validateRows($type, $rows, $mode);
+        $request->session()->put('import_preview', compact('type', 'rows', 'mode'));
+
+        return view('admin.import', $this->viewData($type) + ['preview' => $rows, 'rowErrors' => $errors, 'mode' => $mode]);
+    }
+
+    public function generate(Request $request)
+    {
+        $this->authorizeType($request, 'variants');
+        $data = $request->validate(['series_id' => 'required|exists:series,id', 'sku_prefix' => 'required|regex:/^[A-Za-z0-9._-]+$/|max:40', 'product_types' => 'nullable|string|max:1000', 'colors' => 'required|string|max:2000', 'sizes' => 'required|string|max:1000', 'price' => 'required|integer|between:1,100000000', 'stock' => 'required|integer|between:0,1000000', 'weight' => 'required|integer|between:1,100000', 'fulfillment' => 'required|in:ready_stock,pre_order', 'lead_time' => 'nullable|string|max:150', 'mode' => 'required|in:create,upsert']);
+        $series = Series::findOrFail($data['series_id']);
+        $split = fn (?string $value) => collect(preg_split('/[,\r\n]+/', $value ?? ''))->map(fn ($item) => trim($item))->filter()->unique()->values()->all();
+        $types = $series->uses_product_type ? $split($data['product_types'] ?? '') : [''];
+        $colors = $split($data['colors']);
+        $sizes = $split($data['sizes']);
+        if (! $types || ! $colors || ! $sizes || count($types) * count($colors) * count($sizes) > BulkImportService::MAXIMUM_ROWS) {
+            throw ValidationException::withMessages(['colors' => 'Kombinasi harus lengkap dan tidak melebihi batas import.']);
         }
         $rows = [];
-        foreach ($types as $type) {
+        foreach ($types as $productType) {
             foreach ($colors as $color) {
                 foreach ($sizes as $size) {
-                    $suffix = strtoupper(trim(preg_replace('/[^A-Za-z0-9]+/', '-', implode('-', array_filter([$type, $color, $size]))), '-'));
-                    $rows[] = ['series_slug' => $series->slug, 'sku' => strtoupper($d['sku_prefix'].'-'.$suffix), 'product_type' => $type, 'color' => $color, 'size' => $size, 'price' => $d['price'], 'stock' => $d['stock'], 'weight' => $d['weight'], 'fulfillment' => $d['fulfillment'], 'lead_time' => $d['lead_time'] ?? ''];
+                    $suffix = strtoupper(trim(preg_replace('/[^A-Za-z0-9]+/', '-', implode('-', array_filter([$productType, $color, $size]))), '-'));
+                    $rows[] = ['series_slug' => $series->slug, 'sku' => strtoupper($data['sku_prefix'].'-'.$suffix), 'product_type' => $productType, 'color' => $color, 'size' => $size, 'price' => $data['price'], 'stock' => $data['stock'], 'low_stock' => 5, 'weight' => $data['weight'], 'fulfillment' => $data['fulfillment'], 'measurement_template_name' => '', 'lead_time' => $data['lead_time'] ?? '', 'active' => 1];
                 }
             }
         }
-        $mode = $d['mode'];
-        [, $errors] = $this->validateRows($rows, $mode);
-        $r->session()->put('import_preview', compact('rows', 'mode'));
+        $type = 'variants';
+        $mode = $data['mode'];
+        [, $errors] = $this->imports->validateRows($type, $rows, $mode);
+        $request->session()->put('import_preview', compact('type', 'rows', 'mode'));
 
-        return view('admin.import', ['preview' => $rows, 'rowErrors' => $errors, 'mode' => $mode, 'seriesOptions' => Series::orderBy('name')->get()]);
+        return view('admin.import', $this->viewData($type) + ['preview' => $rows, 'rowErrors' => $errors, 'mode' => $mode]);
     }
 
-    private function csv(string $path): array
+    public function commit(Request $request)
     {
-        $f = fopen($path, 'r');
-        $header = fgetcsv($f, 0, ',', '"', '');
+        $preview = $request->session()->get('import_preview');
+        if (! is_array($preview) || ! isset($preview['type'], $preview['rows'], $preview['mode'])) {
+            throw ValidationException::withMessages(['file' => 'Pratinjau import tidak ditemukan.']);
+        }
+        $this->authorizeType($request, $preview['type']);
+        $count = $this->imports->commit($preview['type'], $preview['rows'], $preview['mode'], $request->user()->id);
+        $request->session()->forget('import_preview');
+
+        return redirect()->route('admin.import', ['type' => $preview['type']])->with('success', "Import berhasil. {$count} baris disimpan secara atomik.");
+    }
+
+    /** @return array<int, array<string, string>> */
+    private function csv(string $path, array $columns, ?array $legacyColumns = null): array
+    {
+        $handle = fopen($path, 'r');
+        $header = fgetcsv($handle, 0, ',', '"', '');
         if ($header) {
             $header[0] = ltrim($header[0], "\xEF\xBB\xBF");
         }
-        if ($header !== self::COLUMNS) {
-            fclose($f);
-            throw ValidationException::withMessages(['csv' => 'Header harus sama dengan template Dthree.']);
+        if ($header !== $columns && $header !== $legacyColumns) {
+            fclose($handle);
+            throw ValidationException::withMessages(['file' => 'Header CSV tidak sama dengan template modul yang dipilih.']);
         }
+        $fileColumns = $header;
         $rows = [];
-        while (($row = fgetcsv($f, 0, ',', '"', '')) !== false) {
-            if ($row === [null]) {
+        while (($values = fgetcsv($handle, 0, ',', '"', '')) !== false) {
+            if ($values === [null]) {
                 continue;
-            }if (count($rows) >= 200) {
-                throw ValidationException::withMessages(['csv' => 'Maksimal 200 baris.']);
-            }$rows[] = count($row) === count($header) ? array_combine($header, $row) : ['_error' => 'Jumlah kolom tidak sesuai.'];
-        } fclose($f);
+            }
+            if (count($rows) >= BulkImportService::MAXIMUM_ROWS) {
+                fclose($handle);
+                throw ValidationException::withMessages(['file' => 'Jumlah baris melebihi batas import.']);
+            }
+            $values = array_slice(array_pad($values, count($fileColumns), ''), 0, count($fileColumns));
+            $rows[] = array_combine($fileColumns, $values);
+        }
+        fclose($handle);
 
         return $rows;
     }
 
-    private function xlsx(string $path): array
+    private function defaults(string $type, array $rows): array
     {
-        $zip = new ZipArchive;
-        if ($zip->open($path) !== true || ! ($sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml'))) {
-            throw ValidationException::withMessages(['csv' => 'XLSX tidak dapat dibaca. Gunakan worksheet pertama.']);
-        }
-        $shared = [];
-        if ($xml = $zip->getFromName('xl/sharedStrings.xml')) {
-            foreach (simplexml_load_string($xml)->si as $item) {
-                $shared[] = implode('', array_map(fn ($n) => (string) $n, $item->xpath('.//t')));
-            }
-        }
-        $matrix = [];
-        foreach (simplexml_load_string($sheetXml)->sheetData->row as $row) {
-            $values = array_fill(0, count(self::COLUMNS), '');
-            foreach ($row->c as $cell) {
-                preg_match('/^[A-Z]+/', (string) $cell['r'], $m);
-                $col = 0;
-                foreach (str_split($m[0] ?? '') as $letter) {
-                    $col = $col * 26 + ord($letter) - 64;
-                }if ($col < 1 || $col > count(self::COLUMNS)) {
-                    continue;
-                }$value = (string) $cell->v;
-                if ((string) $cell['t'] === 's') {
-                    $value = $shared[(int) $value] ?? '';
-                } elseif ((string) $cell['t'] === 'inlineStr') {
-                    $value = implode('', array_map(fn ($n) => (string) $n, $cell->is->xpath('.//t')));
-                }$values[$col - 1] = $value;
-            }$matrix[] = $values;
-        } $zip->close();
-        if (array_shift($matrix) !== self::COLUMNS) {
-            throw ValidationException::withMessages(['csv' => 'Header XLSX harus sama dengan template Dthree.']);
-        }
-        if (count($matrix) > 200) {
-            throw ValidationException::withMessages(['csv' => 'Maksimal 200 baris.']);
+        if ($type !== 'variants') {
+            return $rows;
         }
 
-        return array_map(fn ($row) => array_combine(self::COLUMNS, $row), $matrix);
+        return array_map(function (array $row) {
+            $row['low_stock'] = ($row['low_stock'] ?? '') === '' ? 5 : $row['low_stock'];
+            $row['active'] = ($row['active'] ?? '') === '' ? 1 : $row['active'];
+            $row['measurement_template_name'] ??= '';
+
+            return $row;
+        }, $rows);
     }
 
-    private function validateRows(array $rows, string $mode): array
+    /** @return array{0: string, 1: array<string, mixed>} */
+    private function selected(Request $request): array
     {
-        $errors = [];
-        $clean = [];
-        $seen = [];
-        $combos = [];
-        foreach ($rows as $i => $row) {
-            $row = array_map(fn ($v) => trim((string) $v), $row);
-            $row['sku'] = strtoupper($row['sku'] ?? '');
-            $existing = Variant::where('sku', $row['sku'])->first();
-            $messages = Validator::make($row, ['series_slug' => 'required|exists:series,slug', 'sku' => 'required|regex:/^[A-Za-z0-9._-]+$/|max:80', 'product_type' => 'nullable|string|max:100', 'color' => 'required|string|max:80', 'size' => 'required|string|max:40', 'price' => 'required|integer|between:1,100000000', 'stock' => 'required|integer|between:0,1000000', 'weight' => 'required|integer|between:1,100000', 'fulfillment' => 'required|in:ready_stock,pre_order', 'lead_time' => 'nullable|string|max:150'])->errors()->all();
-            if ($mode === 'create' && $existing) {
-                $messages[] = 'SKU sudah ada.';
-            }if (isset($seen[$row['sku']])) {
-                $messages[] = 'SKU duplikat di file.';
-            }$seen[$row['sku']] = true;
-            $series = Series::where('slug', $row['series_slug'] ?? '')->first();
-            if ($series) {
-                if ($series->uses_product_type !== ! empty($row['product_type'])) {
-                    $messages[] = 'Jenis produk tidak sesuai struktur series.';
-                }$combo = hash('sha256', mb_strtolower(implode('|', [$series->id, $row['product_type'] ?? '', $row['color'] ?? '', $row['size'] ?? ''])));
-                if (isset($combos[$combo]) || Variant::where('combination_key', $combo)->when($existing, fn ($q) => $q->whereKeyNot($existing->id))->exists()) {
-                    $messages[] = 'Kombinasi varian duplikat.';
-                }$combos[$combo] = true;
-            }
-            if ($messages) {
-                $errors[$i + 2] = $messages;
-            } else {
-                unset($row['series_slug']);
-                $row['series_id'] = $series->id;
-                $clean[] = $row;
-            }
-        } if (! $rows) {
-            $errors[1] = ['File tidak berisi data.'];
-        }
+        $type = $request->input('type', 'variants');
+        $definitions = $this->imports->definitions();
+        abort_unless(isset($definitions[$type]), 404);
+        $this->authorizeType($request, $type);
 
-        return [$clean, $errors];
+        return [$type, $definitions[$type]];
     }
 
-    public function commit(Request $r)
+    private function authorizeType(Request $request, string $type): void
     {
-        $p = $r->session()->get('import_preview');
-        if (! is_array($p) || ! isset($p['rows'],$p['mode'])) {
-            throw ValidationException::withMessages(['csv' => 'Pratinjau import tidak ditemukan.']);
-        }
-        DB::transaction(function () use ($p) {
-            [$clean,$errors] = $this->validateRows($p['rows'], $p['mode']);
-            if ($errors) {
-                throw ValidationException::withMessages(['csv' => 'Data berubah. Buat pratinjau ulang.']);
-            }foreach ($clean as $row) {
-                $v = Variant::where('sku', $row['sku'])->lockForUpdate()->first();
-                $old = $v?->stock ?? 0;
-                if ($v) {
-                    $v->update($row);
-                } else {
-                    $v = Variant::create($row);
-                }$delta = $v->stock - $old;
-                if ($delta) {
-                    StockMovement::create(['variant_id' => $v->id, 'user_id' => auth()->id(), 'stock_delta' => $delta, 'reserved_delta' => 0, 'reason' => $old ? 'Penyesuaian stok import upsert' : 'Stok awal import']);
-                }
-            }Audit::record('variants.imported', $p['mode'], null, ['rows' => count($clean), 'skus' => array_column($clean, 'sku')]);
-        });
-        $r->session()->forget('import_preview');
+        $definition = $this->imports->definitions()[$type] ?? null;
+        abort_unless($definition && $request->user()->allowed($definition['permission']), 403);
+    }
 
-        return redirect()->route('admin.resources', 'variants')->with('success', 'Import berhasil. Semua baris tersimpan secara atomik.');
+    private function viewData(string $type, ?array $definitions = null): array
+    {
+        $definitions ??= $this->imports->definitions();
+        if (! isset($definitions[$type])) {
+            $type = array_key_first($definitions) ?: 'variants';
+        }
+
+        return ['definitions' => $definitions, 'selectedType' => $type, 'definition' => $definitions[$type] ?? null, 'seriesOptions' => Series::orderBy('name')->get()];
     }
 }
