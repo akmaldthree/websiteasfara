@@ -92,6 +92,30 @@ class ProductWorkspaceTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'products.bulk_activate', 'subject' => 'series:'.$first->id]);
     }
 
+    public function test_compare_at_price_is_managed_per_series_and_rendered_on_storefront(): void
+    {
+        $product = $this->product(['active' => true]);
+        Variant::create(['series_id' => $product->id, 'sku' => 'SALE-SAGE-M', 'color' => 'Sage', 'size' => 'M', 'price' => 408000, 'stock' => 20, 'weight' => 500]);
+        $payload = [
+            'category_id' => $this->category->id,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'description' => $product->description,
+            'compare_at_price' => 480000,
+            'active' => '1',
+        ];
+
+        $this->actingAs($this->admin)->post(route('admin.products.update', $product), $payload)
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(480000, $product->fresh()->compare_at_price);
+        $this->get(route('catalog'))->assertOk()->assertSee('Rp 408.000')->assertSee('Rp 480.000')->assertSee('sale-price');
+        $this->get(route('product', $product->slug))->assertOk()->assertSee('Rp 408.000')->assertSee('Rp 480.000')->assertSee('display-compare-price');
+
+        $this->actingAs($this->admin)->post(route('admin.products.update', $product), array_replace($payload, ['compare_at_price' => 400000]))
+            ->assertSessionHasErrors('compare_at_price');
+        $this->assertSame(480000, $product->fresh()->compare_at_price);
+    }
+
     public function test_multiple_photos_can_be_uploaded_and_product_can_be_duplicated_safely(): void
     {
         Storage::fake('public');

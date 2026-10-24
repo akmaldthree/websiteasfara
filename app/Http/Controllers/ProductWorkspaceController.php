@@ -134,6 +134,7 @@ class ProductWorkspaceController extends Controller
             'variants.*.stock_delta' => 'nullable|integer|between:-1000000,1000000',
             'variants.*.stock_reason' => 'nullable|string|max:255',
         ]);
+        $this->assertCompareAtPrice($series, collect($data['variants'])->min('price'), 'variants.0.price');
 
         DB::transaction(function () use ($data, $series) {
             foreach ($data['variants'] as $index => $row) {
@@ -171,6 +172,8 @@ class ProductWorkspaceController extends Controller
         ]);
         $row['active'] = $request->boolean('active');
         $this->assertVariant($series, null, $row);
+        $minimumPrice = min(array_filter([$series->variants()->min('price'), (int) $row['price']]) ?: [(int) $row['price']]);
+        $this->assertCompareAtPrice($series, $minimumPrice, 'price');
         $stock = (int) $row['stock'];
         unset($row['stock']);
         $variant = DB::transaction(function () use ($row, $stock, $series) {
@@ -213,6 +216,10 @@ class ProductWorkspaceController extends Controller
         if (count($combinations) > 100) {
             throw ValidationException::withMessages(['colors' => 'Maksimal 100 kombinasi dalam satu proses.']);
         }
+        $existingMinimum = $series->variants()->min('price');
+        $generatedMinimum = collect($combinations)->min('price');
+        $minimumPrice = min(array_filter([$existingMinimum, $generatedMinimum]) ?: [$generatedMinimum]);
+        $this->assertCompareAtPrice($series, $minimumPrice, 'price');
         DB::transaction(function () use ($combinations, $series) {
             foreach ($combinations as $row) {
                 $variant = $series->variants()->create($this->variantAttributes($row) + ['stock' => $row['stock']]);
@@ -383,8 +390,12 @@ class ProductWorkspaceController extends Controller
             'slug' => ['required', 'alpha_dash', 'max:150', Rule::unique('series', 'slug')->ignore($series?->id)],
             'description' => 'nullable|string|max:10000', 'material' => 'nullable|string|max:2000', 'care' => 'nullable|string|max:2000', 'size_guide' => 'nullable|string|max:5000',
             'seo_title' => 'nullable|string|max:200', 'seo_description' => 'nullable|string|max:300', 'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'compare_at_price' => 'nullable|integer|between:1,100000000',
             'uses_product_type' => 'nullable|boolean', 'featured' => 'nullable|boolean', 'active' => 'nullable|boolean',
         ]);
+        if ($series && ! empty($data['compare_at_price'])) {
+            $this->assertCompareAtPrice($series, $series->variants()->min('price'), 'compare_at_price', (int) $data['compare_at_price']);
+        }
         $data['uses_product_type'] = $request->boolean('uses_product_type');
         $data['featured'] = $request->boolean('featured');
         $data['active'] = $request->boolean('active');
@@ -395,6 +406,14 @@ class ProductWorkspaceController extends Controller
         }
 
         return $data;
+    }
+
+    private function assertCompareAtPrice(Series $series, ?int $minimumPrice, string $key, ?int $compareAtPrice = null): void
+    {
+        $compareAtPrice ??= $series->compare_at_price;
+        if ($compareAtPrice && $minimumPrice && $compareAtPrice <= $minimumPrice) {
+            throw ValidationException::withMessages([$key => 'Harga coret harus lebih besar dari harga jual terendah produk.']);
+        }
     }
 
     private function assertVariant(Series $series, ?Variant $variant, array &$row, string $prefix = ''): void

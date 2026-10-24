@@ -38,8 +38,8 @@ class BulkImportService
                 ['name', 'slug', 'description', 'seo_title', 'seo_description', 'active'],
                 ['name' => 'required|string|max:100', 'slug' => 'required|alpha_dash|max:100', 'description' => 'nullable|string|max:5000', 'seo_title' => 'nullable|string|max:200', 'seo_description' => 'nullable|string|max:300', 'active' => 'required|in:0,1'], ['slug']),
             'series' => $this->definition('Series / produk', 'catalog.write', Series::class,
-                ['category_slug', 'name', 'slug', 'description', 'material', 'care', 'size_guide', 'image', 'seo_title', 'seo_description', 'uses_product_type', 'featured', 'active'],
-                ['category_slug' => 'required|exists:categories,slug', 'name' => 'required|string|max:150', 'slug' => 'required|alpha_dash|max:150', 'description' => 'nullable|string|max:10000', 'material' => 'nullable|string|max:2000', 'care' => 'nullable|string|max:2000', 'size_guide' => 'nullable|string|max:5000', 'image' => 'nullable|string|max:255', 'seo_title' => 'nullable|string|max:200', 'seo_description' => 'nullable|string|max:300', 'uses_product_type' => 'required|in:0,1', 'featured' => 'required|in:0,1', 'active' => 'required|in:0,1'], ['slug']),
+                ['category_slug', 'name', 'slug', 'description', 'material', 'care', 'size_guide', 'image', 'compare_at_price', 'seo_title', 'seo_description', 'uses_product_type', 'featured', 'active'],
+                ['category_slug' => 'required|exists:categories,slug', 'name' => 'required|string|max:150', 'slug' => 'required|alpha_dash|max:150', 'description' => 'nullable|string|max:10000', 'material' => 'nullable|string|max:2000', 'care' => 'nullable|string|max:2000', 'size_guide' => 'nullable|string|max:5000', 'image' => 'nullable|string|max:255', 'compare_at_price' => 'nullable|integer|between:1,100000000', 'seo_title' => 'nullable|string|max:200', 'seo_description' => 'nullable|string|max:300', 'uses_product_type' => 'required|in:0,1', 'featured' => 'required|in:0,1', 'active' => 'required|in:0,1'], ['slug']),
             'variants' => $this->definition('SKU & varian', 'catalog.write', Variant::class,
                 ['series_slug', 'sku', 'product_type', 'color', 'size', 'price', 'stock', 'low_stock', 'weight', 'fulfillment', 'measurement_template_name', 'lead_time', 'active'],
                 ['series_slug' => 'required|exists:series,slug', 'sku' => 'required|regex:/^[A-Za-z0-9._-]+$/|max:80', 'product_type' => 'nullable|string|max:100', 'color' => 'required|string|max:80', 'size' => 'required|string|max:40', 'price' => 'required|integer|between:1,100000000', 'stock' => 'required|integer|between:0,1000000', 'low_stock' => 'required|integer|between:0,100000', 'weight' => 'required|integer|between:1,100000', 'fulfillment' => 'required|in:ready_stock,pre_order,custom_made,bundle', 'measurement_template_name' => 'nullable|string|max:120', 'lead_time' => 'nullable|string|max:150', 'active' => 'required|in:0,1'], ['sku']),
@@ -247,6 +247,18 @@ class BulkImportService
         }
         if ($type === 'product-media' && ! empty($row['variant_id']) && Variant::whereKey($row['variant_id'])->value('series_id') !== $row['series_id']) {
             $messages[] = 'SKU galeri harus berasal dari series yang dipilih.';
+        }
+        if ($type === 'series' && ! empty($row['compare_at_price'])) {
+            $minimumPrice = Series::where('slug', $input['slug'])->first()?->variants()->min('price');
+            if ($minimumPrice && (int) $row['compare_at_price'] <= $minimumPrice) {
+                $messages[] = 'Harga coret harus lebih besar dari harga jual terendah produk.';
+            }
+        }
+        if ($type === 'variants' && ($series = Series::find($row['series_id'] ?? null))) {
+            $minimumPrice = min(array_filter([$series->variants()->min('price'), (int) $row['price']]) ?: [(int) $row['price']]);
+            if ($series->compare_at_price && $series->compare_at_price <= $minimumPrice) {
+                $messages[] = 'Harga coret series harus lebih besar dari harga jual terendah produk.';
+            }
         }
         if (in_array($type, ['series', 'product-media', 'content'], true) && ! empty($row['image'])) {
             if (str_contains($row['image'], '..') || str_starts_with($row['image'], '/') || ! Storage::disk('public')->exists($row['image'])) {
