@@ -102,8 +102,27 @@ class ProductWorkspaceTest extends TestCase
         $this->actingAs($this->admin)->post(route('admin.products.media.upload', $product), [
             'images' => [UploadedFile::fake()->createWithContent('depan.png', $png), UploadedFile::fake()->createWithContent('belakang.png', $png)],
             'alt_text' => 'Produk tampak lengkap',
+            'color' => 'Sage',
+            'variant_id' => $variant->id,
+            'set_first_as_main' => '1',
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(2, ProductMedia::where('series_id', $product->id)->count());
+        $photos = ProductMedia::where('series_id', $product->id)->orderBy('id')->get();
+        $this->assertSame('Sage', $photos[0]->color);
+        $this->assertSame($variant->id, $photos[0]->variant_id);
+        $this->assertSame($photos[0]->image, $product->fresh()->image);
+
+        $this->post(route('admin.products.media.manage', $product), [
+            'main_media_id' => $photos[1]->id,
+            'media' => [
+                ['id' => $photos[0]->id, 'alt_text' => 'Tampak depan', 'color' => 'Sage Muda', 'variant_id' => '', 'sort_order' => 2, 'active' => '1'],
+                ['id' => $photos[1]->id, 'alt_text' => 'Tampak belakang', 'color' => 'Sage', 'variant_id' => $variant->id, 'sort_order' => 1, 'active' => '1'],
+            ],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('product_media', ['id' => $photos[0]->id, 'alt_text' => 'Tampak depan', 'color' => 'Sage Muda', 'variant_id' => null, 'sort_order' => 2]);
+        $this->assertSame($photos[1]->image, $product->fresh()->image);
+        $this->get(route('admin.products.edit', ['series' => $product, 'section' => 'media']))
+            ->assertOk()->assertSee('Unggah semua foto')->assertSee('Atur galeri')->assertSee('Tampak depan');
 
         $this->post(route('admin.products.duplicate', $product))->assertRedirect()->assertSessionHasNoErrors();
         $copy = Series::where('name', 'Naira - Salinan')->firstOrFail();
@@ -111,6 +130,17 @@ class ProductWorkspaceTest extends TestCase
         $this->assertSame(1, $copy->variants()->count());
         $this->assertSame(0, $copy->variants()->first()->stock);
         $this->assertNotSame($variant->sku, $copy->variants()->first()->sku);
+        $this->assertSame(2, $copy->media()->count());
+
+        $this->post(route('admin.products.media.manage', $product), [
+            'main_media_id' => $photos[1]->id,
+            'media' => [
+                ['id' => $photos[0]->id, 'alt_text' => 'Tampak depan', 'sort_order' => 2, 'active' => '1', 'delete' => '1'],
+                ['id' => $photos[1]->id, 'alt_text' => 'Tampak belakang', 'sort_order' => 1, 'active' => '1'],
+            ],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('product_media', ['id' => $photos[0]->id]);
+        $this->assertSame(1, $product->media()->count());
         $this->assertSame(2, $copy->media()->count());
     }
 

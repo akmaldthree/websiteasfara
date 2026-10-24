@@ -228,15 +228,108 @@ class ProductWorkspaceController extends Controller
 
     public function uploadMedia(Request $request, Series $series)
     {
-        $data = $request->validate(['images' => 'required|array|min:1|max:10', 'images.*' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120', 'alt_text' => 'nullable|string|max:160']);
-        $order = ((int) $series->media()->max('sort_order')) + 1;
-        foreach ($data['images'] as $image) {
-            $path = $image->store('product-gallery', 'public');
-            $media = $series->media()->create(['image' => $path, 'alt_text' => $data['alt_text'] ?: $series->name.' - '.$image->getClientOriginalName(), 'sort_order' => $order++, 'active' => true]);
-            Audit::record('product_media.workspace_created', 'product-media:'.$media->id, null, $media->toArray());
+        $data = $request->validate([
+            'images' => 'required|array|min:1|max:10',
+            'images.*' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'alt_text' => 'nullable|string|max:160',
+            'color' => 'nullable|string|max:80',
+            'variant_id' => 'nullable|integer',
+            'set_first_as_main' => 'nullable|boolean',
+        ]);
+        $variantId = $data['variant_id'] ?? null;
+        if ($variantId && ! $series->variants()->whereKey($variantId)->exists()) {
+            throw ValidationException::withMessages(['variant_id' => 'Varian yang dipilih bukan milik produk ini.']);
         }
+        $order = ((int) $series->media()->max('sort_order')) + 1;
+        $setFirstAsMain = $request->boolean('set_first_as_main');
+        DB::transaction(function () use ($data, $order, $series, $variantId, $setFirstAsMain) {
+            $firstMedia = null;
+            foreach ($data['images'] as $image) {
+                $path = $image->store('product-gallery', 'public');
+                $media = $series->media()->create([
+                    'image' => $path,
+                    'alt_text' => $data['alt_text'] ?: $series->name.' - '.$image->getClientOriginalName(),
+                    'color' => filled($data['color'] ?? null) ? trim($data['color']) : null,
+                    'variant_id' => $variantId,
+                    'sort_order' => $order++,
+                    'active' => true,
+                ]);
+                $firstMedia ??= $media;
+                Audit::record('product_media.workspace_created', 'product-media:'.$media->id, null, $media->toArray());
+            }
+
+            if ($setFirstAsMain && $firstMedia) {
+                $series->update(['image' => $firstMedia->image]);
+            }
+
+        });
 
         return redirect()->route('admin.products.edit', ['series' => $series, 'section' => 'media'])->with('success', count($data['images']).' foto berhasil diunggah.');
+    }
+
+    public function manageMedia(Request $request, Series $series)
+    {
+        $data = $request->validate([
+            'media' => 'required|array|min:1|max:100',
+            'media.*.id' => 'required|integer|distinct',
+            'media.*.alt_text' => 'required|string|max:200',
+            'media.*.color' => 'nullable|string|max:80',
+            'media.*.variant_id' => 'nullable|integer',
+            'media.*.sort_order' => 'required|integer|min:0|max:10000',
+            'media.*.active' => 'nullable|boolean',
+            'media.*.delete' => 'nullable|boolean',
+            'main_media_id' => 'nullable|integer',
+        ]);
+        $submittedIds = collect($data['media'])->pluck('id')->map(fn ($id) => (int) $id);
+        $mediaById = $series->media()->whereKey($submittedIds)->get()->keyBy('id');
+        if ($mediaById->count() !== $submittedIds->count()) {
+            throw ValidationException::withMessages(['media' => 'Ada foto yang bukan milik produk ini. Muat ulang halaman lalu coba kembali.']);
+        }
+        $variantIds = $series->variants()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        foreach ($data['media'] as $index => $row) {
+            if (! empty($row['variant_id']) && ! in_array((int) $row['variant_id'], $variantIds, true)) {
+                throw ValidationException::withMessages(['media.'.$index.'.variant_id' => 'Varian yang dipilih bukan milik produk ini.']);
+            }
+        }
+        $mainId = isset($data['main_media_id']) ? (int) $data['main_media_id'] : null;
+        if ($mainId && ! $mediaById->has($mainId)) {
+            throw ValidationException::withMessages(['main_media_id' => 'Foto utama yang dipilih tidak valid.']);
+        }
+
+        DB::transaction(function () use ($data, $mainId, $mediaById, $series) {
+            $mainMedia = null;
+            foreach ($data['media'] as $row) {
+                $media = $mediaById[(int) $row['id']];
+                $before = $media->getAttributes();
+                if (! empty($row['delete'])) {
+                    if ($mainId === $media->id) {
+                        throw ValidationException::withMessages(['main_media_id' => 'Foto utama tidak dapat sekaligus dihapus. Pilih foto utama lain.']);
+                    }
+                    $media->delete();
+                    Audit::record('product_media.workspace_deleted', 'product-media:'.$media->id, $before, null);
+
+                    continue;
+                }
+                $media->update([
+                    'alt_text' => trim($row['alt_text']),
+                    'color' => filled($row['color'] ?? null) ? trim($row['color']) : null,
+                    'variant_id' => ! empty($row['variant_id']) ? (int) $row['variant_id'] : null,
+                    'sort_order' => (int) $row['sort_order'],
+                    'active' => (bool) ($row['active'] ?? false),
+                ]);
+                if ($mainId === $media->id) {
+                    $mainMedia = $media;
+                }
+                Audit::record('product_media.workspace_updated', 'product-media:'.$media->id, $before, $media->getAttributes());
+            }
+            if ($mainMedia) {
+                $series->update(['image' => $mainMedia->image]);
+            } elseif ($series->image && ! $series->media()->where('image', $series->image)->exists()) {
+                $series->update(['image' => $series->media()->where('active', true)->orderBy('sort_order')->value('image')]);
+            }
+        });
+
+        return redirect()->route('admin.products.edit', ['series' => $series, 'section' => 'media'])->with('success', 'Semua pengaturan foto berhasil disimpan.');
     }
 
     public function duplicate(Series $series)
