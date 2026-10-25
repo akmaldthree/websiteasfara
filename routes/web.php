@@ -10,10 +10,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [Store::class, 'home'])->name('home');
 Route::get('/koleksi', [Store::class, 'catalog'])->name('catalog');
+Route::get('/pencarian/saran', [Store::class, 'searchSuggestions'])->middleware('throttle:60,1')->name('search.suggestions');
 Route::get('/koleksi/{slug}', [Store::class, 'product'])->name('product');
 Route::get('/halaman/{slug}', [Store::class, 'page'])->name('page');
 Route::get('/konten/{type}/{slug}', [Store::class, 'content'])->name('content.show');
 Route::get('/keranjang', [Store::class, 'cart'])->name('cart');
+Route::get('/keranjang/ringkas', [Store::class, 'cartSummary'])->name('cart.summary');
 Route::post('/keranjang', [Store::class, 'add'])->middleware('throttle:30,1')->name('cart.add');
 Route::post('/keranjang/ubah', [Store::class, 'updateCart'])->name('cart.update');
 Route::post('/custom/{variant}', [Store::class, 'customize'])->middleware('throttle:10,1')->name('custom.submit');

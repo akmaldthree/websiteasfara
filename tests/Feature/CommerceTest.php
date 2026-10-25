@@ -65,6 +65,21 @@ class CommerceTest extends TestCase
         $this->get('/pesanan/'.$order->id)->assertForbidden();
     }
 
+    public function test_predictive_search_and_cart_drawer_return_storefront_data(): void
+    {
+        $this->getJson(route('search.suggestions', ['q' => 'Raff']))
+            ->assertOk()
+            ->assertJsonPath('products.0.name', 'Raffah')
+            ->assertJsonStructure(['products' => [['name', 'url', 'image', 'price']]]);
+
+        $this->withSession(['cart' => [$this->variant->id => 2]])
+            ->getJson(route('cart.summary'))
+            ->assertOk()
+            ->assertJsonPath('count', 2)
+            ->assertJsonPath('lines.0.variant', 'Black · L')
+            ->assertJsonPath('subtotal', 'Rp 600.000');
+    }
+
     public function test_server_prices_snapshot_and_idempotency(): void
     {
         $this->input['total'] = 1;

@@ -37,6 +37,7 @@ class StoreController extends Controller
             'collections' => Series::published()
                 ->with(['category', 'media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
                 ->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')
+                ->withSum(['orderItems as sold_quantity' => fn ($query) => $query->whereHas('order', fn ($order) => $order->whereNotIn('status', ['cancelled']))], 'quantity')
                 ->withCount('reviews')->withAvg('reviews', 'rating')
                 ->orderByDesc('featured')
                 ->latest()
@@ -97,6 +98,30 @@ class StoreController extends Controller
         return view('store.catalog', compact('collections', 'currentCategory', 'recentlyViewed'));
     }
 
+    public function searchSuggestions(Request $request)
+    {
+        $term = trim(mb_substr((string) $request->query('q'), 0, 100));
+        if (mb_strlen($term) < 2) {
+            return response()->json(['products' => []]);
+        }
+
+        $products = Series::published()
+            ->where(function ($query) use ($term) {
+                $like = '%'.$term.'%';
+                $query->where('name', 'like', $like)
+                    ->orWhereHas('variants', fn ($variant) => $variant->where('active', true)->where(fn ($q) => $q->where('sku', 'like', $like)->orWhere('color', 'like', $like)->orWhere('size', 'like', $like)));
+            })
+            ->with(['media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
+            ->take(6)->get()->map(fn (Series $series) => [
+                'name' => $series->name,
+                'url' => route('product', $series->slug),
+                'image' => $series->media->first()?->image_url ?? $series->image_url,
+                'price' => 'Rp '.number_format((int) $series->variants->min('price'), 0, ',', '.'),
+            ]);
+
+        return response()->json(['products' => $products]);
+    }
+
     public function product(Request $r, string $slug, PricingService $pricing, Analytics $analytics)
     {
         $series = Series::published()->where('slug', $slug)->with([
@@ -148,6 +173,29 @@ class StoreController extends Controller
         $recentlyViewed = $this->recentlyViewed($r);
 
         return view('store.cart', compact('cart', 'lines', 'recentlyViewed'));
+    }
+
+    public function cartSummary(Request $request, CheckoutService $service)
+    {
+        $cart = $request->session()->get('cart', []);
+        if (! $cart) {
+            return response()->json(['count' => 0, 'subtotal' => 'Rp 0', 'lines' => []]);
+        }
+
+        $lines = $service->lines($cart, false, $request->user(), $request->session()->get('cart_customizations', []));
+
+        return response()->json([
+            'count' => array_sum($cart),
+            'subtotal' => 'Rp '.number_format(array_sum(array_column($lines, 'total')), 0, ',', '.'),
+            'lines' => collect($lines)->map(fn ($line) => [
+                'name' => $line['variant']->series->name,
+                'variant' => $line['variant']->label,
+                'quantity' => $line['quantity'],
+                'total' => 'Rp '.number_format($line['total'], 0, ',', '.'),
+                'image' => $line['variant']->series->image_url,
+                'url' => route('product', $line['variant']->series->slug),
+            ])->values(),
+        ]);
     }
 
     public function add(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics)
