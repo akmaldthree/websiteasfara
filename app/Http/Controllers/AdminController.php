@@ -801,7 +801,7 @@ class AdminController extends Controller
         $data['analytics_enabled'] = $r->boolean('analytics_enabled');
         $data['checkout_enabled'] = $r->boolean('checkout_enabled');
         $data['staff_two_factor_required'] = $r->boolean('staff_two_factor_required');
-        foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled', 'welcome_voucher_enabled'] as $toggle) {
+        foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled', 'welcome_voucher_enabled', 'home_editorial_sections_enabled', 'home_story_enabled'] as $toggle) {
             $data[$toggle] = $r->boolean($toggle);
         }
         if ($data['checkout_enabled'] && ! count($banks)) {

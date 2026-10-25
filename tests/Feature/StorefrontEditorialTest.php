@@ -122,6 +122,19 @@ class StorefrontEditorialTest extends TestCase
         $this->get(route('product', $this->series->slug))->assertOk()->assertSee('Lingkar dada')->assertSee('106 cm');
     }
 
+    public function test_first_available_variant_is_selected_on_home_and_product_pages(): void
+    {
+        $variant = $this->series->variants()->firstOrFail();
+
+        $home = $this->get(route('home'))->assertOk();
+        $this->assertMatchesRegularExpression('/<option value="'.$variant->id.'"[^>]*selected>/', $home->getContent());
+        $this->assertMatchesRegularExpression('/<button class="btn btn-dark"\s+data-featured-submit>ADD TO CART<\/button>/', $home->getContent());
+
+        $product = $this->get(route('product', $this->series->slug))->assertOk();
+        $this->assertMatchesRegularExpression('/<option value="'.$variant->id.'"[^>]*selected>/', $product->getContent());
+        $product->assertSee('const initial=select.selectedOptions[0]', false);
+    }
+
     public function test_empty_cart_summary_has_recommendations_and_shipping_progress(): void
     {
         Setting::put('free_shipping_threshold', 500000);
