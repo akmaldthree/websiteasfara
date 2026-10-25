@@ -77,7 +77,8 @@
                 </details>
             @endif
             <div class="product-details">
-                @foreach(['material'=>'Bahan','care'=>'Perawatan','size_guide'=>'Panduan ukuran'] as $key=>$label)<details @if($key==='size_guide') id="size-guide" @endif><summary>{{ $label }}</summary><p class="preserve-lines">{{ $series->$key ?: 'Informasi sedang dilengkapi. Hubungi Dthree untuk bantuan.' }}</p></details>@endforeach
+                @foreach(['material'=>'Bahan','care'=>'Perawatan'] as $key=>$label)<details><summary>{{ $label }}</summary><p class="preserve-lines">{{ $series->$key ?: 'Informasi sedang dilengkapi. Hubungi Dthree untuk bantuan.' }}</p></details>@endforeach
+                <details id="size-guide"><summary>Panduan ukuran</summary>@include('partials.size-chart')</details>
                 <details><summary>Pengiriman & pembayaran</summary><p>Pesanan dikirim dari Tasikmalaya melalui POS atau JNE. Pilihan COD mengikuti wilayah dan nilai pesanan. Biaya final ditampilkan sebelum pesanan dibuat.</p></details>
             </div>
         </div>
@@ -91,7 +92,7 @@
 @auth<form class="panel mt-4" method="post" action="{{ route('product.question',$series) }}">@csrf<label for="product-question"><strong>Ajukan pertanyaan</strong></label><textarea id="product-question" class="form-control mt-2" name="question" rows="3" minlength="10" maxlength="1000" required>{{ old('question') }}</textarea><button class="btn btn-dark mt-3">Kirim pertanyaan</button></form>@else<p><a href="{{ route('login') }}">Masuk</a> untuk mengajukan pertanyaan produk.</p>@endauth
 </section>
 <dialog class="product-lightbox" id="product-lightbox"><button type="button" id="close-product-zoom" aria-label="Tutup foto">×</button><img id="product-lightbox-image" src="{{ $mainImage }}" alt="{{ $series->name }} diperbesar"></dialog>
-<dialog class="size-guide-dialog" id="size-guide-dialog"><button type="button" class="drawer-close" data-close-size-guide aria-label="Tutup panduan ukuran">×</button><span class="eyebrow">{{ strtoupper($series->name) }}</span><h2>PANDUAN UKURAN</h2><div class="preserve-lines">{{ $series->size_guide ?: 'Panduan ukuran sedang dilengkapi. Hubungi tim Dthree untuk rekomendasi ukuran.' }}</div><p class="small">Jika berada di antara dua ukuran, pilih ukuran lebih besar atau hubungi Dthree melalui WhatsApp.</p></dialog>
+<dialog class="size-guide-dialog" id="size-guide-dialog"><button type="button" class="drawer-close" data-close-size-guide aria-label="Tutup panduan ukuran">×</button><span class="eyebrow">{{ strtoupper($series->name) }}</span><h2>PANDUAN UKURAN</h2>@include('partials.size-chart')<p class="small">Jika berada di antara dua ukuran, pilih ukuran lebih besar atau hubungi Dthree melalui WhatsApp.</p></dialog>
 @if($standardVariants->isNotEmpty())<div class="mobile-purchase-bar"><div><small>{{ strtoupper($series->name) }}</small><strong id="mobile-product-price">@rupiah($minimumPrice)</strong></div><button type="button" class="btn btn-dark" data-mobile-add disabled>ADD TO CART</button></div>@endif
 @endsection
 @push('scripts')

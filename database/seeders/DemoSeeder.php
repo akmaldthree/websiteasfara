@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\Coupon;
+use App\Models\CuratedLink;
 use App\Models\Page;
 use App\Models\ProductMedia;
 use App\Models\Series;
@@ -50,6 +51,7 @@ class DemoSeeder extends Seeder
                 'material' => $product['material'],
                 'care' => 'Cuci lembut dengan warna serupa, hindari pemutih, dan setrika dengan suhu rendah.',
                 'size_guide' => "S: LD 96 cm · panjang 136 cm\nM: LD 102 cm · panjang 138 cm\nL: LD 108 cm · panjang 140 cm\nXL: LD 114 cm · panjang 142 cm",
+                'size_chart' => ['columns' => ['Ukuran', 'Lingkar dada', 'Panjang'], 'rows' => collect($product['sizes'])->map(fn ($size, $position) => [$size, (96 + $position * 6).' cm', (136 + $position * 2).' cm'])->all(), 'notes' => 'Ukuran dalam sentimeter. Pilih ukuran lebih besar jika berada di antara dua ukuran.'],
                 'image' => 'demo/'.$product['image'],
                 'seo_title' => $product['name'].' — Koleksi Dthree',
                 'seo_description' => $product['description'],
@@ -64,6 +66,7 @@ class DemoSeeder extends Seeder
 
         $this->seedShippingRates();
         $this->seedStoreLocations();
+        $this->seedCuratedLinks();
         $this->seedContent();
         $this->seedCoupons();
         $this->seedSettings();
@@ -173,10 +176,26 @@ class DemoSeeder extends Seeder
         }
     }
 
+    private function seedCuratedLinks(): void
+    {
+        foreach ([
+            ['fit', 'Daily Wear', '/koleksi?sort=featured', null, null, 1],
+            ['fit', 'Office Wear', '/koleksi?category=abaya-dewasa', null, null, 2],
+            ['fit', 'Special Occasion', '/koleksi?category=sarimbit-keluarga', null, null, 3],
+            ['fit', 'Earth Tone Collection', '/koleksi?color=Olive', null, null, 4],
+            ['promo', 'New Arrival', '/koleksi?sort=newest', 'NEW ARRIVAL', 'demo/naura-rose.webp', 1],
+            ['promo', 'Best Seller', '/koleksi?sort=best_selling', 'BEST SELLER', 'demo/mahira-black.webp', 2],
+        ] as [$section, $title, $url, $eyebrow, $image, $sortOrder]) {
+            CuratedLink::updateOrCreate(['section' => $section, 'title' => $title], compact('url', 'eyebrow', 'image') + ['sort_order' => $sortOrder, 'active' => true]);
+        }
+    }
+
     private function seedContent(): void
     {
         $entries = [
             ['banner', 'Kebersamaan dalam satu warna', 'demo-banner', 'Temukan koleksi sarimbit keluarga dengan bahan nyaman dan warna yang dirancang untuk saling melengkapi.', 'campaign-family.webp', '/koleksi?category=sarimbit-keluarga', 'Lihat sarimbit', 1],
+            ['banner', 'Siluet yang bergerak bersama Anda', 'demo-banner-abaya', 'Koleksi abaya ringan dengan detail bersih untuk rutinitas dari pagi hingga malam.', 'raffah-olive.webp', '/koleksi?category=abaya-dewasa', 'Lihat abaya', 2],
+            ['banner', 'Warna lembut untuk hari istimewa', 'demo-banner-new', 'Temukan pilihan terbaru dalam palet hangat yang mudah dipadukan.', 'naura-rose.webp', '/koleksi?sort=newest', 'Lihat koleksi baru', 3],
             ['home_section', 'Dirancang untuk bergerak bersama Anda', 'demo-cerita', 'Material pilihan, potongan nyaman, dan detail yang tetap rapi dari pagi hingga malam.', 'raffah-olive.webp', '/koleksi?category=abaya-dewasa', 'Jelajahi abaya', 2],
             ['home_section', 'Warna hangat untuk momen istimewa', 'demo-harmoni', 'Padukan koleksi dewasa dan anak untuk menciptakan tampilan keluarga yang selaras.', 'sakina-plum.webp', '/koleksi?category=sarimbit-keluarga', 'Pilih koleksi', 3],
             ['home_section', 'Siluet ringan dalam warna natural', 'demo-look-natural', 'Temukan abaya dan pelengkap dalam palet natural untuk gaya yang mudah dipadukan.', 'raffah-olive.webp', '/koleksi?category=abaya-dewasa', 'Lihat tampilan', 4],
@@ -229,6 +248,8 @@ class DemoSeeder extends Seeder
             'duration' => 6500,
             'mobile_url' => '',
         ]]]);
+        ContentEntry::where('slug', 'demo-banner-abaya')->update(['blocks' => [['type' => 'hero_options', 'align' => 'right', 'tone' => 'light', 'duration' => 6000, 'mobile_url' => '']]]);
+        ContentEntry::where('slug', 'demo-banner-new')->update(['blocks' => [['type' => 'hero_options', 'align' => 'center', 'tone' => 'light', 'duration' => 6000, 'mobile_url' => '']]]);
     }
 
     private function seedCoupons(): void
@@ -268,6 +289,7 @@ class DemoSeeder extends Seeder
             'welcome_voucher_title' => 'Hadiah untuk pembelian pertama',
             'welcome_voucher_text' => 'Nikmati potongan 10% untuk koleksi pilihan dengan minimum transaksi yang berlaku.',
             'welcome_voucher_code' => 'DEMO10',
+            'free_shipping_threshold' => 500000,
             'hero_eyebrow' => 'Koleksi terbaru Dthree',
             'hero_title' => 'Tumbuh bersama dalam setiap cerita',
             'hero_text' => 'Busana modest yang nyaman untuk perempuan dan keluarga Indonesia, dirancang dengan warna hangat serta detail yang berkesan.',
@@ -302,13 +324,15 @@ class DemoSeeder extends Seeder
             'pengiriman' => 'Pesanan ready stock diproses 1–2 hari kerja. Estimasi tiba mengikuti layanan kurir dan lokasi tujuan yang dipilih saat checkout.',
             'retur-garansi' => 'Pengajuan retur dapat dilakukan sesuai batas waktu dan kondisi produk pada kebijakan toko. Simpan bukti pembelian dan dokumentasi saat paket diterima.',
             'tentang' => 'Dthree adalah brand modest fashion dari Tasikmalaya yang menghadirkan busana perempuan dan keluarga dengan fokus pada kenyamanan, detail, dan kebersamaan.',
+            'sejarah' => 'Dthree tumbuh dari Tasikmalaya dengan tujuan menghadirkan busana modest yang dekat dengan keseharian perempuan dan keluarga Indonesia.',
+            'cara-pemesanan' => 'Pilih series, warna, dan ukuran yang tersedia. Tambahkan ke keranjang, lengkapi alamat, pilih pengiriman serta pembayaran, lalu tinjau pesanan sebelum konfirmasi.',
+            'pengiriman-internasional' => 'Pengiriman internasional dilayani melalui konfirmasi tim Dthree. Hubungi layanan pelanggan untuk pemeriksaan negara tujuan, ongkir, dan estimasi.',
         ];
 
         foreach ($copy as $slug => $body) {
-            $page = Page::where('slug', $slug)->first();
-            if ($page) {
-                $page->update(['active' => true, 'body' => $body, 'editorial_status' => 'approved', 'seo_title' => $page->title.' — Dthree', 'seo_description' => $body]);
-            }
+            $title = str($slug)->replace('-', ' ')->title()->toString();
+            $page = Page::firstOrCreate(['slug' => $slug], ['title' => $title, 'body' => $body, 'active' => true]);
+            $page->update(['active' => true, 'body' => $body, 'editorial_status' => 'approved', 'seo_title' => $page->title.' — Dthree', 'seo_description' => $body]);
         }
     }
 }

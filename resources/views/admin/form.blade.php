@@ -28,7 +28,7 @@ $hints=[
         @foreach($schema['fields'] as $key=>$field)
             @php($value=old($key,$record->$key))
             @php($required=str_contains($field[2],'required'))
-            <div @class(['field-wrap','span-2'=>in_array($field[1],['textarea','blocks'])])>
+            <div @class(['field-wrap','span-2'=>in_array($field[1],['textarea','blocks','size_chart'])])>
                 <label for="{{ $key }}">{{ $field[0] }}@if($required)<span class="required-mark" aria-label="wajib">*</span>@endif</label>
                 @if($field[1]==='textarea')
                     <textarea id="{{ $key }}" name="{{ $key }}" class="form-control" rows="5">{{ is_array($value) ? json_encode($value, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE) : $value }}</textarea>
@@ -40,6 +40,14 @@ $hints=[
                         <button id="add-content-block" type="button" class="btn btn-outline-dark">+ Tambah blok</button>
                     </div>
                     <small>Susun konten dengan tombol naik/turun. Teks selalu ditampilkan secara aman; blok tombol dan gambar menerima URL HTTPS atau path internal.</small>
+                @elseif($field[1]==='size_chart')
+                    @php($chart=is_array($value)?$value:(json_decode((string)$value,true)?:[]))
+                    <input type="hidden" id="size_chart" name="size_chart" value="{{ $chart ? json_encode($chart,JSON_UNESCAPED_UNICODE) : '' }}">
+                    <div class="panel size-chart-editor" data-size-chart-editor>
+                        <label for="size-chart-columns">Nama kolom, pisahkan dengan tanda |</label><input class="form-control" id="size-chart-columns" value="{{ implode(' | ',$chart['columns']??['Ukuran','Lingkar dada','Panjang']) }}" placeholder="Ukuran | Lingkar dada | Panjang">
+                        <label class="mt-3" for="size-chart-rows">Data ukuran, satu baris per ukuran</label><textarea class="form-control" id="size-chart-rows" rows="7" placeholder="S | 96 cm | 136 cm&#10;M | 102 cm | 138 cm">@foreach($chart['rows']??[] as $row){{ implode(' | ',$row) }}{{ !$loop->last?"\n":'' }}@endforeach</textarea>
+                        <label class="mt-3" for="size-chart-notes">Keterangan singkatan / catatan</label><textarea class="form-control" id="size-chart-notes" rows="3">{{ $chart['notes']??'' }}</textarea><small>Gunakan tanda | untuk memisahkan kolom. Pratinjau tabel diperbarui otomatis.</small><div class="table-responsive mt-3" id="size-chart-preview"></div>
+                    </div>
                 @elseif(in_array($field[1],['select','category','series','variant','price_group','measurement_template']))
                     @php($options=match($field[1]){
                         'category'=>\App\Models\Category::pluck('name','id'),
@@ -76,6 +84,9 @@ $hints=[
 const slugInput=document.getElementById('slug');const slugSource=document.getElementById('name')||document.getElementById('title');if(slugInput&&slugSource&&!slugInput.value){slugSource.addEventListener('input',()=>{slugInput.value=slugSource.value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')})}
 </script>
 @endpush
+@if(array_key_exists('size_chart',$schema['fields']))
+@push('scripts')<script>(()=>{const target=document.getElementById('size_chart'),columns=document.getElementById('size-chart-columns'),rows=document.getElementById('size-chart-rows'),notes=document.getElementById('size-chart-notes'),preview=document.getElementById('size-chart-preview');const esc=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));const sync=()=>{const columnValues=columns.value.split('|').map(value=>value.trim()).filter(Boolean);const rowValues=rows.value.split(/\r?\n/).map(line=>line.split('|').map(value=>value.trim())).filter(row=>row.some(Boolean));target.value=columnValues.length&&rowValues.length?JSON.stringify({columns:columnValues,rows:rowValues,notes:notes.value.trim()}):'';preview.innerHTML=columnValues.length?`<table class="table"><thead><tr>${columnValues.map(value=>`<th>${esc(value)}</th>`).join('')}</tr></thead><tbody>${rowValues.map(row=>`<tr>${columnValues.map((_,index)=>`<td>${esc(row[index]||'')}</td>`).join('')}</tr>`).join('')}</tbody></table>`:''};[columns,rows,notes].forEach(input=>input.addEventListener('input',sync));sync()})();</script>@endpush
+@endif
 @if(array_key_exists('blocks',$schema['fields']))
 @php($availableMedia=\App\Models\MediaAsset::where('active',true)->latest()->get()->map(fn($asset)=>['url'=>$asset->url,'alt'=>$asset->alt_text,'name'=>$asset->name])->values()->all())
 @php($availableSeries=\App\Models\Series::orderBy('name')->get(['id','name'])->map(fn($series)=>['id'=>$series->id,'name'=>$series->name])->values()->all())

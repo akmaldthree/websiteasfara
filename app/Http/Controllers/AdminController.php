@@ -361,6 +361,9 @@ class AdminController extends Controller
             }
         }
         $data = $r->validate($rules);
+        if ($resource === 'curated-links' && ! $this->safeContentUrl($data['url'])) {
+            throw ValidationException::withMessages(['url' => 'Tautan harus berupa path internal atau URL http/https yang valid.']);
+        }
         if ($resource === 'bundle-components') {
             $bundle = Variant::findOrFail($data['bundle_variant_id']);
             $component = Variant::findOrFail($data['component_variant_id']);
@@ -463,6 +466,23 @@ class AdminController extends Controller
         }
         if ($resource === 'series' && $record->exists && $record->variants()->exists() && (bool) $data['uses_product_type'] !== $record->uses_product_type) {
             throw ValidationException::withMessages(['uses_product_type' => 'Struktur series dengan varian tidak dapat diubah.']);
+        }
+        if ($resource === 'series') {
+            if (empty($data['size_chart'])) {
+                $data['size_chart'] = null;
+            } else {
+                try {
+                    $chart = json_decode($data['size_chart'], true, 32, JSON_THROW_ON_ERROR);
+                } catch (\JsonException) {
+                    throw ValidationException::withMessages(['size_chart' => 'Tabel ukuran tidak valid. Muat ulang halaman dan coba kembali.']);
+                }
+                $columns = collect($chart['columns'] ?? [])->map(fn ($value) => trim((string) $value))->filter()->values();
+                $rows = collect($chart['rows'] ?? [])->map(fn ($row) => collect($row)->map(fn ($value) => trim((string) $value))->values()->all())->values();
+                if ($columns->count() < 2 || $columns->count() > 10 || $rows->isEmpty() || $rows->count() > 30 || $rows->contains(fn ($row) => count($row) !== $columns->count())) {
+                    throw ValidationException::withMessages(['size_chart' => 'Isi 2–10 kolom dan minimal satu baris. Setiap baris harus memiliki jumlah kolom yang sama.']);
+                }
+                $data['size_chart'] = ['columns' => $columns->all(), 'rows' => $rows->all(), 'notes' => mb_substr(trim((string) ($chart['notes'] ?? '')), 0, 2000)];
+            }
         }
         if ($resource === 'variants') {
             if ($data['fulfillment'] === 'custom_made' && empty($data['measurement_template_id'])) {
@@ -710,7 +730,7 @@ class AdminController extends Controller
             'footer_copyright' => 'nullable|string|max:200',
             'shipping_mode' => 'required|in:manual,api', 'shipping_provider' => 'required|string|max:80', 'shipping_api_url' => 'nullable|url|max:500', 'shipping_api_token_new' => 'nullable|string|max:2000',
             'tracking_mode' => 'required|in:manual,api', 'whatsapp_mode' => 'required|in:manual,api', 'whatsapp_provider' => 'required|string|max:80', 'whatsapp_api_url' => 'nullable|url|max:500', 'whatsapp_api_token_new' => 'nullable|string|max:2000',
-            'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0',
+            'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'free_shipping_threshold' => 'sometimes|required|integer|min:0|max:1000000000', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0',
             'payment_review_sla_hours' => 'required|integer|between:1,168',
             'cod_blocked_phones_text' => 'nullable|string|max:10000', 'cod_excluded_skus_text' => 'nullable|string|max:10000', 'cod_excluded_categories_text' => 'nullable|string|max:10000',
             'loyalty_spend_per_point' => 'required|integer|min:1', 'loyalty_point_value' => 'required|integer|min:1', 'loyalty_min_redeem' => 'required|integer|min:1', 'loyalty_expiry_days' => 'required|integer|between:1,3650',

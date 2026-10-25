@@ -12,6 +12,7 @@ use App\Models\ProductQuestion;
 use App\Models\Review;
 use App\Models\ReviewHelpfulVote;
 use App\Models\Series;
+use App\Models\Setting;
 use App\Models\ShippingRate;
 use App\Models\Variant;
 use App\Services\AfterSalesService;
@@ -195,11 +196,9 @@ class StoreController extends Controller
     public function cartSummary(Request $request, CheckoutService $service)
     {
         $cart = $request->session()->get('cart', []);
-        if (! $cart) {
-            return response()->json(['count' => 0, 'subtotal' => 'Rp 0', 'lines' => []]);
-        }
-
-        $lines = $service->lines($cart, false, $request->user(), $request->session()->get('cart_customizations', []));
+        $lines = $cart ? $service->lines($cart, false, $request->user(), $request->session()->get('cart_customizations', [])) : [];
+        $subtotal = array_sum(array_column($lines, 'total'));
+        $target = max(0, (int) Setting::get('free_shipping_threshold', 500000));
         $recommendations = $this->cartRecommendations($lines)->take(3)->map(fn ($series) => [
             'name' => $series->name,
             'price' => 'Rp '.number_format((int) $series->variants_min_price, 0, ',', '.'),
@@ -209,7 +208,10 @@ class StoreController extends Controller
 
         return response()->json([
             'count' => array_sum($cart),
-            'subtotal' => 'Rp '.number_format(array_sum(array_column($lines, 'total')), 0, ',', '.'),
+            'subtotal' => 'Rp '.number_format($subtotal, 0, ',', '.'),
+            'free_shipping_target' => $target,
+            'free_shipping_remaining' => max(0, $target - $subtotal),
+            'free_shipping_progress' => $target > 0 ? min(100, (int) round($subtotal / $target * 100)) : 100,
             'lines' => collect($lines)->map(fn ($line) => [
                 'name' => $line['variant']->series->name,
                 'variant' => $line['variant']->label,
@@ -258,14 +260,10 @@ class StoreController extends Controller
 
     private function cartRecommendations(array $lines)
     {
-        if ($lines === []) {
-            return collect();
-        }
-
         $seriesIds = collect($lines)->pluck('variant.series_id')->filter()->unique();
         $categoryIds = collect($lines)->pluck('variant.series.category_id')->filter()->unique();
 
-        return Series::published()->whereNotIn('id', $seriesIds)
+        return Series::published()->when($seriesIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $seriesIds))
             ->when($categoryIds->isNotEmpty(), fn ($query) => $query->whereIn('category_id', $categoryIds))
             ->with([
                 'category',

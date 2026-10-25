@@ -2,10 +2,13 @@
 @section('title','Keranjang — Dthree')
 @section('content')
 <section class="container-xxl section cart-page">
+    @php($cartSubtotal=array_sum(array_column($lines,'total')))
+    @php($shippingTarget=max(0,(int)($shop['free_shipping_threshold'] ?? 500000)))
+    @php($shippingRemaining=max(0,$shippingTarget-$cartSubtotal))
     <span class="eyebrow">PILIHAN ANDA</span>
-    <h1 class="mt-3 mb-4">Keranjang belanja</h1>
+    <h1 class="mt-3 mb-4">{{ __('store.cart') }}</h1>
     @if(empty($lines))
-        <div class="empty-state cart-empty"><h2>KERANJANG</h2><p>Keranjang Anda kosong</p><a class="btn btn-dark" href="{{ route('catalog') }}">CONTINUE SHOPPING</a></div>
+        <div class="empty-state cart-empty"><span>YOUR SHOPPING BAG</span><h2>{{ strtoupper(__('store.empty_cart')) }}</h2><p>Temukan koleksi yang nyaman untuk keseharian dan momen istimewa Anda.</p><a class="btn btn-dark" href="{{ route('catalog') }}">{{ strtoupper(__('store.start_shopping')) }}</a></div>
     @else
         @if($lines[0]['price_group'])
             <div class="alert alert-success">Harga akun <strong>{{ $lines[0]['price_group']->name }}</strong> diterapkan. Tier dihitung per SKU berdasarkan jumlah di keranjang.</div>
@@ -34,13 +37,14 @@
                 @endforeach
             </div>
             <div class="col-lg-4"><aside class="panel cart-summary">
-                <h2>Ringkasan belanja</h2>
-                <div class="summary-row"><span>Subtotal</span><strong>@rupiah(array_sum(array_column($lines,'total')))</strong></div>
+                <h2>{{ __('store.order_summary') }}</h2>
+                @if($shippingTarget>0)<div class="shipping-progress"><p>{{ $shippingRemaining>0?'Tambah Rp '.number_format($shippingRemaining,0,',','.').' lagi untuk mencapai promo gratis ongkir.':'Target promo gratis ongkir sudah tercapai.' }}</p><div><i style="width:{{ min(100,(int)round($cartSubtotal/$shippingTarget*100)) }}%"></i></div></div>@endif
+                <div class="summary-row"><span>{{ __('store.subtotal') }}</span><strong>@rupiah($cartSubtotal)</strong></div>
                 @if($lines[0]['price_group'])
                     <p class="small mt-3">Minimum {{ $lines[0]['price_group']->minimum_order_quantity }} item dan @rupiah($lines[0]['price_group']->minimum_order_amount) per pesanan.</p>
                 @endif
                 <p class="small mt-3">Ongkir, voucher, dan biaya COD dihitung pada langkah berikutnya. Harga dan stok diperiksa kembali sebelum pesanan dibuat.</p>
-                <a class="btn btn-dark w-100" href="{{ route('checkout') }}">Lanjut ke checkout ↗</a>
+                <a class="btn btn-dark w-100" href="{{ route('checkout') }}">{{ __('store.continue_checkout') }} ↗</a>
                 <a class="d-block text-center small mt-3" href="{{ route('catalog') }}">Lanjut belanja</a>
             </aside></div>
         </div>

@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\ContentEntry;
+use App\Models\CuratedLink;
 use App\Models\NewsletterSubscriber;
 use App\Models\Series;
+use App\Models\Setting;
 use App\Models\StoreLocation;
 use App\Models\User;
 use App\Models\Variant;
@@ -105,5 +107,50 @@ class StorefrontEditorialTest extends TestCase
 
         $payload['blocks'] = json_encode([['type' => 'hero_options', 'align' => 'outside', 'tone' => 'dark', 'duration' => 7000]]);
         $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasErrors('blocks');
+    }
+
+    public function test_curated_navigation_and_structured_size_chart_render(): void
+    {
+        CuratedLink::create(['section' => 'fit', 'title' => 'Office Wear', 'url' => '/koleksi?category=gamis', 'active' => true]);
+        $this->series->update(['size_chart' => [
+            'columns' => ['Ukuran', 'Lingkar dada', 'Panjang'],
+            'rows' => [['M', '100 cm', '138 cm'], ['L', '106 cm', '140 cm']],
+            'notes' => 'Ukuran dalam sentimeter.',
+        ]]);
+
+        $this->get(route('home'))->assertOk()->assertSee('FIND YOUR FIT')->assertSee('OFFICE WEAR');
+        $this->get(route('product', $this->series->slug))->assertOk()->assertSee('Lingkar dada')->assertSee('106 cm');
+    }
+
+    public function test_empty_cart_summary_has_recommendations_and_shipping_progress(): void
+    {
+        Setting::put('free_shipping_threshold', 500000);
+
+        $this->get(route('cart.summary'))->assertOk()->assertJson([
+            'count' => 0,
+            'free_shipping_target' => 500000,
+            'free_shipping_remaining' => 500000,
+            'free_shipping_progress' => 0,
+        ])->assertJsonCount(1, 'recommendations');
+    }
+
+    public function test_admin_can_manage_curated_links_and_structured_size_chart(): void
+    {
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+
+        $this->actingAs($admin)->post(route('admin.store', 'curated-links'), [
+            'section' => 'fit', 'title' => 'Weekend Edit', 'url' => '/koleksi?sort=newest',
+            'eyebrow' => '', 'sort_order' => 3, 'active' => '1',
+        ])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('curated_links', ['title' => 'Weekend Edit', 'active' => true]);
+
+        $chart = ['columns' => ['Ukuran', 'Dada'], 'rows' => [['M', '100 cm'], ['L', '106 cm']], 'notes' => 'Ukur badan tanpa menarik meteran.'];
+        $this->actingAs($admin)->post(route('admin.update', ['series', $this->series->id]), [
+            'category_id' => $this->series->category_id, 'name' => $this->series->name, 'slug' => $this->series->slug,
+            'description' => '', 'material' => '', 'care' => '', 'seo_title' => '', 'seo_description' => '',
+            'size_guide' => '', 'size_chart' => json_encode($chart), 'uses_product_type' => '0', 'featured' => '0', 'active' => '1',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame($chart, $this->series->fresh()->size_chart);
     }
 }

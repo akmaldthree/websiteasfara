@@ -12,7 +12,7 @@ class Series extends Model
 
     protected function casts(): array
     {
-        return ['active' => 'boolean', 'featured' => 'boolean', 'uses_product_type' => 'boolean', 'compare_at_price' => 'integer'];
+        return ['active' => 'boolean', 'featured' => 'boolean', 'uses_product_type' => 'boolean', 'compare_at_price' => 'integer', 'size_chart' => 'array'];
     }
 
     public function category()

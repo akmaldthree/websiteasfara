@@ -5,6 +5,7 @@ use App\Models\BusinessOrderRule;
 use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\Coupon;
+use App\Models\CuratedLink;
 use App\Models\MeasurementTemplate;
 use App\Models\NewsletterSubscriber;
 use App\Models\Page;
@@ -18,6 +19,8 @@ use App\Models\VariantPrice;
 
 // field: label, input type, validation, optional select options.
 return [
+    'curated-links' => ['model' => CuratedLink::class, 'title' => 'Menu koleksi kurasi', 'permission' => 'content.write', 'columns' => ['section' => 'Bagian', 'title' => 'Judul', 'url' => 'Tautan', 'sort_order' => 'Urutan', 'active' => 'Aktif'], 'fields' => [
+        'section' => ['Bagian menu', 'select', 'required|in:fit,promo', ['fit' => 'Find Your Fit', 'promo' => 'Kartu promosi']], 'title' => ['Judul', 'text', 'required|string|max:150'], 'url' => ['Tautan katalog / halaman', 'text', 'required|string|max:500'], 'eyebrow' => ['Label kecil', 'text', 'nullable|string|max:100'], 'image' => ['Gambar kartu promosi', 'file', 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072'], 'sort_order' => ['Urutan', 'number', 'required|integer|min:0|max:10000'], 'active' => ['Tampilkan', 'checkbox', 'boolean']]],
     'product-media' => ['model' => ProductMedia::class, 'title' => 'Galeri produk', 'permission' => 'catalog.write', 'columns' => ['series_id' => 'Produk / series', 'variant_id' => 'SKU khusus', 'color' => 'Warna', 'alt_text' => 'Alt text', 'sort_order' => 'Urutan', 'active' => 'Aktif'], 'fields' => [
         'series_id' => ['Series', 'series', 'required|exists:series,id'], 'variant_id' => ['SKU khusus (opsional)', 'variant', 'nullable|exists:variants,id'], 'color' => ['Warna khusus (opsional)', 'text', 'nullable|string|max:80'],
         'image' => ['Gambar', 'file', 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072'], 'alt_text' => ['Alt text', 'text', 'required|string|max:200'], 'sort_order' => ['Urutan', 'number', 'required|integer|min:0|max:10000'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
@@ -57,7 +60,7 @@ return [
         'category_id' => ['Kategori', 'category', 'required|exists:categories,id'], 'name' => ['Nama series', 'text', 'required|string|max:150'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:150'],
         'description' => ['Deskripsi', 'textarea', 'nullable|string|max:10000'], 'material' => ['Bahan', 'textarea', 'nullable|string|max:2000'], 'care' => ['Perawatan', 'textarea', 'nullable|string|max:2000'],
         'seo_title' => ['Judul SEO', 'text', 'nullable|string|max:200'], 'seo_description' => ['Deskripsi SEO', 'textarea', 'nullable|string|max:300'],
-        'size_guide' => ['Panduan ukuran', 'textarea', 'nullable|string|max:5000'], 'image' => ['Foto produk (JPG / PNG / WebP, maks. 3 MB)', 'file', 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072'],
+        'size_guide' => ['Catatan panduan ukuran', 'textarea', 'nullable|string|max:5000'], 'size_chart' => ['Tabel ukuran terstruktur', 'size_chart', 'nullable|string|max:20000'], 'image' => ['Foto produk (JPG / PNG / WebP, maks. 3 MB)', 'file', 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072'],
         'uses_product_type' => ['Gunakan jenis produk (Sarimbit)', 'checkbox', 'boolean'], 'featured' => ['Tampilkan di beranda', 'checkbox', 'boolean'], 'active' => ['Terbitkan', 'checkbox', 'boolean']]],
     'variants' => ['model' => Variant::class, 'title' => 'Varian & SKU', 'permission' => 'catalog.write', 'columns' => ['sku' => 'SKU', 'product_type' => 'Jenis', 'color' => 'Warna', 'size' => 'Ukuran', 'price' => 'Harga', 'stock' => 'Stok / kuota', 'reserved' => 'Reservasi'], 'fields' => [
         'series_id' => ['Series', 'series', 'required|exists:series,id'], 'sku' => ['SKU manual', 'text', 'required|regex:/^[A-Za-z0-9._-]+$/|max:80'], 'product_type' => ['Jenis produk (kosong untuk Abaya)', 'text', 'nullable|string|max:100'],
