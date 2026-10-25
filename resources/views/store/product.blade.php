@@ -1,6 +1,7 @@
 @extends('layouts.store')
 @section('title',$series->seo_title ?: $series->name.' — '.($shop['brand_name'] ?? 'Dthree'))
 @section('description',$series->seo_description ?: \Illuminate\Support\Str::limit($series->description ?? '',160))
+@section('body_class','product-detail-body')
 @php($gallery=$series->media)
 @php($mainImage=$gallery->first()?->image_url ?? $series->image_url)
 @php($minimumPrice=(int)$series->variants->min('price'))
@@ -19,6 +20,7 @@
                 <div class="product-gallery-pager" aria-label="Galeri foto produk">
                     @foreach($gallery as $media)<button type="button" class="product-thumbnail product-gallery-dot {{ $loop->first?'active':'' }}" data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text }}" data-variant="{{ $media->variant_id }}" data-color="{{ mb_strtolower($media->color ?? '') }}" aria-label="Tampilkan foto {{ $loop->iteration }}"></button>@endforeach
                 </div>
+                @if($gallery->count()>1)<div class="product-gallery-grid">@foreach($gallery->skip(1) as $media)<button type="button" data-gallery-grid data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text }}" aria-label="Perbesar {{ $media->alt_text }}"><img src="{{ $media->image_url }}" alt="{{ $media->alt_text }}" loading="lazy"></button>@endforeach</div>@endif
             @elseif(!$series->image)<small class="text-muted">Ilustrasi koleksi. Foto produk dapat ditambahkan melalui dashboard admin.</small>@endif
         </div>
         <div class="col-lg-5 product-info-column">
@@ -47,7 +49,9 @@
                     @endforeach
                 </select>
                 <div class="variant-info" id="variant-info" aria-live="polite">Pilih varian untuk melihat harga dan ketersediaan.</div>
-                <div class="product-purchase"><div><label for="qty">Jumlah</label><div class="quantity-stepper"><button type="button" data-qty-change="-1" aria-label="Kurangi jumlah">−</button><input class="form-control quantity" type="number" name="quantity" id="qty" min="1" max="100" value="1" required><button type="button" data-qty-change="1" aria-label="Tambah jumlah">+</button></div></div><button class="btn btn-dark" data-product-submit disabled>ADD TO CART</button><button class="btn btn-outline-dark" name="buy_now" value="1" data-product-submit disabled>BELI SEKARANG</button></div>
+                <div class="product-quantity-block"><label for="qty">Jumlah</label><div class="quantity-stepper"><button type="button" data-qty-change="-1" aria-label="Kurangi jumlah">−</button><input class="form-control quantity" type="number" name="quantity" id="qty" min="1" max="100" value="1" required><button type="button" data-qty-change="1" aria-label="Tambah jumlah">+</button></div></div>
+                @if(($shop['welcome_voucher_enabled'] ?? false) && !empty($shop['welcome_voucher_code']))<div class="product-voucher-stack"><div><b>{{ $shop['welcome_voucher_title'] ?? 'EXTRA DISCOUNT' }}</b><span>Gunakan kode <strong>{{ $shop['welcome_voucher_code'] }}</strong> saat checkout</span></div><div><b>MEMBER BENEFIT</b><span>Kumpulkan poin dan nikmati penawaran pelanggan Dthree</span></div></div>@endif
+                <div class="product-purchase"><button class="btn btn-outline-dark" data-product-submit disabled>ADD TO CART</button><button class="btn btn-dark product-buy-now" name="buy_now" value="1" data-product-submit disabled>BELI SEKARANG</button></div>
             </form>@endif
             <details class="payment-methods"><summary>PAYMENT METHOD</summary><p>Transfer bank manual, COD sesuai wilayah, dan termin untuk akun bisnis yang disetujui. Total akhir serta ongkir ditampilkan sebelum pesanan dibuat.</p></details>
             @if(!empty($shop['whatsapp']))<a class="product-whatsapp" href="https://wa.me/{{ $shop['whatsapp'] }}?text={{ urlencode('Assalamualaikum, saya ingin bertanya tentang '.$series->name) }}" target="_blank" rel="noopener">VIA WHATSAPP ↗</a>@endif
@@ -114,6 +118,7 @@ variantChoices.forEach(button=>button.addEventListener('click',()=>{if(button.di
 if(select){const initial=select.selectedOptions[0];if(initial?.value){selectedVariantValues.type=initial.dataset.type;selectedVariantValues.color=initial.dataset.color;selectedVariantValues.size=initial.dataset.size;variantChoices.forEach(choice=>choice.classList.toggle('active',choice.dataset.value===selectedVariantValues[choice.dataset.kind]))}select.addEventListener('change',update);qty.addEventListener('input',update);update();}
 document.querySelectorAll('[data-qty-change]').forEach(button=>button.addEventListener('click',()=>{qty.value=Math.min(Number(qty.max),Math.max(Number(qty.min),Number(qty.value)+Number(button.dataset.qtyChange)));qty.dispatchEvent(new Event('input'))}));
 const lightbox=document.getElementById('product-lightbox');const lightboxImage=document.getElementById('product-lightbox-image');document.getElementById('open-product-zoom')?.addEventListener('click',()=>{lightboxImage.src=mainImage.src;lightboxImage.alt=mainImage.alt;lightbox.showModal()});document.getElementById('close-product-zoom')?.addEventListener('click',()=>lightbox.close());lightbox?.addEventListener('click',event=>{if(event.target===lightbox)lightbox.close()});
+document.querySelectorAll('[data-gallery-grid]').forEach(button=>button.addEventListener('click',()=>{lightboxImage.src=button.dataset.image;lightboxImage.alt=button.dataset.alt;lightbox.showModal()}));let galleryStartX=0;mainImage?.closest('.product-gallery-stage')?.addEventListener('pointerdown',event=>galleryStartX=event.clientX);mainImage?.closest('.product-gallery-stage')?.addEventListener('pointerup',event=>{const delta=event.clientX-galleryStartX;if(Math.abs(delta)>45&&thumbnails.length)showImage(thumbnails[(galleryIndex+(delta<0?1:-1)+thumbnails.length)%thumbnails.length])});
 const sizeGuide=document.getElementById('size-guide-dialog');document.querySelector('[data-open-size-guide]')?.addEventListener('click',()=>sizeGuide.showModal());document.querySelector('[data-close-size-guide]')?.addEventListener('click',()=>sizeGuide.close());sizeGuide?.addEventListener('click',event=>{if(event.target===sizeGuide)sizeGuide.close()});document.querySelector('[data-mobile-add]')?.addEventListener('click',()=>document.getElementById('product-purchase-form').requestSubmit());
 document.getElementById('share-product').addEventListener('click',async()=>{const data={title:@json($series->name),text:@json('Lihat '.$series->name.' dari '.($shop['brand_name'] ?? 'Dthree')),url:window.location.href};try{if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(data.url);document.getElementById('share-status').textContent='Tautan disalin.'}}catch(error){if(error.name!=='AbortError')document.getElementById('share-status').textContent='Salin alamat halaman dari browser Anda.'}});
 </script>
