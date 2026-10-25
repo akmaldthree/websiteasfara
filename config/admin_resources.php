@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\Coupon;
 use App\Models\MeasurementTemplate;
+use App\Models\NewsletterSubscriber;
 use App\Models\Page;
 use App\Models\PriceGroup;
 use App\Models\ProductMedia;
@@ -20,7 +21,7 @@ return [
         'series_id' => ['Series', 'series', 'required|exists:series,id'], 'variant_id' => ['SKU khusus (opsional)', 'variant', 'nullable|exists:variants,id'], 'color' => ['Warna khusus (opsional)', 'text', 'nullable|string|max:80'],
         'image' => ['Gambar', 'file', 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072'], 'alt_text' => ['Alt text', 'text', 'required|string|max:200'], 'sort_order' => ['Urutan', 'number', 'required|integer|min:0|max:10000'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'content' => ['model' => ContentEntry::class, 'title' => 'Banner & konten website', 'permission' => 'content.write', 'columns' => ['type' => 'Tipe', 'title' => 'Judul', 'slug' => 'Slug', 'editorial_status' => 'Status konten', 'sort_order' => 'Urutan', 'starts_at' => 'Mulai', 'active' => 'Terbit'], 'fields' => [
-        'type' => ['Tipe konten', 'select', 'required|in:banner,home_section,menu,faq,journal,campaign', ['banner' => 'Banner', 'home_section' => 'Section beranda', 'menu' => 'Menu', 'faq' => 'FAQ', 'journal' => 'Journal', 'campaign' => 'Campaign']],
+        'type' => ['Tipe konten', 'select', 'required|in:banner,home_section,menu,faq,journal,lookbook,campaign', ['banner' => 'Banner', 'home_section' => 'Section beranda / Shop the Look', 'menu' => 'Menu', 'faq' => 'FAQ', 'journal' => 'Journal', 'lookbook' => 'Lookbook', 'campaign' => 'Campaign']],
         'title' => ['Judul', 'text', 'required|string|max:200'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:180'], 'summary' => ['Ringkasan', 'textarea', 'nullable|string|max:2000'], 'body' => ['Isi teks cadangan', 'textarea', 'nullable|string|max:50000'], 'template' => ['Template halaman', 'select', 'sometimes|in:standard,wide,landing', ['standard' => 'Standar', 'wide' => 'Lebar', 'landing' => 'Landing page']], 'blocks' => ['Blok konten', 'blocks', 'nullable|string|max:50000'],
         'image' => ['Gambar', 'file', 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072'], 'link_url' => ['Tautan', 'text', 'nullable|string|max:500'], 'link_label' => ['Label tautan', 'text', 'nullable|string|max:100'],
         'seo_title' => ['Judul SEO', 'text', 'nullable|string|max:200'], 'seo_description' => ['Deskripsi SEO', 'textarea', 'nullable|string|max:300'], 'sort_order' => ['Urutan', 'number', 'required|integer|min:0|max:10000'],
@@ -79,4 +80,6 @@ return [
         'starts_at' => ['Mulai (WIB)', 'datetime-local', 'required|date'], 'ends_at' => ['Selesai (WIB)', 'datetime-local', 'required|date|after:starts_at'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
     'pages' => ['model' => Page::class, 'title' => 'Halaman informasi & kebijakan', 'permission' => 'content.write', 'columns' => ['title' => 'Judul', 'slug' => 'Slug', 'editorial_status' => 'Status konten', 'active' => 'Terbit'], 'fields' => [
         'title' => ['Judul', 'text', 'required|string|max:150'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:150'], 'body' => ['Isi halaman (teks cadangan)', 'textarea', 'required|string|max:50000'], 'template' => ['Template halaman', 'select', 'sometimes|in:standard,wide,landing', ['standard' => 'Standar', 'wide' => 'Lebar', 'landing' => 'Landing page']], 'blocks' => ['Blok konten', 'blocks', 'nullable|string|max:50000'], 'seo_title' => ['Judul SEO', 'text', 'nullable|string|max:200'], 'seo_description' => ['Deskripsi SEO', 'textarea', 'nullable|string|max:300'], 'editorial_status' => ['Status editorial', 'select', 'required|in:draft,review,approved', ['draft' => 'Draft', 'review' => 'Menunggu review', 'approved' => 'Disetujui']], 'review_note' => ['Catatan editor/reviewer', 'textarea', 'nullable|string|max:1000'], 'starts_at' => ['Mulai tayang', 'datetime-local', 'nullable|date'], 'ends_at' => ['Selesai tayang', 'datetime-local', 'nullable|date|after:starts_at'], 'active' => ['Tayangkan setelah disetujui', 'checkbox', 'boolean']]],
+    'newsletter' => ['model' => NewsletterSubscriber::class, 'title' => 'Pelanggan newsletter', 'permission' => 'content.write', 'columns' => ['email' => 'Email', 'name' => 'Nama', 'source' => 'Sumber', 'subscribed_at' => 'Terdaftar', 'active' => 'Aktif'], 'fields' => [
+        'email' => ['Email', 'email', 'required|email|max:150'], 'name' => ['Nama (opsional)', 'text', 'nullable|string|max:100'], 'source' => ['Sumber', 'text', 'required|string|max:80'], 'subscribed_at' => ['Tanggal berlangganan', 'datetime-local', 'required|date'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
 ];

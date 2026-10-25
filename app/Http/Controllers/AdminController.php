@@ -539,7 +539,7 @@ class AdminController extends Controller
         if (! is_array($blocks) || count($blocks) > 50) {
             throw ValidationException::withMessages(['blocks' => 'Konten dibatasi maksimal 50 blok.']);
         }
-        $allowed = ['heading', 'paragraph', 'quote', 'button', 'image', 'columns'];
+        $allowed = ['heading', 'paragraph', 'quote', 'button', 'image', 'columns', 'product_hotspot'];
         foreach ($blocks as $index => &$block) {
             if (! is_array($block) || ! in_array($block['type'] ?? '', $allowed, true)) {
                 throw ValidationException::withMessages(['blocks' => 'Tipe blok ke-'.($index + 1).' tidak didukung.']);
@@ -564,6 +564,17 @@ class AdminController extends Controller
                 }
                 $block['items'] = array_values($items);
             }
+            if ($block['type'] === 'product_hotspot') {
+                $seriesId = filter_var($block['series_id'] ?? null, FILTER_VALIDATE_INT);
+                $x = filter_var($block['x'] ?? null, FILTER_VALIDATE_FLOAT);
+                $y = filter_var($block['y'] ?? null, FILTER_VALIDATE_FLOAT);
+                if (! $seriesId || ! Series::whereKey($seriesId)->exists() || $x === false || $y === false || $x < 0 || $x > 100 || $y < 0 || $y > 100) {
+                    throw ValidationException::withMessages(['blocks' => 'Hotspot produk ke-'.($index + 1).' memerlukan produk dan posisi X/Y antara 0–100.']);
+                }
+                $block['series_id'] = $seriesId;
+                $block['x'] = round($x, 2);
+                $block['y'] = round($y, 2);
+            }
             if (in_array($block['type'], ['button', 'image'], true)) {
                 if (empty($block['url']) || ! $this->safeContentUrl($block['url'])) {
                     throw ValidationException::withMessages(['blocks' => 'Tautan blok ke-'.($index + 1).' harus berupa URL https atau path internal.']);
@@ -572,7 +583,7 @@ class AdminController extends Controller
                     throw ValidationException::withMessages(['blocks' => 'Label atau alt text blok ke-'.($index + 1).' wajib diisi dan maksimal 200 karakter.']);
                 }
             }
-            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label', 'items']));
+            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label', 'items', 'series_id', 'x', 'y']));
         }
 
         return array_values($blocks);
@@ -678,6 +689,7 @@ class AdminController extends Controller
             'footer_text' => 'nullable|string|max:500', 'store_location' => 'nullable|string|max:150', 'contact_email' => 'nullable|email|max:150',
             'whatsapp' => ['nullable', 'regex:/^62[0-9]{8,13}$/'], 'instagram_url' => 'nullable|url|max:500', 'tiktok_url' => 'nullable|url|max:500', 'facebook_url' => 'nullable|url|max:500',
             'default_seo_title' => 'nullable|string|max:200', 'default_seo_description' => 'nullable|string|max:300',
+            'home_new_slugs' => 'nullable|string|max:2000', 'home_best_slugs' => 'nullable|string|max:2000', 'home_sale_slugs' => 'nullable|string|max:2000',
             'theme_primary_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_accent_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_background_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_surface_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_text_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'theme_font' => 'required|in:classic,modern,system', 'theme_container_width' => 'required|integer|between:960,1800', 'theme_radius' => 'required|integer|between:0,32', 'theme_header_style' => 'required|in:standard,compact,centered',
             'footer_copyright' => 'nullable|string|max:200',

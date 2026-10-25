@@ -14,6 +14,8 @@ Route::get('/pencarian/saran', [Store::class, 'searchSuggestions'])->middleware(
 Route::get('/koleksi/{slug}', [Store::class, 'product'])->name('product');
 Route::get('/halaman/{slug}', [Store::class, 'page'])->name('page');
 Route::get('/konten/{type}/{slug}', [Store::class, 'content'])->name('content.show');
+Route::get('/konten/{type}', [Store::class, 'contentIndex'])->name('content.index');
+Route::post('/newsletter', [Store::class, 'newsletter'])->middleware('throttle:5,1')->name('newsletter.store');
 Route::get('/keranjang', [Store::class, 'cart'])->name('cart');
 Route::get('/keranjang/ringkas', [Store::class, 'cartSummary'])->name('cart.summary');
 Route::post('/keranjang', [Store::class, 'add'])->middleware('throttle:30,1')->name('cart.add');

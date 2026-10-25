@@ -29,6 +29,7 @@
                 @foreach(['content','pages'] as $key)@php($item=config('admin_resources.'.$key))<a href="{{ route('admin.resources',$key) }}" @class(['active'=>request()->route('resource')===$key])>{{ $item['title'] }}</a>@endforeach
                 <a href="{{ route('admin.media') }}" @class(['active'=>request()->routeIs('admin.media*')])>Pustaka media</a>
                 <a href="{{ route('admin.reviews') }}" @class(['active'=>request()->routeIs('admin.reviews*')])>Ulasan & pertanyaan</a>
+                @php($newsletter=config('admin_resources.newsletter'))<a href="{{ route('admin.resources','newsletter') }}" @class(['active'=>request()->route('resource')==='newsletter'])>{{ $newsletter['title'] }}</a>
             @endif
             @if(auth()->user()->allowed('promotions.write'))@php($item=config('admin_resources.coupons'))<a href="{{ route('admin.resources','coupons') }}" @class(['active'=>request()->route('resource')==='coupons'])>{{ $item['title'] }}</a>@endif
         </div>

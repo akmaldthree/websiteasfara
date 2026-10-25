@@ -161,12 +161,15 @@ class DemoSeeder extends Seeder
             ['home_section', 'Warna hangat untuk momen istimewa', 'demo-harmoni', 'Padukan koleksi dewasa dan anak untuk menciptakan tampilan keluarga yang selaras.', 'sakina-plum.webp', '/koleksi?category=sarimbit-keluarga', 'Pilih koleksi', 3],
             ['menu', 'FAQ', 'demo-menu-faq', null, null, '/konten/faq/pertanyaan-umum', 'FAQ', 1],
             ['menu', 'Journal', 'demo-menu-journal', null, null, '/konten/journal/merawat-busana', 'Journal', 2],
+            ['menu', 'Lookbook', 'demo-menu-lookbook', null, null, '/konten/lookbook', 'Lookbook', 3],
             ['faq', 'Bagaimana memilih ukuran yang tepat?', 'pertanyaan-umum', 'Gunakan panduan ukuran pada halaman produk. Ukur lingkar dada pada bagian terlebar dan pilih ukuran dengan ruang longgar 4–8 cm sesuai preferensi.', null, null, null, 1],
             ['faq', 'Apakah warna produk sama dengan foto?', 'akurasi-warna', 'Kami berusaha menampilkan warna seakurat mungkin. Sedikit perbedaan dapat terjadi karena pencahayaan foto dan pengaturan layar.', null, null, null, 2],
             ['faq', 'Berapa lama pesanan diproses?', 'waktu-proses', 'Produk ready stock diproses 1–2 hari kerja setelah pembayaran terverifikasi. Estimasi pengiriman mengikuti layanan kurir.', null, null, null, 3],
             ['journal', 'Cara merawat busana agar tetap nyaman', 'merawat-busana', 'Pisahkan warna gelap dan terang, gunakan deterjen lembut, hindari pemutih, dan keringkan di tempat teduh agar serat serta warna lebih terjaga.', 'naura-rose.webp', null, null, 1],
             ['journal', 'Panduan memilih sarimbit keluarga', 'memilih-sarimbit', 'Mulai dari palet warna yang disukai, tentukan kebutuhan tiap anggota keluarga, lalu cocokkan ukuran melalui panduan pada setiap produk.', 'arcelia-sage.webp', null, null, 2],
             ['journal', 'Tiga cara memadukan abaya', 'memadukan-abaya', 'Gunakan aksesori bertekstur lembut, pilih alas kaki bernuansa netral, dan tambahkan outer ringan untuk menciptakan tampilan berbeda.', 'mahira-black.webp', null, null, 3],
+            ['lookbook', 'The Warm Gathering', 'warm-gathering', 'Inspirasi busana keluarga dalam palet plum, sage, dan warna netral untuk momen kebersamaan.', 'campaign-family.webp', '/koleksi?category=sarimbit-keluarga', 'Lihat koleksi', 1],
+            ['lookbook', 'Everyday Modest Edit', 'everyday-modest-edit', 'Siluet ringan dan warna mudah dipadukan untuk rutinitas dari pagi hingga malam.', 'raffah-olive.webp', '/koleksi?category=abaya-dewasa', 'Lihat koleksi', 2],
             ['campaign', 'Hadiah pelanggan baru', 'promo-demo', 'Gunakan kode DEMO10 untuk potongan 10% pada transaksi demonstrasi pertama Anda.', 'campaign-family.webp', '/koleksi', 'Mulai belanja', 1],
             ['campaign', 'Lengkapi gaya keluarga', 'promo-family', 'Gunakan FAMILY15 untuk potongan 15% pada pembelian koleksi sarimbit dengan minimum transaksi yang berlaku.', 'sakina-plum.webp', '/koleksi?category=sarimbit-keluarga', 'Lihat koleksi', 2],
         ];
@@ -187,6 +190,13 @@ class DemoSeeder extends Seeder
                 'active' => true,
             ]);
         }
+
+        $lookProducts = Series::whereIn('slug', ['sakina-family', 'arcelia-family', 'hana-flow-khimar'])->pluck('id', 'slug');
+        ContentEntry::where('slug', 'demo-harmoni')->update(['blocks' => [
+            ['type' => 'product_hotspot', 'series_id' => $lookProducts['sakina-family'], 'x' => 33, 'y' => 55],
+            ['type' => 'product_hotspot', 'series_id' => $lookProducts['arcelia-family'], 'x' => 62, 'y' => 44],
+            ['type' => 'product_hotspot', 'series_id' => $lookProducts['hana-flow-khimar'], 'x' => 78, 'y' => 24],
+        ]]);
     }
 
     private function seedCoupons(): void

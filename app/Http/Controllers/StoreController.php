@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\CustomQuote;
+use App\Models\NewsletterSubscriber;
 use App\Models\Order;
 use App\Models\Page;
 use App\Models\ProductQuestion;
@@ -32,19 +33,19 @@ class StoreController extends Controller
     public function home(Request $request, Analytics $analytics)
     {
         $analytics->record($request, 'view_home');
+        $contentEntries = ContentEntry::published()->whereIn('type', ['banner', 'home_section'])->orderBy('sort_order')->get();
+        $collections = Series::published()
+            ->with(['category', 'media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
+            ->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')
+            ->withSum(['orderItems as sold_quantity' => fn ($query) => $query->whereHas('order', fn ($order) => $order->whereNotIn('status', ['cancelled']))], 'quantity')
+            ->withCount('reviews')->withAvg('reviews', 'rating')
+            ->orderByDesc('featured')->latest()->take(24)->get();
+        $lookProductIds = $contentEntries->flatMap(fn ($entry) => collect($entry->blocks)->where('type', 'product_hotspot')->pluck('series_id'))->filter()->unique();
+        $lookProducts = Series::published()->whereIn('id', $lookProductIds)
+            ->with(['media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
+            ->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')->get()->keyBy('id');
 
-        return view('store.home', [
-            'collections' => Series::published()
-                ->with(['category', 'media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
-                ->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')
-                ->withSum(['orderItems as sold_quantity' => fn ($query) => $query->whereHas('order', fn ($order) => $order->whereNotIn('status', ['cancelled']))], 'quantity')
-                ->withCount('reviews')->withAvg('reviews', 'rating')
-                ->orderByDesc('featured')
-                ->latest()
-                ->take(16)
-                ->get(),
-            'contentEntries' => ContentEntry::published()->whereIn('type', ['banner', 'home_section'])->orderBy('sort_order')->get(),
-        ]);
+        return view('store.home', compact('collections', 'contentEntries', 'lookProducts'));
     }
 
     public function catalog(Request $r, Analytics $analytics)
@@ -53,7 +54,9 @@ class StoreController extends Controller
             'category',
             'media' => fn ($query) => $query->where('active', true),
             'variants' => fn ($query) => $query->where('active', true),
-        ])->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price')->withCount('reviews')->withAvg('reviews', 'rating');
+        ])->withMin(['variants' => fn ($q) => $q->where('active', true)], 'price')
+            ->withSum(['orderItems as sold_quantity' => fn ($query) => $query->whereHas('order', fn ($order) => $order->whereNotIn('status', ['cancelled']))], 'quantity')
+            ->withCount('reviews')->withAvg('reviews', 'rating');
         $currentCategory = null;
         if ($r->filled('q')) {
             $q->where(function ($q) use ($r) {
@@ -83,7 +86,14 @@ class StoreController extends Controller
             }
         });
         match ($r->input('sort')) {
-            'price_asc' => $q->orderBy('variants_min_price'),'price_desc' => $q->orderByDesc('variants_min_price'),default => $q->latest()
+            'featured' => $q->orderByDesc('featured')->latest(),
+            'best_selling' => $q->orderByDesc('sold_quantity')->latest(),
+            'price_asc' => $q->orderBy('variants_min_price'),
+            'price_desc' => $q->orderByDesc('variants_min_price'),
+            'title_asc' => $q->orderBy('name'),
+            'title_desc' => $q->orderByDesc('name'),
+            'oldest' => $q->oldest(),
+            default => $q->latest(),
         };
 
         $collections = $q->paginate(12)->withQueryString();
@@ -95,7 +105,13 @@ class StoreController extends Controller
 
         $recentlyViewed = $this->recentlyViewed($r);
 
-        return view('store.catalog', compact('collections', 'currentCategory', 'recentlyViewed'));
+        $filterOptions = [
+            'colors' => Variant::where('active', true)->whereHas('series', fn ($series) => $series->published())->select('color')->selectRaw('count(distinct series_id) as total')->whereNotNull('color')->groupBy('color')->orderBy('color')->get(),
+            'sizes' => Variant::where('active', true)->whereHas('series', fn ($series) => $series->published())->select('size')->selectRaw('count(distinct series_id) as total')->whereNotNull('size')->groupBy('size')->orderBy('size')->get(),
+            'types' => Variant::where('active', true)->whereHas('series', fn ($series) => $series->published())->select('product_type')->selectRaw('count(distinct series_id) as total')->whereNotNull('product_type')->where('product_type', '!=', '')->groupBy('product_type')->orderBy('product_type')->get(),
+        ];
+
+        return view('store.catalog', compact('collections', 'currentCategory', 'recentlyViewed', 'filterOptions'));
     }
 
     public function searchSuggestions(Request $request)
@@ -437,8 +453,31 @@ class StoreController extends Controller
 
     public function content(string $type, string $slug)
     {
-        abort_unless(in_array($type, ['faq', 'journal', 'campaign']), 404);
+        abort_unless(in_array($type, ['faq', 'journal', 'lookbook', 'campaign']), 404);
 
         return view('store.content', ['entry' => ContentEntry::published()->where('type', $type)->where('slug', $slug)->firstOrFail()]);
+    }
+
+    public function contentIndex(string $type)
+    {
+        abort_unless(in_array($type, ['journal', 'lookbook', 'campaign']), 404);
+        $entries = ContentEntry::published()->where('type', $type)->orderBy('sort_order')->latest()->paginate(12);
+
+        return view('store.content-index', compact('type', 'entries'));
+    }
+
+    public function newsletter(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|email:rfc|max:150',
+            'name' => 'nullable|string|max:100',
+            'consent' => 'accepted',
+        ]);
+        NewsletterSubscriber::updateOrCreate(
+            ['email' => mb_strtolower(trim($data['email']))],
+            ['name' => $data['name'] ?? null, 'source' => 'footer', 'active' => true, 'subscribed_at' => now()]
+        );
+
+        return back()->with('success', 'Terima kasih. Anda sudah terdaftar untuk menerima kabar Dthree.');
     }
 }
