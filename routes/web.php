@@ -9,6 +9,12 @@ use App\Http\Controllers\StoreController as Store;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [Store::class, 'home'])->name('home');
+Route::get('/bahasa/{locale}', function (string $locale) {
+    abort_unless(in_array($locale, ['id', 'en'], true), 404);
+    session(['locale' => $locale]);
+
+    return back();
+})->name('locale');
 Route::get('/koleksi', [Store::class, 'catalog'])->name('catalog');
 Route::get('/pencarian/saran', [Store::class, 'searchSuggestions'])->middleware('throttle:60,1')->name('search.suggestions');
 Route::get('/koleksi/{slug}', [Store::class, 'product'])->name('product');

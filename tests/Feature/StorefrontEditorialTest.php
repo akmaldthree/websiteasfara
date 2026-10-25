@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\NewsletterSubscriber;
 use App\Models\Series;
+use App\Models\StoreLocation;
 use App\Models\User;
 use App\Models\Variant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,5 +66,44 @@ class StorefrontEditorialTest extends TestCase
 
         $this->get(route('content.index', 'lookbook'))->assertOk()->assertSee('Eid Lookbook');
         $this->get(route('catalog', ['sort' => 'title_asc']))->assertOk()->assertSee('WARNA')->assertSee('Black')->assertSee('UKURAN')->assertSee('ZAYNA SERIES');
+    }
+
+    public function test_store_locations_and_language_switch_are_rendered_from_cms(): void
+    {
+        StoreLocation::create([
+            'name' => 'Dthree Bandung',
+            'address' => 'Jl. Buah Batu No. 121',
+            'city' => 'Bandung',
+            'hours' => '09.00–19.00',
+            'sort_order' => 1,
+            'active' => true,
+        ]);
+
+        $this->get(route('home'))->assertOk()->assertSee('Dthree Bandung')->assertSee('Jl. Buah Batu No. 121');
+        $this->from(route('home'))->get(route('locale', 'en'))->assertRedirect(route('home'))->assertSessionHas('locale', 'en');
+        $this->get(route('home'))->assertOk()->assertSee('All collections')->assertSee('Track order');
+
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $this->actingAs($admin)->get(route('admin.resources', 'store-locations'))->assertOk()->assertSee('Dthree Bandung');
+    }
+
+    public function test_hero_slide_options_are_saved_and_validated(): void
+    {
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $entry = ContentEntry::create(['type' => 'banner', 'title' => 'Hero', 'slug' => 'hero-options', 'active' => false]);
+        $payload = [
+            'type' => 'banner', 'title' => 'Hero', 'slug' => 'hero-options', 'summary' => 'Hero yang dapat diatur.', 'body' => '',
+            'template' => 'standard', 'blocks' => json_encode([['type' => 'hero_options', 'align' => 'right', 'tone' => 'dark', 'duration' => 7000, 'mobile_url' => 'https://example.com/mobile.webp']]),
+            'link_url' => '/koleksi', 'link_label' => 'Belanja', 'seo_title' => '', 'seo_description' => '', 'sort_order' => 1,
+            'editorial_status' => 'approved', 'review_note' => '', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
+        ];
+
+        $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasNoErrors();
+        $this->get(route('home'))->assertOk()->assertSee('hero-align-right')->assertSee('data-duration="7000"', false);
+
+        $payload['blocks'] = json_encode([['type' => 'hero_options', 'align' => 'outside', 'tone' => 'dark', 'duration' => 7000]]);
+        $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasErrors('blocks');
     }
 }

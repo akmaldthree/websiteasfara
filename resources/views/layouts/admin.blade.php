@@ -30,6 +30,7 @@
                 <a href="{{ route('admin.media') }}" @class(['active'=>request()->routeIs('admin.media*')])>Pustaka media</a>
                 <a href="{{ route('admin.reviews') }}" @class(['active'=>request()->routeIs('admin.reviews*')])>Ulasan & pertanyaan</a>
                 @php($newsletter=config('admin_resources.newsletter'))<a href="{{ route('admin.resources','newsletter') }}" @class(['active'=>request()->route('resource')==='newsletter'])>{{ $newsletter['title'] }}</a>
+                @php($locations=config('admin_resources.store-locations'))<a href="{{ route('admin.resources','store-locations') }}" @class(['active'=>request()->route('resource')==='store-locations'])>{{ $locations['title'] }}</a>
             @endif
             @if(auth()->user()->allowed('promotions.write'))@php($item=config('admin_resources.coupons'))<a href="{{ route('admin.resources','coupons') }}" @class(['active'=>request()->route('resource')==='coupons'])>{{ $item['title'] }}</a>@endif
         </div>

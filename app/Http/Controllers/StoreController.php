@@ -187,8 +187,9 @@ class StoreController extends Controller
         $cart = $r->session()->get('cart', []);
         $lines = $cart ? $service->lines($cart, false, $r->user(), $r->session()->get('cart_customizations', [])) : [];
         $recentlyViewed = $this->recentlyViewed($r);
+        $recommendations = $this->cartRecommendations($lines);
 
-        return view('store.cart', compact('cart', 'lines', 'recentlyViewed'));
+        return view('store.cart', compact('cart', 'lines', 'recentlyViewed', 'recommendations'));
     }
 
     public function cartSummary(Request $request, CheckoutService $service)
@@ -199,6 +200,12 @@ class StoreController extends Controller
         }
 
         $lines = $service->lines($cart, false, $request->user(), $request->session()->get('cart_customizations', []));
+        $recommendations = $this->cartRecommendations($lines)->take(3)->map(fn ($series) => [
+            'name' => $series->name,
+            'price' => 'Rp '.number_format((int) $series->variants_min_price, 0, ',', '.'),
+            'image' => $series->image_url,
+            'url' => route('product', $series->slug),
+        ])->values();
 
         return response()->json([
             'count' => array_sum($cart),
@@ -211,6 +218,7 @@ class StoreController extends Controller
                 'image' => $line['variant']->series->image_url,
                 'url' => route('product', $line['variant']->series->slug),
             ])->values(),
+            'recommendations' => $recommendations,
         ]);
     }
 
@@ -246,6 +254,25 @@ class StoreController extends Controller
             'media' => fn ($query) => $query->where('active', true),
             'variants' => fn ($query) => $query->where('active', true),
         ])->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')->withCount('reviews')->withAvg('reviews', 'rating')->get()->sortBy(fn ($series) => $ids->search($series->id))->values();
+    }
+
+    private function cartRecommendations(array $lines)
+    {
+        if ($lines === []) {
+            return collect();
+        }
+
+        $seriesIds = collect($lines)->pluck('variant.series_id')->filter()->unique();
+        $categoryIds = collect($lines)->pluck('variant.series.category_id')->filter()->unique();
+
+        return Series::published()->whereNotIn('id', $seriesIds)
+            ->when($categoryIds->isNotEmpty(), fn ($query) => $query->whereIn('category_id', $categoryIds))
+            ->with([
+                'category',
+                'media' => fn ($query) => $query->where('active', true),
+                'variants' => fn ($query) => $query->where('active', true),
+            ])->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')
+            ->withCount('reviews')->withAvg('reviews', 'rating')->orderByDesc('featured')->take(8)->get();
     }
 
     public function updateCart(Request $r, CartService $cartService)

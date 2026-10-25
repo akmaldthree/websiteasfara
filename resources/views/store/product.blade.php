@@ -35,7 +35,7 @@
             @if($standardVariants->isNotEmpty())<form method="post" action="{{ route('cart.add') }}" id="product-purchase-form">@csrf
                 <div class="variant-option-groups">
                     @if($series->uses_product_type)<div><label>Jenis produk</label><div class="variant-choices">@foreach($standardVariants->pluck('product_type')->unique() as $type)<button type="button" class="variant-choice" data-kind="type" data-value="{{ mb_strtolower($type) }}">{{ $type }}</button>@endforeach</div></div>@endif
-                    <div><label>Warna</label><div class="variant-choices">@foreach($standardVariants->pluck('color')->unique() as $color)<button type="button" class="variant-choice" data-kind="color" data-value="{{ mb_strtolower($color) }}">{{ $color }}</button>@endforeach</div></div>
+                    <div><label>Warna</label><div class="variant-choices">@foreach($standardVariants->pluck('color')->unique() as $color)<button type="button" class="variant-choice color-choice" data-kind="color" data-value="{{ mb_strtolower($color) }}"><i style="--swatch:{{ \App\Support\ColorSwatch::hex($color) }}"></i>{{ $color }}</button>@endforeach</div></div>
                     <div><div class="variant-option-label"><span>Ukuran</span><button type="button" class="size-guide-link" data-open-size-guide>Panduan ukuran</button></div><div class="variant-choices">@foreach($standardVariants->pluck('size')->unique() as $size)<button type="button" class="variant-choice" data-kind="size" data-value="{{ mb_strtolower($size) }}">{{ $size }}</button>@endforeach</div></div>
                 </div>
                 <label class="visually-hidden" for="variant">Kombinasi varian</label>

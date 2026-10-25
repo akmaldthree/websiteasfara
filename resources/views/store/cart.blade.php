@@ -46,5 +46,6 @@
         </div>
     @endif
 </section>
+@if($recommendations->isNotEmpty())<section class="recently-viewed container-xxl"><span class="eyebrow">LENGKAPI PILIHAN ANDA</span><h2>YOU MAY ALSO LIKE</h2><div class="product-carousel" data-drag-scroll>@foreach($recommendations as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div></section>@endif
 @if($recentlyViewed->isNotEmpty())<section class="recently-viewed container-xxl"><h2>RECENTLY VIEWED PRODUCTS</h2><div class="product-carousel" data-drag-scroll>@foreach($recentlyViewed as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div></section>@endif
 @endsection

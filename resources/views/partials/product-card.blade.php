@@ -14,6 +14,7 @@
         <script type="application/json" id="quick-product-{{ $collection->id }}">{!! json_encode(['name'=>$collection->name,'url'=>route('product',$collection->slug),'image'=>$cardImages->first(),'usesType'=>(bool)$collection->uses_product_type,'variants'=>$quickVariants], JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
     @endif
     <div class="product-meta"><h3><a href="{{ route('product',$collection->slug) }}">{{ strtoupper($collection->name) }}</a></h3><div class="product-card-prices"><span @class(['sale-price'=>$collection->compare_at_price>$sellingPrice])><small>{{ $collection->compare_at_price>$sellingPrice?'HARGA SALE':'HARGA' }}</small>@rupiah($sellingPrice)</span>@if($collection->compare_at_price>$sellingPrice)<del><small>HARGA NORMAL</small>@rupiah($collection->compare_at_price)</del>@endif</div></div>
-    <p>{{ $collection->variants->pluck('color')->filter()->unique()->count() }} WARNA TERSEDIA</p>
+    @php($cardColors=$collection->variants->pluck('color')->filter()->unique()->values())
+    <div class="product-card-colors" aria-label="{{ $cardColors->count() }} warna tersedia">@foreach($cardColors->take(5) as $color)<i style="--swatch:{{ \App\Support\ColorSwatch::hex($color) }}" title="{{ $color }}"></i>@endforeach @if($cardColors->count()>5)<small>+{{ $cardColors->count()-5 }}</small>@endif</div>
     @if(($collection->reviews_count ?? 0)>0)<div class="product-rating"><span>★★★★★</span> {{ number_format((float)$collection->reviews_avg_rating,1) }} ({{ $collection->reviews_count }})</div>@endif
 </article>

@@ -10,6 +10,7 @@ use App\Models\ProductMedia;
 use App\Models\Series;
 use App\Models\Setting;
 use App\Models\ShippingRate;
+use App\Models\StoreLocation;
 use App\Models\Variant;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
@@ -62,6 +63,7 @@ class DemoSeeder extends Seeder
         }
 
         $this->seedShippingRates();
+        $this->seedStoreLocations();
         $this->seedContent();
         $this->seedCoupons();
         $this->seedSettings();
@@ -153,12 +155,31 @@ class DemoSeeder extends Seeder
         }
     }
 
+    private function seedStoreLocations(): void
+    {
+        foreach ([
+            ['Dthree Tasikmalaya', 'Jl. HZ Mustofa No. 88', 'Tasikmalaya', 'Setiap hari · 09.00–20.00', 1],
+            ['Dthree Bandung', 'Jl. Buah Batu No. 121', 'Bandung', 'Senin–Sabtu · 09.00–19.00', 2],
+            ['Dthree Jakarta', 'Jl. Kemang Raya No. 24', 'Jakarta Selatan', 'Setiap hari · 10.00–21.00', 3],
+        ] as [$name, $address, $city, $hours, $sortOrder]) {
+            StoreLocation::updateOrCreate(['name' => $name], [
+                'address' => $address,
+                'city' => $city,
+                'map_url' => 'https://maps.google.com/?q='.urlencode($address.' '.$city),
+                'hours' => $hours,
+                'sort_order' => $sortOrder,
+                'active' => true,
+            ]);
+        }
+    }
+
     private function seedContent(): void
     {
         $entries = [
             ['banner', 'Kebersamaan dalam satu warna', 'demo-banner', 'Temukan koleksi sarimbit keluarga dengan bahan nyaman dan warna yang dirancang untuk saling melengkapi.', 'campaign-family.webp', '/koleksi?category=sarimbit-keluarga', 'Lihat sarimbit', 1],
             ['home_section', 'Dirancang untuk bergerak bersama Anda', 'demo-cerita', 'Material pilihan, potongan nyaman, dan detail yang tetap rapi dari pagi hingga malam.', 'raffah-olive.webp', '/koleksi?category=abaya-dewasa', 'Jelajahi abaya', 2],
             ['home_section', 'Warna hangat untuk momen istimewa', 'demo-harmoni', 'Padukan koleksi dewasa dan anak untuk menciptakan tampilan keluarga yang selaras.', 'sakina-plum.webp', '/koleksi?category=sarimbit-keluarga', 'Pilih koleksi', 3],
+            ['home_section', 'Siluet ringan dalam warna natural', 'demo-look-natural', 'Temukan abaya dan pelengkap dalam palet natural untuk gaya yang mudah dipadukan.', 'raffah-olive.webp', '/koleksi?category=abaya-dewasa', 'Lihat tampilan', 4],
             ['menu', 'FAQ', 'demo-menu-faq', null, null, '/konten/faq/pertanyaan-umum', 'FAQ', 1],
             ['menu', 'Journal', 'demo-menu-journal', null, null, '/konten/journal/merawat-busana', 'Journal', 2],
             ['menu', 'Lookbook', 'demo-menu-lookbook', null, null, '/konten/lookbook', 'Lookbook', 3],
@@ -197,6 +218,17 @@ class DemoSeeder extends Seeder
             ['type' => 'product_hotspot', 'series_id' => $lookProducts['arcelia-family'], 'x' => 62, 'y' => 44],
             ['type' => 'product_hotspot', 'series_id' => $lookProducts['hana-flow-khimar'], 'x' => 78, 'y' => 24],
         ]]);
+        ContentEntry::where('slug', 'demo-look-natural')->update(['blocks' => [
+            ['type' => 'product_hotspot', 'series_id' => $lookProducts['arcelia-family'], 'x' => 30, 'y' => 48],
+            ['type' => 'product_hotspot', 'series_id' => $lookProducts['hana-flow-khimar'], 'x' => 67, 'y' => 36],
+        ]]);
+        ContentEntry::where('slug', 'demo-banner')->update(['blocks' => [[
+            'type' => 'hero_options',
+            'align' => 'left',
+            'tone' => 'light',
+            'duration' => 6500,
+            'mobile_url' => '',
+        ]]]);
     }
 
     private function seedCoupons(): void
@@ -231,6 +263,11 @@ class DemoSeeder extends Seeder
             'loyalty_enabled' => true,
             'analytics_enabled' => true,
             'brand_name' => 'Dthree',
+            'announcement_lines' => "GRATIS ONGKIR UNTUK PROMO TERPILIH\nDAPATKAN 10% DENGAN KODE DEMO10\nPENGIRIMAN KE SELURUH INDONESIA",
+            'welcome_voucher_enabled' => true,
+            'welcome_voucher_title' => 'Hadiah untuk pembelian pertama',
+            'welcome_voucher_text' => 'Nikmati potongan 10% untuk koleksi pilihan dengan minimum transaksi yang berlaku.',
+            'welcome_voucher_code' => 'DEMO10',
             'hero_eyebrow' => 'Koleksi terbaru Dthree',
             'hero_title' => 'Tumbuh bersama dalam setiap cerita',
             'hero_text' => 'Busana modest yang nyaman untuk perempuan dan keluarga Indonesia, dirancang dengan warna hangat serta detail yang berkesan.',

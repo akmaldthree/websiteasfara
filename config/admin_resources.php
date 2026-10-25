@@ -12,6 +12,7 @@ use App\Models\PriceGroup;
 use App\Models\ProductMedia;
 use App\Models\Series;
 use App\Models\ShippingRate;
+use App\Models\StoreLocation;
 use App\Models\Variant;
 use App\Models\VariantPrice;
 
@@ -82,4 +83,6 @@ return [
         'title' => ['Judul', 'text', 'required|string|max:150'], 'slug' => ['Slug', 'text', 'required|alpha_dash|max:150'], 'body' => ['Isi halaman (teks cadangan)', 'textarea', 'required|string|max:50000'], 'template' => ['Template halaman', 'select', 'sometimes|in:standard,wide,landing', ['standard' => 'Standar', 'wide' => 'Lebar', 'landing' => 'Landing page']], 'blocks' => ['Blok konten', 'blocks', 'nullable|string|max:50000'], 'seo_title' => ['Judul SEO', 'text', 'nullable|string|max:200'], 'seo_description' => ['Deskripsi SEO', 'textarea', 'nullable|string|max:300'], 'editorial_status' => ['Status editorial', 'select', 'required|in:draft,review,approved', ['draft' => 'Draft', 'review' => 'Menunggu review', 'approved' => 'Disetujui']], 'review_note' => ['Catatan editor/reviewer', 'textarea', 'nullable|string|max:1000'], 'starts_at' => ['Mulai tayang', 'datetime-local', 'nullable|date'], 'ends_at' => ['Selesai tayang', 'datetime-local', 'nullable|date|after:starts_at'], 'active' => ['Tayangkan setelah disetujui', 'checkbox', 'boolean']]],
     'newsletter' => ['model' => NewsletterSubscriber::class, 'title' => 'Pelanggan newsletter', 'permission' => 'content.write', 'columns' => ['email' => 'Email', 'name' => 'Nama', 'source' => 'Sumber', 'subscribed_at' => 'Terdaftar', 'active' => 'Aktif'], 'fields' => [
         'email' => ['Email', 'email', 'required|email|max:150'], 'name' => ['Nama (opsional)', 'text', 'nullable|string|max:100'], 'source' => ['Sumber', 'text', 'required|string|max:80'], 'subscribed_at' => ['Tanggal berlangganan', 'datetime-local', 'required|date'], 'active' => ['Aktif', 'checkbox', 'boolean']]],
+    'store-locations' => ['model' => StoreLocation::class, 'title' => 'Lokasi toko', 'permission' => 'content.write', 'columns' => ['name' => 'Lokasi', 'city' => 'Kota', 'hours' => 'Jam buka', 'sort_order' => 'Urutan', 'active' => 'Aktif'], 'fields' => [
+        'name' => ['Nama toko / mal', 'text', 'required|string|max:150'], 'address' => ['Alamat', 'textarea', 'required|string|max:1000'], 'city' => ['Kota', 'text', 'nullable|string|max:100'], 'map_url' => ['Tautan Google Maps', 'url', 'nullable|url|max:500'], 'hours' => ['Jam buka', 'text', 'nullable|string|max:150'], 'sort_order' => ['Urutan', 'number', 'required|integer|min:0|max:10000'], 'active' => ['Tampilkan di footer', 'checkbox', 'boolean']]],
 ];

@@ -539,7 +539,7 @@ class AdminController extends Controller
         if (! is_array($blocks) || count($blocks) > 50) {
             throw ValidationException::withMessages(['blocks' => 'Konten dibatasi maksimal 50 blok.']);
         }
-        $allowed = ['heading', 'paragraph', 'quote', 'button', 'image', 'columns', 'product_hotspot'];
+        $allowed = ['heading', 'paragraph', 'quote', 'button', 'image', 'columns', 'product_hotspot', 'hero_options'];
         foreach ($blocks as $index => &$block) {
             if (! is_array($block) || ! in_array($block['type'] ?? '', $allowed, true)) {
                 throw ValidationException::withMessages(['blocks' => 'Tipe blok ke-'.($index + 1).' tidak didukung.']);
@@ -575,6 +575,20 @@ class AdminController extends Controller
                 $block['x'] = round($x, 2);
                 $block['y'] = round($y, 2);
             }
+            if ($block['type'] === 'hero_options') {
+                $align = $block['align'] ?? 'left';
+                $tone = $block['tone'] ?? 'light';
+                $duration = filter_var($block['duration'] ?? 6500, FILTER_VALIDATE_INT);
+                if (! in_array($align, ['left', 'center', 'right'], true) || ! in_array($tone, ['light', 'dark'], true) || ! $duration || $duration < 2500 || $duration > 20000) {
+                    throw ValidationException::withMessages(['blocks' => 'Opsi hero memerlukan posisi, warna teks, dan durasi 2500–20000 milidetik yang valid.']);
+                }
+                if (! empty($block['mobile_url']) && ! $this->safeContentUrl($block['mobile_url'])) {
+                    throw ValidationException::withMessages(['blocks' => 'Gambar mobile hero harus berupa URL HTTPS atau path internal.']);
+                }
+                $block['align'] = $align;
+                $block['tone'] = $tone;
+                $block['duration'] = $duration;
+            }
             if (in_array($block['type'], ['button', 'image'], true)) {
                 if (empty($block['url']) || ! $this->safeContentUrl($block['url'])) {
                     throw ValidationException::withMessages(['blocks' => 'Tautan blok ke-'.($index + 1).' harus berupa URL https atau path internal.']);
@@ -583,7 +597,7 @@ class AdminController extends Controller
                     throw ValidationException::withMessages(['blocks' => 'Label atau alt text blok ke-'.($index + 1).' wajib diisi dan maksimal 200 karakter.']);
                 }
             }
-            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label', 'items', 'series_id', 'x', 'y']));
+            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label', 'items', 'series_id', 'x', 'y', 'align', 'tone', 'duration', 'mobile_url']));
         }
 
         return array_values($blocks);
@@ -690,6 +704,7 @@ class AdminController extends Controller
             'whatsapp' => ['nullable', 'regex:/^62[0-9]{8,13}$/'], 'instagram_url' => 'nullable|url|max:500', 'tiktok_url' => 'nullable|url|max:500', 'facebook_url' => 'nullable|url|max:500',
             'default_seo_title' => 'nullable|string|max:200', 'default_seo_description' => 'nullable|string|max:300',
             'home_new_slugs' => 'nullable|string|max:2000', 'home_best_slugs' => 'nullable|string|max:2000', 'home_sale_slugs' => 'nullable|string|max:2000',
+            'announcement_lines' => 'nullable|string|max:2000', 'welcome_voucher_title' => 'nullable|string|max:150', 'welcome_voucher_text' => 'nullable|string|max:500', 'welcome_voucher_code' => 'nullable|string|max:40',
             'theme_primary_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_accent_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_background_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_surface_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_text_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'theme_font' => 'required|in:classic,modern,system', 'theme_container_width' => 'required|integer|between:960,1800', 'theme_radius' => 'required|integer|between:0,32', 'theme_header_style' => 'required|in:standard,compact,centered',
             'footer_copyright' => 'nullable|string|max:200',
@@ -766,7 +781,7 @@ class AdminController extends Controller
         $data['analytics_enabled'] = $r->boolean('analytics_enabled');
         $data['checkout_enabled'] = $r->boolean('checkout_enabled');
         $data['staff_two_factor_required'] = $r->boolean('staff_two_factor_required');
-        foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled'] as $toggle) {
+        foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled', 'welcome_voucher_enabled'] as $toggle) {
             $data[$toggle] = $r->boolean($toggle);
         }
         if ($data['checkout_enabled'] && ! count($banks)) {
