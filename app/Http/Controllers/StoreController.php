@@ -152,11 +152,19 @@ class StoreController extends Controller
         $questions = ProductQuestion::where('series_id', $series->id)->where('status', 'answered')->with('user')->latest('answered_at')->get();
         $helpfulReviewIds = $r->user() ? ReviewHelpfulVote::where('user_id', $r->user()->id)->whereIn('review_id', $reviews->pluck('id'))->pluck('review_id')->all() : [];
         $wishlistIds = $r->user()?->wishlistItems()->whereIn('variant_id', $series->variants->pluck('id'))->pluck('variant_id')->all() ?? [];
+        $relatedProducts = Series::published()
+            ->whereKeyNot($series->id)
+            ->where('category_id', $series->category_id)
+            ->with(['category', 'media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
+            ->withMin(['variants as variants_min_price' => fn ($query) => $query->where('active', true)], 'price')
+            ->withCount(['reviews' => fn ($query) => $query->where('status', 'approved')])
+            ->withAvg(['reviews' => fn ($query) => $query->where('status', 'approved')], 'rating')
+            ->orderByDesc('featured')->latest('id')->take(8)->get();
         $recentlyViewedIds = collect($r->session()->get('recently_viewed', []))->prepend($series->id)->unique()->take(8)->values()->all();
         $r->session()->put('recently_viewed', $recentlyViewedIds);
         $analytics->record($r, 'view_item', ['series_id' => $series->id, 'variant_id' => $r->integer('variant') ?: null]);
 
-        return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'reviews', 'questions', 'helpfulReviewIds', 'wishlistIds'));
+        return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'reviews', 'questions', 'helpfulReviewIds', 'wishlistIds', 'relatedProducts'));
     }
 
     public function question(Request $request, Series $series)

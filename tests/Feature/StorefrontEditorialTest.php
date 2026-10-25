@@ -132,7 +132,10 @@ class StorefrontEditorialTest extends TestCase
 
         $product = $this->get(route('product', $this->series->slug))->assertOk();
         $this->assertMatchesRegularExpression('/<option value="'.$variant->id.'"[^>]*selected>/', $product->getContent());
-        $product->assertSee('const initial=select.selectedOptions[0]', false);
+        $product->assertSee('const initial=select.selectedOptions[0]', false)
+            ->assertSee('data-product-gallery-next', false)
+            ->assertSee('product-stock-bar', false)
+            ->assertSee('S&amp;K PENGEMBALIAN', false);
     }
 
     public function test_empty_cart_summary_has_recommendations_and_shipping_progress(): void

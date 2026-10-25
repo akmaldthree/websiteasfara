@@ -42,7 +42,7 @@
     @if($heroSlides->count()>1)<button class="hero-arrow hero-arrow-prev" type="button" data-hero-prev aria-label="Banner sebelumnya">‹</button><button class="hero-arrow hero-arrow-next" type="button" data-hero-next aria-label="Banner berikutnya">›</button><div class="hero-dots" aria-label="Pilih banner">@foreach($heroSlides as $slide)<button type="button" class="{{ $loop->first?'is-active':'' }}" data-hero-dot="{{ $loop->index }}" aria-label="Banner {{ $loop->iteration }}"></button>@endforeach</div>@endif
     <a class="hero-next-section" href="#featured" aria-label="Ke produk unggulan">↓</a>
 </section>
-@if($featured=$collections->first())
+@if(($shop['home_featured_enabled'] ?? true) && ($featured=$collections->first()))
 @php($featuredVariants=$featured->variants->where('fulfillment','!=','custom_made')->filter(fn($variant)=>$variant->available>0))
 @php($featuredImages=$featured->media->pluck('image_url')->prepend($featured->image_url)->filter()->unique()->values())
 @php($featuredDefault=$featuredVariants->first())
@@ -57,19 +57,19 @@
 </section>
 @endif
 
-<section class="category-media-grid container-xxl reveal">
+@if($shop['home_categories_enabled'] ?? true)<section class="category-media-grid container-xxl reveal">
     @foreach($collections->unique('category_id')->take(3) as $categoryProduct)<a href="{{ route('catalog',['category'=>$categoryProduct->category->slug]) }}"><img src="{{ $categoryProduct->image_url }}" alt="{{ $categoryProduct->category->name }}"><span>{{ strtoupper($categoryProduct->category->name) }}</span></a>@endforeach
-</section>
+</section>@endif
 
-<section class="commerce-section container-xxl reveal">
+@if($shop['home_collections_enabled'] ?? true)<section class="commerce-section container-xxl reveal">
     <div class="commerce-heading"><h2>FEATURED COLLECTION</h2><a href="{{ route('catalog') }}">VIEW ALL</a></div>
     <div class="collection-tabs" role="tablist"><button class="is-active" type="button" data-collection-tab="new">NEW ARRIVAL</button><button type="button" data-collection-tab="best">BEST SELLER</button></div>
     <div class="collection-pane is-active" data-collection-pane="new"><div class="product-carousel" data-drag-scroll>@forelse($newCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@empty<div class="empty-state"><h3>Koleksi sedang disiapkan.</h3></div>@endforelse</div></div>
     <div class="collection-pane" data-collection-pane="best"><div class="product-carousel" data-drag-scroll>@foreach($bestCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div></div>
-</section>
+</section>@endif
 
 @php($looks=$contentEntries->where('type','home_section')->filter(fn($entry)=>collect($entry->blocks)->contains('type','product_hotspot'))->values())
-@if($looks->isNotEmpty())
+@if(($shop['home_look_enabled'] ?? true) && $looks->isNotEmpty())
 <section class="shop-look-carousel reveal" data-look-carousel>
     <header><span>STEAL THE LOOK!</span><h2>BEST COMBINATION</h2></header>
     @foreach($looks as $look)<article class="shop-look {{ $loop->first?'is-active':'' }}" data-look-slide aria-hidden="{{ $loop->first?'false':'true' }}">
@@ -80,7 +80,7 @@
 </section>
 @endif
 
-@if($saleCollections->isNotEmpty())<section class="commerce-section sale-section container-xxl reveal"><div class="commerce-heading"><h2>SALE</h2><a href="{{ route('catalog',['sale'=>1]) }}">VIEW ALL</a></div><div class="product-carousel" data-drag-scroll>@foreach($saleCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div></section>@endif
+@if(($shop['home_sale_enabled'] ?? true) && $saleCollections->isNotEmpty())<section class="commerce-section sale-section container-xxl reveal"><div class="commerce-heading"><h2>SALE</h2><a href="{{ route('catalog',['sale'=>1]) }}">VIEW ALL</a></div><div class="product-carousel" data-drag-scroll>@foreach($saleCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div></section>@endif
 
 @if($shop['home_editorial_sections_enabled'] ?? false)
 @foreach($contentEntries->where('type','home_section')->reject(fn($entry)=>$looks->contains('id',$entry->id)) as $entry)

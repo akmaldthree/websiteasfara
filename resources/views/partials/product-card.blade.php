@@ -7,7 +7,7 @@
     <a class="product-image" href="{{ route('product',$collection->slug) }}">
         <img class="product-image-primary" src="{{ $cardImages->first() }}" alt="{{ $collection->name }}{{ $collection->image ? '' : ' — ilustrasi koleksi' }}" loading="lazy">
         @if($cardImages->count()>1)<img class="product-image-secondary" src="{{ $cardImages->get(1) }}" alt="{{ $collection->name }} — tampilan berikutnya" loading="lazy">@endif
-        @if($availableStock<=0)<span class="product-tag product-tag-sold">SOLD OUT</span>@elseif($saving>0)<span class="product-tag">HEMAT @rupiah($saving)</span>@elseif($collection->featured)<span class="product-tag">FEATURED</span>@endif
+        @if($availableStock<=0)<span class="product-tag product-tag-sold">SOLD OUT</span>@elseif($saving>0)<span class="product-tag product-tag-sale">SAVE IDR {{ number_format($saving,0,',','.') }},00</span>@elseif($collection->featured)<span class="product-tag">FEATURED</span>@endif
     </a>
     @if($quickVariants->isNotEmpty())
         <button type="button" class="product-quick" data-quick-open="quick-product-{{ $collection->id }}">PILIH OPSI</button>

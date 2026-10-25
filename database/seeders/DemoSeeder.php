@@ -6,12 +6,16 @@ use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\Coupon;
 use App\Models\CuratedLink;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Page;
 use App\Models\ProductMedia;
+use App\Models\Review;
 use App\Models\Series;
 use App\Models\Setting;
 use App\Models\ShippingRate;
 use App\Models\StoreLocation;
+use App\Models\User;
 use App\Models\Variant;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
@@ -65,6 +69,7 @@ class DemoSeeder extends Seeder
             $this->seedMedia($series, $product);
         }
 
+        $this->seedReviews();
         $this->seedShippingRates();
         $this->seedStoreLocations();
         $this->seedCuratedLinks();
@@ -72,6 +77,63 @@ class DemoSeeder extends Seeder
         $this->seedCoupons();
         $this->seedSettings();
         $this->seedPages();
+    }
+
+    private function seedReviews(): void
+    {
+        $customer = User::updateOrCreate(['email' => 'pelanggan.demo@dthree.co.id'], [
+            'name' => 'Pelanggan Dthree',
+            'phone' => '6281234567890',
+            'password' => 'demo-password-change-me',
+        ]);
+        $order = Order::updateOrCreate(['number' => 'DEMO-REVIEW-001'], [
+            'checkout_key' => 'demo-review-order-001',
+            'user_id' => $customer->id,
+            'name' => $customer->name,
+            'phone' => $customer->phone,
+            'email' => $customer->email,
+            'address' => ['address' => 'Alamat demonstrasi', 'city' => 'Tasikmalaya', 'province' => 'Jawa Barat', 'postal_code' => '46100'],
+            'payment_method' => 'transfer',
+            'status' => 'completed',
+            'payment_status' => 'paid',
+            'fulfillment_status' => 'received',
+            'subtotal' => 0,
+            'shipping_cost' => 0,
+            'total' => 0,
+            'shipping' => ['courier' => 'JNE', 'service' => 'REG', 'cost' => 0],
+            'inventory_state' => 'committed',
+            'expires_at' => now()->addDay(),
+            'paid_at' => now()->subDays(8),
+            'shipped_at' => now()->subDays(7),
+            'completed_at' => now()->subDays(4),
+            'received_at' => now()->subDays(4),
+        ]);
+
+        foreach (Series::whereIn('slug', collect($this->products())->pluck('slug'))->with('variants')->get() as $index => $series) {
+            $variant = $series->variants->first();
+            if (! $variant) {
+                continue;
+            }
+            $item = OrderItem::updateOrCreate(['order_id' => $order->id, 'variant_id' => $variant->id], [
+                'sku' => $variant->sku,
+                'name' => $series->name,
+                'attributes' => ['color' => $variant->color, 'size' => $variant->size],
+                'fulfillment' => $variant->fulfillment,
+                'lead_time' => $variant->lead_time,
+                'weight' => $variant->weight,
+                'price' => $variant->price,
+                'quantity' => 1,
+                'total' => $variant->price,
+            ]);
+            Review::updateOrCreate(['order_item_id' => $item->id], [
+                'user_id' => $customer->id,
+                'variant_id' => $variant->id,
+                'rating' => 4 + ($index % 2),
+                'body' => $index % 2 ? 'Potongannya rapi, bahannya nyaman, dan warnanya sesuai foto.' : 'Nyaman dipakai seharian dan ukuran sesuai panduan.',
+                'status' => 'approved',
+                'moderated_at' => now(),
+            ]);
+        }
     }
 
     private function products(): array
@@ -303,6 +365,16 @@ class DemoSeeder extends Seeder
             'story_eyebrow' => 'Tentang Dthree',
             'story_title' => 'Busana yang menyertai momen keluarga',
             'story_text' => 'Kami menghadirkan koleksi dengan siluet santun, warna mudah dipadukan, dan kenyamanan yang mendukung aktivitas Anda.',
+            'hero_height_desktop' => 660,
+            'storefront_animation_speed' => 550,
+            'product_grid_columns' => 4,
+            'home_featured_enabled' => true,
+            'home_categories_enabled' => true,
+            'home_collections_enabled' => true,
+            'home_look_enabled' => true,
+            'home_sale_enabled' => true,
+            'product_related_enabled' => true,
+            'cart_recommendations_enabled' => true,
             'home_editorial_sections_enabled' => false,
             'home_story_enabled' => false,
             'store_location' => 'Tasikmalaya · Indonesia',

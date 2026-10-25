@@ -5,11 +5,10 @@
     @php($cartSubtotal=array_sum(array_column($lines,'total')))
     @php($shippingTarget=max(0,(int)($shop['free_shipping_threshold'] ?? 500000)))
     @php($shippingRemaining=max(0,$shippingTarget-$cartSubtotal))
-    <span class="eyebrow">PILIHAN ANDA</span>
-    <h1 class="mt-3 mb-4">{{ __('store.cart') }}</h1>
     @if(empty($lines))
-        <div class="empty-state cart-empty"><span>YOUR SHOPPING BAG</span><h2>{{ strtoupper(__('store.empty_cart')) }}</h2><p>Temukan koleksi yang nyaman untuk keseharian dan momen istimewa Anda.</p><a class="btn btn-dark" href="{{ route('catalog') }}">{{ strtoupper(__('store.start_shopping')) }}</a></div>
+        <div class="empty-state cart-empty"><h1>{{ strtoupper(__('store.cart')) }}</h1><p>{{ __('store.empty_cart') }}</p><a class="btn btn-dark" href="{{ route('catalog') }}">{{ strtoupper(__('store.start_shopping')) }}</a></div>
     @else
+        <span class="eyebrow">PILIHAN ANDA</span><h1 class="mt-3 mb-4">{{ __('store.cart') }}</h1>
         @if($lines[0]['price_group'])
             <div class="alert alert-success">Harga akun <strong>{{ $lines[0]['price_group']->name }}</strong> diterapkan. Tier dihitung per SKU berdasarkan jumlah di keranjang.</div>
         @endif
@@ -50,6 +49,6 @@
         </div>
     @endif
 </section>
-@if($recommendations->isNotEmpty())<section class="recently-viewed container-xxl"><span class="eyebrow">LENGKAPI PILIHAN ANDA</span><h2>YOU MAY ALSO LIKE</h2><div class="product-carousel" data-drag-scroll>@foreach($recommendations as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div></section>@endif
+@if(!empty($lines) && ($shop['cart_recommendations_enabled'] ?? true) && $recommendations->isNotEmpty())<section class="recently-viewed container-xxl"><span class="eyebrow">LENGKAPI PILIHAN ANDA</span><h2>YOU MAY ALSO LIKE</h2><div class="product-carousel" data-drag-scroll>@foreach($recommendations as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div></section>@endif
 @if($recentlyViewed->isNotEmpty())<section class="recently-viewed container-xxl"><h2>RECENTLY VIEWED PRODUCTS</h2><div class="product-carousel" data-drag-scroll>@foreach($recentlyViewed as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div></section>@endif
 @endsection
