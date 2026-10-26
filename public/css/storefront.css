@@ -349,7 +349,7 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 .header-actions a,.header-search-button{transition:color var(--motion-fast) var(--motion-ease-soft),transform var(--motion-base) var(--motion-ease)}
 .catalog-mega-menu{transform:translateY(-12px);transition:opacity 280ms var(--motion-ease-soft),transform var(--motion-base) var(--motion-ease),visibility 0s linear var(--motion-base);will-change:opacity,transform}
 .site-header.is-catalog-open .catalog-mega-menu,.site-header:has(.catalog-nav-link:hover) .catalog-mega-menu,.site-header:has(.catalog-nav-link:focus-visible) .catalog-mega-menu,.catalog-mega-menu:hover,.catalog-mega-menu:focus-within{visibility:visible;opacity:1;transform:none;pointer-events:auto;transition-delay:0s}
-.catalog-mega-menu:before{content:"";position:absolute;right:0;bottom:100%;left:0;height:34px}
+.catalog-nav-link:before{content:"";position:absolute;top:100%;right:-16px;left:-16px;height:38px}.home-transparent-header .catalog-nav-link:before{height:44px}
 .catalog-mega-menu a{transition:color var(--motion-fast) var(--motion-ease-soft),border-color var(--motion-fast) var(--motion-ease-soft),padding-left var(--motion-base) var(--motion-ease),opacity var(--motion-fast) var(--motion-ease-soft)}
 .catalog-mega-menu .mega-category-list a:hover,.catalog-mega-menu .mega-fit a:hover{padding-left:6px}
 .reveal{transform:translateY(22px);transition:opacity var(--store-motion) var(--motion-ease-soft),transform var(--store-motion) var(--motion-ease)}
