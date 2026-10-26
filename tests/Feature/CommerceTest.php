@@ -309,6 +309,31 @@ class CommerceTest extends TestCase
         $this->assertSame(1, session('cart')[$this->variant->id]);
     }
 
+    public function test_cart_repairs_stale_quantities_before_adding_or_rendering(): void
+    {
+        $this->withSession(['cart' => [$this->variant->id => 'not-a-number']])
+            ->post('/keranjang', ['variant_id' => $this->variant->id, 'quantity' => 1])
+            ->assertRedirect(route('cart'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(1, session('cart')[$this->variant->id]);
+
+        $this->withSession(['cart' => [$this->variant->id => 101]])
+            ->get('/keranjang')
+            ->assertOk()
+            ->assertSee('Keranjang Anda masih kosong');
+    }
+
+    public function test_buy_now_uses_selected_quantity_instead_of_duplicating_an_existing_line(): void
+    {
+        $this->withSession(['cart' => [$this->variant->id => 2]])
+            ->post('/keranjang', ['variant_id' => $this->variant->id, 'quantity' => 1, 'buy_now' => 1])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(1, session('cart')[$this->variant->id]);
+    }
+
     public function test_import_requires_preview_and_rejects_duplicates(): void
     {
         $this->actingAs($this->user('admin'));

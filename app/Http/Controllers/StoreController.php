@@ -191,9 +191,9 @@ class StoreController extends Controller
         return back()->with('success', $message);
     }
 
-    public function cart(Request $r, CheckoutService $service)
+    public function cart(Request $r, CheckoutService $service, CartService $cartService)
     {
-        $cart = $r->session()->get('cart', []);
+        $cart = $this->normalizedCart($r, $cartService);
         $lines = $cart ? $service->lines($cart, false, $r->user(), $r->session()->get('cart_customizations', [])) : [];
         $recentlyViewed = $this->recentlyViewed($r);
         $recommendations = $this->cartRecommendations($lines);
@@ -201,9 +201,9 @@ class StoreController extends Controller
         return view('store.cart', compact('cart', 'lines', 'recentlyViewed', 'recommendations'));
     }
 
-    public function cartSummary(Request $request, CheckoutService $service)
+    public function cartSummary(Request $request, CheckoutService $service, CartService $cartService)
     {
-        $cart = $request->session()->get('cart', []);
+        $cart = $this->normalizedCart($request, $cartService);
         $lines = $cart ? $service->lines($cart, false, $request->user(), $request->session()->get('cart_customizations', [])) : [];
         $subtotal = array_sum(array_column($lines, 'total'));
         $target = max(0, (int) Setting::get('free_shipping_threshold', 500000));
@@ -240,8 +240,11 @@ class StoreController extends Controller
         if ($variant->fulfillment === 'custom_made') {
             throw ValidationException::withMessages(['variant_id' => 'Gunakan formulir ukuran custom pada halaman produk.']);
         }
-        $cart = $r->session()->get('cart', []);
-        $cart[$d['variant_id']] = ($cart[$d['variant_id']] ?? 0) + $d['quantity'];
+        $cart = $this->normalizedCart($r, $cartService);
+        $currentQuantity = (int) ($cart[$d['variant_id']] ?? 0);
+        $cart[$d['variant_id']] = $r->boolean('buy_now')
+            ? $d['quantity']
+            : min(100, $currentQuantity + $d['quantity']);
         $service->lines($cart, false, $r->user(), $r->session()->get('cart_customizations', []));
         $r->session()->put('cart', $cart);
         if ($r->user()) {
@@ -285,7 +288,7 @@ class StoreController extends Controller
     public function updateCart(Request $r, CartService $cartService, CheckoutService $checkoutService)
     {
         $d = $r->validate(['variant_id' => 'required|integer', 'quantity' => 'required|integer|min:0|max:100']);
-        $cart = $r->session()->get('cart', []);
+        $cart = $this->normalizedCart($r, $cartService);
         if ($d['quantity'] === 0) {
             unset($cart[$d['variant_id']]);
             $customizations = $r->session()->get('cart_customizations', []);
@@ -301,27 +304,44 @@ class StoreController extends Controller
         $r->session()->forget('checkout_key');
 
         if ($r->expectsJson()) {
-            return $this->cartSummary($r, $checkoutService);
+            return $this->cartSummary($r, $checkoutService, $cartService);
         }
 
         return back();
     }
 
-    public function checkout(Request $r, CheckoutService $service, Analytics $analytics)
+    public function checkout(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics)
     {
-        if (! $r->session()->get('cart')) {
+        $cart = $this->normalizedCart($r, $cartService);
+        if (! $cart) {
             return redirect()->route('cart');
         }
         if (! $r->session()->has('checkout_key')) {
             $r->session()->put('checkout_key', Str::random(64));
         }
-        $lines = $service->lines($r->session()->get('cart'), false, $r->user(), $r->session()->get('cart_customizations', []));
+        $lines = $service->lines($cart, false, $r->user(), $r->session()->get('cart_customizations', []));
         $rates = ShippingRate::where('active', true)->get();
 
         $businessAccount = $r->user()?->businessAccount;
         $analytics->record($r, 'begin_checkout', ['items' => array_sum(array_column($lines, 'quantity')), 'value' => array_sum(array_column($lines, 'total'))]);
 
         return view('store.checkout', compact('lines', 'rates', 'businessAccount'));
+    }
+
+    private function normalizedCart(Request $request, CartService $cartService): array
+    {
+        $original = $request->session()->get('cart', []);
+        $cart = $cartService->normalize(is_array($original) ? $original : []);
+        if ($cart !== $original) {
+            $storedCustomizations = $request->session()->get('cart_customizations', []);
+            $customizations = array_intersect_key(is_array($storedCustomizations) ? $storedCustomizations : [], $cart);
+            $request->session()->put(['cart' => $cart, 'cart_customizations' => $customizations]);
+            if ($request->user()) {
+                $cartService->sync($request->user(), $cart, $customizations);
+            }
+        }
+
+        return $cart;
     }
 
     private function checkoutData(Request $r): array
