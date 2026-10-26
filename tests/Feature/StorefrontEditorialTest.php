@@ -90,6 +90,16 @@ class StorefrontEditorialTest extends TestCase
         $this->actingAs($admin)->get(route('admin.resources', 'store-locations'))->assertOk()->assertSee('Dthree Bandung');
     }
 
+    public function test_menu_entries_can_target_desktop_or_mobile_navigation(): void
+    {
+        ContentEntry::create(['type' => 'menu', 'placement' => 'mobile', 'title' => 'Mobile Only', 'slug' => 'mobile-only', 'link_url' => '/mobile', 'active' => true]);
+        ContentEntry::create(['type' => 'menu', 'placement' => 'desktop', 'title' => 'Desktop Only', 'slug' => 'desktop-only', 'link_url' => '/desktop', 'active' => true]);
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+        $this->assertSame(1, substr_count($html, 'Mobile Only'));
+        $this->assertSame(2, substr_count($html, 'DESKTOP ONLY'));
+    }
+
     public function test_reference_language_picker_and_product_activity_popup_can_be_managed(): void
     {
         Setting::put('social_proof_enabled', true);

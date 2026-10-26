@@ -30,6 +30,9 @@ class DatabaseSeeder extends Seeder
         foreach (['header_announcement_enabled' => true, 'header_categories_enabled' => true, 'header_tracking_enabled' => true, 'header_sticky' => true, 'footer_pages_enabled' => true, 'footer_social_enabled' => true, 'footer_copyright' => '', 'floating_whatsapp_enabled' => true, 'social_proof_enabled' => true, 'social_proof_interval' => 24, 'social_proof_cities' => 'Jakarta, Bandung, Surabaya, Yogyakarta, Makassar, Medan', 'hero_content_style' => 'editorial'] as $key => $value) {
             Setting::firstOrCreate(['key' => $key], ['value' => $value]);
         }
+        foreach (['home_featured_slug' => '', 'home_category_slugs' => '', 'home_section_order' => array_keys(config('storefront.home_sections')), 'storefront_copy_id' => [], 'storefront_copy_en' => []] as $key => $value) {
+            Setting::firstOrCreate(['key' => $key], ['value' => $value]);
+        }
         foreach (['loyalty_enabled' => false, 'loyalty_spend_per_point' => 10000, 'loyalty_point_value' => 100, 'loyalty_min_redeem' => 100, 'loyalty_expiry_days' => 365, 'loyalty_tiers' => [['name' => 'Member', 'minimum' => 0, 'benefit' => 'Akses program poin', 'value_bonus_percent' => 0], ['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Akses penawaran member', 'value_bonus_percent' => 0], ['name' => 'Gold', 'minimum' => 1500, 'benefit' => 'Prioritas kampanye member', 'value_bonus_percent' => 0]], 'loyalty_bonus_name' => '', 'loyalty_bonus_multiplier' => 1, 'loyalty_bonus_start' => '', 'loyalty_bonus_end' => '', 'loyalty_bonus_segment' => 'all', 'loyalty_bonus_tier' => '', 'loyalty_bonus_target_type' => 'all', 'loyalty_bonus_target_id' => null, 'analytics_enabled' => true, 'cod_allowed_segments' => ['guest', 'customer', 'business'], 'cod_blocked_phones' => [], 'cod_excluded_skus' => [], 'cod_excluded_categories' => []] as $key => $value) {
             Setting::firstOrCreate(['key' => $key], ['value' => $value]);
         }

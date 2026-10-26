@@ -53,6 +53,11 @@ class AdminWebsiteSettingsTest extends TestCase
             'floating_whatsapp_enabled' => '1',
             'social_proof_enabled' => '1',
             'footer_copyright' => 'Hak cipta Dthree.',
+            'home_featured_slug' => '',
+            'home_category_slugs' => '',
+            'home_section_order' => 'hero,collections,featured,categories,look,sale,editorial,story',
+            'storefront_copy_id' => ['featured_collection' => 'KOLEKSI PILIHAN CMS', 'catalog_title' => 'BUSANA'],
+            'storefront_copy_en' => ['featured_collection' => 'CMS CURATED COLLECTION', 'catalog_title' => 'APPAREL'],
         ];
         $payload['brand_name'] = 'Dthree Baru';
         $payload['hero_title'] = 'Judul dari dashboard';
@@ -65,9 +70,13 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame('compact', Setting::get('hero_content_style'));
         $this->assertSame('poppins', Setting::get('theme_font'));
         $this->assertSame(30, Setting::get('social_proof_interval'));
+        $this->assertSame('KOLEKSI PILIHAN CMS', Setting::get('storefront_copy_id')['featured_collection']);
+        $this->assertSame(['hero', 'collections', 'featured', 'categories', 'look', 'sale', 'editorial', 'story'], Setting::get('home_section_order'));
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertSame(['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Nilai poin lebih tinggi', 'value_bonus_percent' => 5], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));
-        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('--ink:#112233', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
+        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('--ink:#112233', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
+        $this->get('/koleksi')->assertOk()->assertSee('BUSANA');
+        $this->withSession(['locale' => 'en'])->get('/')->assertOk()->assertSee('CMS CURATED COLLECTION');
     }
 }

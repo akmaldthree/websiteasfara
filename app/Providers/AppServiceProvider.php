@@ -35,6 +35,9 @@ class AppServiceProvider extends ServiceProvider
             }
             $view->with('categories', Category::where('active', true)->with(['series' => fn ($query) => $query->published()->orderBy('name')])->orderBy('name')->get());
             $view->with('shop', Setting::whereNotIn('key', ['shipping_api_token', 'whatsapp_api_token'])->pluck('value', 'key')->all());
+            $locale = app()->getLocale();
+            $copyOverrides = array_filter(Setting::get('storefront_copy_'.$locale, []), fn ($value) => trim((string) $value) !== '');
+            $view->with('storeCopy', array_replace(config('storefront.copy_defaults.'.$locale, config('storefront.copy_defaults.id')), $copyOverrides));
             $view->with('cmsMenus', ContentEntry::published()->where('type', 'menu')->orderBy('sort_order')->get());
             $view->with('curatedLinks', CuratedLink::where('active', true)->orderBy('sort_order')->get()->groupBy('section'));
             $view->with('storeLocations', StoreLocation::where('active', true)->orderBy('sort_order')->get());

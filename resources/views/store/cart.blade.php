@@ -9,7 +9,7 @@
     @if(empty($lines))
         <div class="empty-state cart-empty"><h1>{{ strtoupper(__('store.cart')) }}</h1><p>{{ __('store.empty_cart') }}</p><a class="btn btn-dark" href="{{ route('catalog') }}">{{ strtoupper(__('store.start_shopping')) }}</a></div>
     @else
-        <span class="eyebrow">PILIHAN ANDA</span><h1 class="mt-3 mb-4">{{ __('store.cart') }}</h1>
+        <span class="eyebrow">{{ $storeCopy['cart_recommendations'] }}</span><h1 class="mt-3 mb-4">{{ $storeCopy['cart_title'] }}</h1>
         @if($lines[0]['price_group'])
             <div class="alert alert-success">Harga akun <strong>{{ $lines[0]['price_group']->name }}</strong> diterapkan. Tier dihitung per SKU berdasarkan jumlah di keranjang.</div>
         @endif
@@ -50,6 +50,6 @@
         </div>
     @endif
 </section>
-@if(!empty($lines) && ($shop['cart_recommendations_enabled'] ?? true) && $recommendations->isNotEmpty())<section class="recently-viewed container-xxl"><span class="eyebrow">LENGKAPI PILIHAN ANDA</span><h2>YOU MAY ALSO LIKE</h2><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($recommendations as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></section>@endif
-@if($recentlyViewed->isNotEmpty())<section class="recently-viewed container-xxl"><h2>RECENTLY VIEWED PRODUCTS</h2><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($recentlyViewed as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></section>@endif
+@if(!empty($lines) && ($shop['cart_recommendations_enabled'] ?? true) && $recommendations->isNotEmpty())<section class="recently-viewed container-xxl"><span class="eyebrow">{{ $storeCopy['cart_recommendations'] }}</span><h2>{{ $storeCopy['related_products'] }}</h2><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($recommendations as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></section>@endif
+@if($recentlyViewed->isNotEmpty())<section class="recently-viewed container-xxl"><h2>{{ $storeCopy['recently_viewed'] }}</h2><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($recentlyViewed as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></section>@endif
 @endsection

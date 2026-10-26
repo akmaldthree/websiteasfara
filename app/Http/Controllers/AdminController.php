@@ -687,7 +687,7 @@ class AdminController extends Controller
 
     public function settings()
     {
-        return view('admin.settings');
+        return view('admin.settings', ['storefrontSeries' => Series::orderBy('name')->get(['id', 'name', 'slug'])]);
     }
 
     public function security()
@@ -730,6 +730,10 @@ class AdminController extends Controller
             'hero_height_desktop' => 'sometimes|required|integer|between:520,800', 'storefront_animation_speed' => 'sometimes|required|integer|between:150,1200', 'product_grid_columns' => 'sometimes|required|integer|in:3,4',
             'hero_content_style' => 'sometimes|required|in:editorial,compact,image_only', 'social_proof_interval' => 'sometimes|required|integer|between:10,120', 'social_proof_cities' => 'nullable|string|max:1000',
             'footer_copyright' => 'nullable|string|max:200',
+            'home_featured_slug' => 'nullable|alpha_dash|max:150', 'home_category_slugs' => 'nullable|string|max:2000',
+            'home_section_order' => 'sometimes|required|string|max:500',
+            'storefront_copy_id' => 'sometimes|required|array', 'storefront_copy_id.*' => 'nullable|string|max:500',
+            'storefront_copy_en' => 'sometimes|required|array', 'storefront_copy_en.*' => 'nullable|string|max:500',
             'shipping_mode' => 'required|in:manual,api', 'shipping_provider' => 'required|string|max:80', 'shipping_api_url' => 'nullable|url|max:500', 'shipping_api_token_new' => 'nullable|string|max:2000',
             'tracking_mode' => 'required|in:manual,api', 'whatsapp_mode' => 'required|in:manual,api', 'whatsapp_provider' => 'required|string|max:80', 'whatsapp_api_url' => 'nullable|url|max:500', 'whatsapp_api_token_new' => 'nullable|string|max:2000',
             'bank_text' => 'nullable|string|max:3000', 'payment_hours' => 'required|integer|between:1,168', 'free_shipping_threshold' => 'sometimes|required|integer|min:0|max:1000000000', 'cod_hours' => 'required|integer|between:1,168', 'cod_min' => 'required|integer|min:0', 'cod_max' => 'required|integer|min:0|gte:cod_min', 'cod_fee' => 'required|integer|min:0', 'cod_percent' => 'required|integer|between:0,100', 'cod_fee_max' => 'required|integer|min:0',
@@ -741,6 +745,21 @@ class AdminController extends Controller
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ];
         $data = $r->validate($rules);
+        $copyKeys = collect(config('storefront.copy_groups'))->flatMap(fn (array $fields) => array_keys($fields))->all();
+        foreach (['id', 'en'] as $locale) {
+            $input = 'storefront_copy_'.$locale;
+            if (array_key_exists($input, $data)) {
+                $data[$input] = collect($data[$input])->only($copyKeys)->map(fn ($value) => trim((string) $value))->all();
+            }
+        }
+        if (array_key_exists('home_section_order', $data)) {
+            $allowedSections = array_keys(config('storefront.home_sections'));
+            $requestedOrder = collect(preg_split('/[,\r\n]+/', $data['home_section_order']))->map(fn ($value) => trim($value))->filter()->unique();
+            if ($requestedOrder->diff($allowedSections)->isNotEmpty()) {
+                throw ValidationException::withMessages(['home_section_order' => 'Urutan beranda berisi section yang tidak dikenal.']);
+            }
+            $data['home_section_order'] = $requestedOrder->concat(collect($allowedSections)->diff($requestedOrder))->values()->all();
+        }
         $banks = [];
         foreach (explode("\n", $data['bank_text'] ?? '') as $line) {
             if (trim($line) !== '') {
