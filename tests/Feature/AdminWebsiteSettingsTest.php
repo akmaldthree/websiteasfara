@@ -37,6 +37,11 @@ class AdminWebsiteSettingsTest extends TestCase
             'theme_background_color' => '#F8F4EE',
             'theme_surface_color' => '#FFFFFF',
             'theme_text_color' => '#202020',
+            'theme_sage_color' => '#EBF2ED',
+            'theme_sand_color' => '#F2EDE5',
+            'theme_taupe_color' => '#C4B9AB',
+            'theme_gold_color' => '#B8965A',
+            'theme_cream_color' => '#F5EDD9',
             'theme_font' => 'poppins',
             'theme_container_width' => 1400,
             'theme_radius' => 12,
@@ -69,13 +74,15 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame(['abaya'], Setting::get('cod_excluded_categories'));
         $this->assertSame('compact', Setting::get('hero_content_style'));
         $this->assertSame('poppins', Setting::get('theme_font'));
+        $this->assertSame('#EBF2ED', Setting::get('theme_sage_color'));
+        $this->assertSame('#B8965A', Setting::get('theme_gold_color'));
         $this->assertSame(30, Setting::get('social_proof_interval'));
         $this->assertSame('KOLEKSI PILIHAN CMS', Setting::get('storefront_copy_id')['featured_collection']);
         $this->assertSame(['hero', 'collections', 'featured', 'categories', 'look', 'sale', 'editorial', 'story'], Setting::get('home_section_order'));
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertSame(['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Nilai poin lebih tinggi', 'value_bonus_percent' => 5], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));
-        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('--ink:#112233', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
+        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('--palette-sage:#EBF2ED', false)->assertSee('--palette-gold:#B8965A', false)->assertSee('--text:#202020', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
         $this->get('/koleksi')->assertOk()->assertSee('BUSANA');
         $this->withSession(['locale' => 'en'])->get('/')->assertOk()->assertSee('CMS CURATED COLLECTION');
     }

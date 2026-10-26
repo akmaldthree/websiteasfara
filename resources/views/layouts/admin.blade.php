@@ -4,6 +4,7 @@
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
     <title>@yield('title','Dashboard') · Dthree Admin</title>
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}"><link rel="stylesheet" href="{{ asset('css/dthree.css') }}?v={{ filemtime(public_path('css/dthree.css')) }}">
+    <style>:root{--palette-sage:{{ \App\Models\Setting::get('theme_sage_color',config('theme.palette.theme_sage_color.color')) }};--palette-sand:{{ \App\Models\Setting::get('theme_sand_color',config('theme.palette.theme_sand_color.color')) }};--palette-taupe:{{ \App\Models\Setting::get('theme_taupe_color',config('theme.palette.theme_taupe_color.color')) }};--palette-gold:{{ \App\Models\Setting::get('theme_gold_color',config('theme.palette.theme_gold_color.color')) }};--palette-cream:{{ \App\Models\Setting::get('theme_cream_color',config('theme.palette.theme_cream_color.color')) }};--ink:{{ \App\Models\Setting::get('theme_text_color',config('theme.text_color')) }};--gold:var(--palette-gold);--cream:var(--palette-cream);--paper:var(--palette-sage);--surface:var(--palette-sand);--line:var(--palette-taupe)}</style>
 </head>
 <body class="admin-body">
 <a class="skip-link visually-hidden-focusable" href="#main-content">Lewati navigasi</a>
