@@ -98,6 +98,9 @@ class StorefrontEditorialTest extends TestCase
 
         $this->get(route('home'))->assertOk()
             ->assertSee('language-picker', false)
+            ->assertSee('aria-controls="catalog-mega-menu"', false)
+            ->assertSee('id="catalog-mega-menu"', false)
+            ->assertSee('is-catalog-open', false)
             ->assertSee('id="social-proof"', false)
             ->assertSee('Zayna Series')
             ->assertSee('hero-content-compact', false);

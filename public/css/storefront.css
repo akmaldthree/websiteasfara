@@ -341,3 +341,30 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
     .catalog-title h1{font-size:31px}
     .checkout-page>h1,.cart-page>h1{font-size:27px;line-height:1.35}
 }
+
+/* Unified motion system and stable desktop catalog interaction. */
+.store-body{--motion-fast:220ms;--motion-base:380ms;--motion-slow:680ms;--motion-ease:cubic-bezier(.22,1,.36,1);--motion-ease-soft:cubic-bezier(.4,0,.2,1)}
+.store-body .site-header{transition:background-color var(--motion-base) var(--motion-ease-soft),color var(--motion-base) var(--motion-ease-soft),box-shadow var(--motion-base) var(--motion-ease-soft),transform var(--motion-base) var(--motion-ease)}
+.desktop-nav a:after,.site-footer a:after{transition:right var(--motion-base) var(--motion-ease)}
+.header-actions a,.header-search-button{transition:color var(--motion-fast) var(--motion-ease-soft),transform var(--motion-base) var(--motion-ease)}
+.catalog-mega-menu{transform:translateY(-12px);transition:opacity 280ms var(--motion-ease-soft),transform var(--motion-base) var(--motion-ease),visibility 0s linear var(--motion-base);will-change:opacity,transform}
+.site-header.is-catalog-open .catalog-mega-menu,.site-header:has(.catalog-nav-link:hover) .catalog-mega-menu,.site-header:has(.catalog-nav-link:focus-visible) .catalog-mega-menu,.catalog-mega-menu:hover,.catalog-mega-menu:focus-within{visibility:visible;opacity:1;transform:none;pointer-events:auto;transition-delay:0s}
+.catalog-mega-menu:before{content:"";position:absolute;right:0;bottom:100%;left:0;height:34px}
+.catalog-mega-menu a{transition:color var(--motion-fast) var(--motion-ease-soft),border-color var(--motion-fast) var(--motion-ease-soft),padding-left var(--motion-base) var(--motion-ease),opacity var(--motion-fast) var(--motion-ease-soft)}
+.catalog-mega-menu .mega-category-list a:hover,.catalog-mega-menu .mega-fit a:hover{padding-left:6px}
+.reveal{transform:translateY(22px);transition:opacity var(--store-motion) var(--motion-ease-soft),transform var(--store-motion) var(--motion-ease)}
+.store-body .product-card{transition:transform var(--motion-base) var(--motion-ease)}
+@media(hover:hover) and (pointer:fine){.store-body .product-card:hover{transform:translateY(-3px)}}
+.store-body .product-image img,.product-gallery-main img,.product-gallery-grid img,.featured-product-photo>[data-featured-image],.category-media-grid img,.editorial-card img,.shop-look-image img{transition-property:opacity,transform;transition-duration:var(--motion-slow);transition-timing-function:var(--motion-ease)}
+.product-quick,.product-card>.product-quick{transition:opacity var(--motion-base) var(--motion-ease-soft),transform var(--motion-base) var(--motion-ease),background-color var(--motion-fast) var(--motion-ease-soft),color var(--motion-fast) var(--motion-ease-soft)}
+.store-body .btn,.variant-choice,.featured-options button,.filter-chip-list span{transition:color var(--motion-fast) var(--motion-ease-soft),background-color var(--motion-fast) var(--motion-ease-soft),border-color var(--motion-fast) var(--motion-ease-soft),box-shadow var(--motion-base) var(--motion-ease),transform var(--motion-base) var(--motion-ease)}
+.hero-arrow,.featured-gallery-arrow,.reference-carousel>[data-carousel-prev],.reference-carousel>[data-carousel-next],.look-hotspot{transition:opacity var(--motion-fast) var(--motion-ease-soft),color var(--motion-fast) var(--motion-ease-soft),background-color var(--motion-fast) var(--motion-ease-soft),border-color var(--motion-fast) var(--motion-ease-soft),transform var(--motion-base) var(--motion-ease)}
+.cart-item,.checkout-summary,.cart-summary,.social-proof{transition:opacity var(--motion-base) var(--motion-ease-soft),border-color var(--motion-fast) var(--motion-ease-soft),box-shadow var(--motion-base) var(--motion-ease),transform var(--motion-base) var(--motion-ease)}
+.catalog-grid>div,.collection-pane.is-active,.shop-look[data-look-slide].is-active{animation-timing-function:var(--motion-ease);animation-duration:var(--motion-slow)}
+.cart-drawer[open]{animation:drawer-in var(--motion-base) var(--motion-ease)}
+
+@media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .store-body *,.store-body *:before,.store-body *:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01ms!important;transition-delay:0s!important}
+    .reveal{opacity:1;transform:none}
+}
