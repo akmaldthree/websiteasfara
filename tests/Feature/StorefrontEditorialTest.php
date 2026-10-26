@@ -132,6 +132,7 @@ class StorefrontEditorialTest extends TestCase
         ];
 
         $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasNoErrors();
+        Setting::put('hero_autoplay_seconds', 7);
         $this->get(route('home'))->assertOk()->assertSee('hero-align-right')->assertSee('data-duration="7000"', false)->assertDontSee('data-hero-prev', false)->assertDontSee('data-hero-next', false);
 
         $payload['blocks'] = json_encode([['type' => 'hero_options', 'align' => 'outside', 'tone' => 'dark', 'duration' => 7000]]);

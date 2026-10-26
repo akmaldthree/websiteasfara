@@ -46,6 +46,7 @@ class AdminWebsiteSettingsTest extends TestCase
             'theme_radius' => 12,
             'theme_header_style' => 'compact',
             'hero_content_style' => 'compact',
+            'hero_autoplay_seconds' => 5.5,
             'social_proof_interval' => 30,
             'social_proof_cities' => 'Jakarta, Bandung',
             'header_announcement_enabled' => '1',
@@ -72,6 +73,7 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame(['ABC-1'], Setting::get('cod_excluded_skus'));
         $this->assertSame(['abaya'], Setting::get('cod_excluded_categories'));
         $this->assertSame('compact', Setting::get('hero_content_style'));
+        $this->assertSame(5.5, (float) Setting::get('hero_autoplay_seconds'));
         $this->assertSame('poppins', Setting::get('theme_font'));
         $this->assertSame('#F9F8F6', Setting::get('theme_palette_base'));
         $this->assertSame('#C9B59C', Setting::get('theme_palette_accent'));
@@ -81,7 +83,7 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertSame(['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Nilai poin lebih tinggi', 'value_bonus_percent' => 5], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));
-        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('--palette-sage:#F9F8F6', false)->assertSee('--palette-gold:#C9B59C', false)->assertSee('--text:#202020', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
+        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('data-duration="5500"', false)->assertSee('--palette-sage:#F9F8F6', false)->assertSee('--palette-gold:#C9B59C', false)->assertSee('--text:#202020', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
         $this->get('/koleksi')->assertOk()->assertSee('BUSANA');
         $this->withSession(['locale' => 'en'])->get('/')->assertOk()->assertSee('CMS CURATED COLLECTION');
     }

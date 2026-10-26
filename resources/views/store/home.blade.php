@@ -37,9 +37,10 @@
     ])->values());
 @endphp
 @push('head')<style>.home-transparent-header #main{display:flex;flex-direction:column}</style>@endpush
+@php($heroAutoplayMs=(int)round((float)($shop['hero_autoplay_seconds'] ?? 6.5)*1000))
 <section class="commerce-hero hero-content-{{ $shop['hero_content_style'] ?? 'editorial' }}" style="order:{{ $homePosition('hero') }}" data-hero-slider aria-roledescription="carousel">
     @foreach($heroSlides as $slide)
-        <article class="commerce-hero-slide hero-align-{{ $slide['align'] }} hero-tone-{{ $slide['tone'] }} {{ $loop->first?'is-active':'' }}" data-hero-slide data-duration="{{ $slide['duration'] }}" aria-hidden="{{ $loop->first?'false':'true' }}">
+        <article class="commerce-hero-slide hero-align-{{ $slide['align'] }} hero-tone-{{ $slide['tone'] }} {{ $loop->first?'is-active':'' }}" data-hero-slide data-duration="{{ $heroAutoplayMs }}" aria-hidden="{{ $loop->first?'false':'true' }}">
             <picture>@if($slide['mobile_image'])<source media="(max-width:767px)" srcset="{{ $slide['mobile_image'] }}">@endif<img src="{{ $slide['image'] }}" alt="{{ $slide['title'] }}"></picture>
             <div class="commerce-hero-overlay"></div>
             <div class="container-xxl commerce-hero-copy"><span>{{ $slide['eyebrow'] }}</span><h1>{{ $slide['title'] }}</h1><p>{{ $slide['text'] }}</p><a class="btn btn-light" href="{{ $slide['url'] }}">{{ strtoupper($slide['label']) }}</a></div>
