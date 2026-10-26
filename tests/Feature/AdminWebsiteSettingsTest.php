@@ -41,12 +41,17 @@ class AdminWebsiteSettingsTest extends TestCase
             'theme_container_width' => 1400,
             'theme_radius' => 12,
             'theme_header_style' => 'compact',
+            'hero_content_style' => 'compact',
+            'social_proof_interval' => 30,
+            'social_proof_cities' => 'Jakarta, Bandung',
             'header_announcement_enabled' => '1',
             'header_categories_enabled' => '1',
             'header_tracking_enabled' => '1',
             'header_sticky' => '1',
             'footer_pages_enabled' => '1',
             'footer_social_enabled' => '1',
+            'floating_whatsapp_enabled' => '1',
+            'social_proof_enabled' => '1',
             'footer_copyright' => 'Hak cipta Dthree.',
         ];
         $payload['brand_name'] = 'Dthree Baru';
@@ -57,6 +62,8 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame(['08123456'], Setting::get('cod_blocked_phones'));
         $this->assertSame(['ABC-1'], Setting::get('cod_excluded_skus'));
         $this->assertSame(['abaya'], Setting::get('cod_excluded_categories'));
+        $this->assertSame('compact', Setting::get('hero_content_style'));
+        $this->assertSame(30, Setting::get('social_proof_interval'));
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertSame(['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Nilai poin lebih tinggi', 'value_bonus_percent' => 5], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\CuratedLink;
+use App\Models\Series;
 use App\Models\Setting;
 use App\Models\StoreLocation;
 use Illuminate\Pagination\Paginator;
@@ -37,6 +38,10 @@ class AppServiceProvider extends ServiceProvider
             $view->with('cmsMenus', ContentEntry::published()->where('type', 'menu')->orderBy('sort_order')->get());
             $view->with('curatedLinks', CuratedLink::where('active', true)->orderBy('sort_order')->get()->groupBy('section'));
             $view->with('storeLocations', StoreLocation::where('active', true)->orderBy('sort_order')->get());
+            $view->with('socialProofProducts', Series::published()
+                ->with(['media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
+                ->whereHas('variants', fn ($query) => $query->where('active', true))
+                ->orderByDesc('featured')->orderByDesc('id')->take(8)->get());
         });
         Blade::directive('rupiah', fn ($expression) => "<?php echo 'Rp '.number_format((float)($expression),0,',','.'); ?>");
     }

@@ -31,7 +31,7 @@
         'mobile_image' => collect($entry->blocks)->firstWhere('type','hero_options')['mobile_url'] ?? null,
     ])->values());
 @endphp
-<section class="commerce-hero" data-hero-slider aria-roledescription="carousel">
+<section class="commerce-hero hero-content-{{ $shop['hero_content_style'] ?? 'editorial' }}" data-hero-slider aria-roledescription="carousel">
     @foreach($heroSlides as $slide)
         <article class="commerce-hero-slide hero-align-{{ $slide['align'] }} hero-tone-{{ $slide['tone'] }} {{ $loop->first?'is-active':'' }}" data-hero-slide data-duration="{{ $slide['duration'] }}" aria-hidden="{{ $loop->first?'false':'true' }}">
             <picture>@if($slide['mobile_image'])<source media="(max-width:767px)" srcset="{{ $slide['mobile_image'] }}">@endif<img src="{{ $slide['image'] }}" alt="{{ $slide['title'] }}"></picture>

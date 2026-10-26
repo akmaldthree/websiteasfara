@@ -90,6 +90,22 @@ class StorefrontEditorialTest extends TestCase
         $this->actingAs($admin)->get(route('admin.resources', 'store-locations'))->assertOk()->assertSee('Dthree Bandung');
     }
 
+    public function test_reference_language_picker_and_product_activity_popup_can_be_managed(): void
+    {
+        Setting::put('social_proof_enabled', true);
+        Setting::put('social_proof_cities', 'Jakarta, Bandung');
+        Setting::put('hero_content_style', 'compact');
+
+        $this->get(route('home'))->assertOk()
+            ->assertSee('language-picker', false)
+            ->assertSee('id="social-proof"', false)
+            ->assertSee('Zayna Series')
+            ->assertSee('hero-content-compact', false);
+
+        Setting::put('social_proof_enabled', false);
+        $this->get(route('home'))->assertOk()->assertDontSee('id="social-proof"', false);
+    }
+
     public function test_hero_slide_options_are_saved_and_validated(): void
     {
         $admin = User::factory()->create();

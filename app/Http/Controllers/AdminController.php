@@ -728,6 +728,7 @@ class AdminController extends Controller
             'theme_primary_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_accent_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_background_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_surface_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_text_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'theme_font' => 'required|in:classic,modern,system', 'theme_container_width' => 'required|integer|between:960,1800', 'theme_radius' => 'required|integer|between:0,32', 'theme_header_style' => 'required|in:standard,compact,centered',
             'hero_height_desktop' => 'sometimes|required|integer|between:520,800', 'storefront_animation_speed' => 'sometimes|required|integer|between:150,1200', 'product_grid_columns' => 'sometimes|required|integer|in:3,4',
+            'hero_content_style' => 'sometimes|required|in:editorial,compact,image_only', 'social_proof_interval' => 'sometimes|required|integer|between:10,120', 'social_proof_cities' => 'nullable|string|max:1000',
             'footer_copyright' => 'nullable|string|max:200',
             'shipping_mode' => 'required|in:manual,api', 'shipping_provider' => 'required|string|max:80', 'shipping_api_url' => 'nullable|url|max:500', 'shipping_api_token_new' => 'nullable|string|max:2000',
             'tracking_mode' => 'required|in:manual,api', 'whatsapp_mode' => 'required|in:manual,api', 'whatsapp_provider' => 'required|string|max:80', 'whatsapp_api_url' => 'nullable|url|max:500', 'whatsapp_api_token_new' => 'nullable|string|max:2000',
@@ -802,7 +803,7 @@ class AdminController extends Controller
         $data['analytics_enabled'] = $r->boolean('analytics_enabled');
         $data['checkout_enabled'] = $r->boolean('checkout_enabled');
         $data['staff_two_factor_required'] = $r->boolean('staff_two_factor_required');
-        foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled', 'welcome_voucher_enabled', 'home_featured_enabled', 'home_categories_enabled', 'home_collections_enabled', 'home_look_enabled', 'home_sale_enabled', 'product_related_enabled', 'cart_recommendations_enabled', 'home_editorial_sections_enabled', 'home_story_enabled'] as $toggle) {
+        foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled', 'floating_whatsapp_enabled', 'social_proof_enabled', 'welcome_voucher_enabled', 'home_featured_enabled', 'home_categories_enabled', 'home_collections_enabled', 'home_look_enabled', 'home_sale_enabled', 'product_related_enabled', 'cart_recommendations_enabled', 'home_editorial_sections_enabled', 'home_story_enabled'] as $toggle) {
             $data[$toggle] = $r->boolean($toggle);
         }
         if ($data['checkout_enabled'] && ! count($banks)) {
