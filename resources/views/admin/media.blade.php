@@ -9,7 +9,7 @@
 <form method="post" enctype="multipart/form-data" action="{{ route('admin.media.upload') }}" class="panel mb-4">
     @csrf
     <div class="form-grid">
-        <div><label for="media-image">Pilih gambar <span class="required-mark">*</span></label><input id="media-image" class="form-control" type="file" name="image" accept="image/jpeg,image/png,image/webp" required><small>JPG, PNG, atau WebP, maksimal 5 MB.</small>@error('image')<div class="text-danger small mt-1">{{ $message }}</div>@enderror</div>
+        <div><label for="media-image">Pilih gambar <span class="required-mark">*</span></label><input id="media-image" class="form-control" type="file" name="image" accept="image/jpeg,image/png,image/webp" required>@include('admin.partials.image-guideline',['preset'=>'media'])@error('image')<div class="text-danger small mt-1">{{ $message }}</div>@enderror</div>
         <div><label for="media-alt">Deskripsi gambar (alt text) <span class="required-mark">*</span></label><input id="media-alt" class="form-control" name="alt_text" maxlength="200" required placeholder="Contoh: Koleksi gamis Dthree warna sage"><small>Jelaskan isi gambar agar mudah dicari dan ramah aksesibilitas.</small>@error('alt_text')<div class="text-danger small mt-1">{{ $message }}</div>@enderror</div>
     </div>
     <button class="btn btn-dark mt-3">Unggah gambar</button>

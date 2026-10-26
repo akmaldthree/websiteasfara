@@ -11,7 +11,6 @@ $hints=[
     'editorial_status'=>'Simpan sebagai Draft saat mengerjakan, Menunggu review saat siap diperiksa, atau Disetujui untuk diterbitkan.',
     'starts_at'=>'Kosongkan jika konten boleh tampil segera setelah aktif dan disetujui.',
     'ends_at'=>'Kosongkan jika tidak memiliki tanggal berakhir.',
-    'image'=>'Upload JPG, PNG, atau WebP. Gunakan gambar terkompresi agar website tetap cepat.',
     'sort_order'=>'Angka lebih kecil ditampilkan lebih dahulu.',
     'target_id'=>'Masukkan ID sesuai jenis target. ID terlihat pada URL halaman edit data terkait.',
     'fields'=>'Format JSON untuk field ukuran. Gunakan template contoh dari Import Excel jika datanya banyak.',
@@ -67,6 +66,8 @@ $hints=[
                     <div class="checkbox-card"><input id="{{ $key }}" type="checkbox" name="{{ $key }}" value="1" @checked($value)><span>{{ $value?'Saat ini aktif.':'Saat ini nonaktif.' }} Klik untuk mengubah status.</span></div>
                 @elseif($field[1]==='file')
                     <input class="form-control" id="{{ $key }}" name="{{ $key }}" type="file" accept="image/png,image/jpeg,image/webp">
+                    @php($imagePreset=match($resource){'curated-links'=>'promo_card','product-media','series'=>'product','content'=>'content',default=>'general'})
+                    @include('admin.partials.image-guideline',['preset'=>$imagePreset])
                     @if($record->exists && $value)<div class="mt-2 d-flex align-items-center gap-2"><img src="{{ asset('storage/'.$value) }}" alt="Pratinjau gambar saat ini" width="64" height="64" style="object-fit:cover"><small>Gambar saat ini. Pilih file baru hanya jika ingin menggantinya.</small></div>@endif
                 @else
                     <input id="{{ $key }}" name="{{ $key }}" type="{{ $field[1] }}" class="form-control" value="{{ $value instanceof \Carbon\CarbonInterface ? $value->format('Y-m-d\TH:i') : $value }}" @required($required)>

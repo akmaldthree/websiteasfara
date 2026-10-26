@@ -57,7 +57,7 @@ $hasPhoto=(bool)$product->image || $product->media->isNotEmpty();$hasVariant=$pr
             <div class="batch-color-number">Warna <span>{{ $loop->iteration }}</span></div>
             <div><label>Nama warna</label><input class="form-control" name="groups[{{ $batchIndex }}][color]" value="{{ $batchGroup['color'] ?? '' }}" required placeholder="Contoh: Sage"></div>
             <div><label>Ukuran, pisahkan koma</label><input class="form-control" name="groups[{{ $batchIndex }}][sizes]" value="{{ $batchGroup['sizes'] ?? '' }}" required placeholder="S, M, L, XL"></div>
-            <div class="batch-file-field"><label>Foto warna ini</label><input class="form-control" type="file" name="groups[{{ $batchIndex }}][images][]" accept="image/jpeg,image/png,image/webp" multiple data-group-images><small>Opsional · maksimal 10 foto per warna.</small></div>
+            <div class="batch-file-field"><label>Foto warna ini</label><input class="form-control" type="file" name="groups[{{ $batchIndex }}][images][]" accept="image/jpeg,image/png,image/webp" multiple data-group-images><small>Opsional · maksimal 10 foto per warna.</small>@include('admin.partials.image-guideline',['preset'=>'product'])</div>
             <div><label>Deskripsi foto</label><input class="form-control" name="groups[{{ $batchIndex }}][alt_text]" value="{{ $batchGroup['alt_text'] ?? '' }}" placeholder="Contoh: {{ $product->name }} warna Sage"></div>
             <div class="batch-image-preview" data-group-preview hidden></div>
             <button type="button" class="batch-remove-color" data-remove-color @if(count($batchGroups)===1) hidden @endif>Hapus warna</button>
@@ -67,7 +67,7 @@ $hasPhoto=(bool)$product->image || $product->media->isNotEmpty();$hasVariant=$pr
         <div class="batch-color-number">Warna <span>__NUMBER__</span></div>
         <div><label>Nama warna</label><input class="form-control" name="groups[__INDEX__][color]" required placeholder="Contoh: Broken White"></div>
         <div><label>Ukuran, pisahkan koma</label><input class="form-control" name="groups[__INDEX__][sizes]" required placeholder="S, M, L, XL"></div>
-        <div class="batch-file-field"><label>Foto warna ini</label><input class="form-control" type="file" name="groups[__INDEX__][images][]" accept="image/jpeg,image/png,image/webp" multiple data-group-images><small>Opsional · maksimal 10 foto per warna.</small></div>
+        <div class="batch-file-field"><label>Foto warna ini</label><input class="form-control" type="file" name="groups[__INDEX__][images][]" accept="image/jpeg,image/png,image/webp" multiple data-group-images><small>Opsional · maksimal 10 foto per warna.</small>@include('admin.partials.image-guideline',['preset'=>'product'])</div>
         <div><label>Deskripsi foto</label><input class="form-control" name="groups[__INDEX__][alt_text]" placeholder="Deskripsi warna ini"></div>
         <div class="batch-image-preview" data-group-preview hidden></div>
         <button type="button" class="batch-remove-color" data-remove-color>Hapus warna</button>
@@ -85,7 +85,7 @@ $hasPhoto=(bool)$product->image || $product->media->isNotEmpty();$hasVariant=$pr
 <section class="panel workspace-section" id="media">
 <div class="section-top"><div><span class="eyebrow">LANGKAH 3</span><h2>Foto produk</h2><p class="small mb-0">Unggah banyak foto lalu atur seluruh galeri series ini tanpa pindah halaman.</p></div><span class="badge">{{ $product->media->count() }} foto</span></div>
 <form method="post" enctype="multipart/form-data" action="{{ route('admin.products.media.upload',$product) }}" class="workspace-media-upload">@csrf
-    <label class="workspace-media-drop" for="images"><strong>+ Pilih banyak foto sekaligus</strong><span>JPG, PNG, atau WebP · maksimal 10 foto dan 5 MB per foto</span><input id="images" type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple required></label>
+    <label class="workspace-media-drop" for="images"><strong>+ Pilih banyak foto sekaligus</strong><span>JPG, PNG, atau WebP · maksimal 10 foto dan 5 MB per foto</span>@include('admin.partials.image-guideline',['preset'=>'product'])<input id="images" type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple required></label>
     <div id="media-upload-preview" class="workspace-upload-preview" hidden></div>
     <div class="workspace-media-defaults">
         <div><label for="media-color">Warna untuk semua foto baru</label><input id="media-color" class="form-control" name="color" placeholder="Opsional, contoh: Sage"></div>

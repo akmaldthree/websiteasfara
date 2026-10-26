@@ -59,4 +59,31 @@ class AdminUsabilityTest extends TestCase
         $this->get(route('admin.media'))->assertOk()->assertSee('Cara menggunakan gambar');
         $this->get(route('admin.import'))->assertOk()->assertSee('Unduh dan isi template');
     }
+
+    public function test_image_upload_fields_show_contextual_size_recommendations(): void
+    {
+        $this->actingAs($this->admin);
+
+        $this->get(route('admin.settings'))
+            ->assertOk()
+            ->assertSee('600 × 200 px')
+            ->assertSee('512 × 512 px')
+            ->assertSee('1920 × 960 px');
+
+        $this->get(route('admin.media'))
+            ->assertOk()
+            ->assertSee('Minimal 1600 px pada sisi terpanjang');
+
+        $this->get(route('admin.create', 'series'))
+            ->assertOk()
+            ->assertSee('1200 × 1500 px');
+
+        $this->get(route('admin.create', 'content'))
+            ->assertOk()
+            ->assertSee('Shop the Look 1600 × 2000 px');
+
+        $this->get(route('admin.create', 'curated-links'))
+            ->assertOk()
+            ->assertSee('900 × 1200 px');
+    }
 }
