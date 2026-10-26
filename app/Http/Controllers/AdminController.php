@@ -726,7 +726,7 @@ class AdminController extends Controller
             'home_new_slugs' => 'nullable|string|max:2000', 'home_best_slugs' => 'nullable|string|max:2000', 'home_sale_slugs' => 'nullable|string|max:2000',
             'announcement_lines' => 'nullable|string|max:2000', 'welcome_voucher_title' => 'nullable|string|max:150', 'welcome_voucher_text' => 'nullable|string|max:500', 'welcome_voucher_code' => 'nullable|string|max:40',
             'theme_primary_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_accent_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_background_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_surface_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_text_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'theme_font' => 'required|in:classic,modern,system', 'theme_container_width' => 'required|integer|between:960,1800', 'theme_radius' => 'required|integer|between:0,32', 'theme_header_style' => 'required|in:standard,compact,centered',
+            'theme_font' => 'required|in:poppins,classic,modern,system', 'theme_container_width' => 'required|integer|between:960,1800', 'theme_radius' => 'required|integer|between:0,32', 'theme_header_style' => 'required|in:standard,compact,centered',
             'hero_height_desktop' => 'sometimes|required|integer|between:520,800', 'storefront_animation_speed' => 'sometimes|required|integer|between:150,1200', 'product_grid_columns' => 'sometimes|required|integer|in:3,4',
             'hero_content_style' => 'sometimes|required|in:editorial,compact,image_only', 'social_proof_interval' => 'sometimes|required|integer|between:10,120', 'social_proof_cities' => 'nullable|string|max:1000',
             'footer_copyright' => 'nullable|string|max:200',

@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
         Setting::firstOrCreate(['key' => 'payment_review_sla_hours'], ['value' => 4]);
         Setting::firstOrCreate(['key' => 'free_shipping_threshold'], ['value' => 500000]);
         Setting::firstOrCreate(['key' => 'staff_two_factor_required'], ['value' => false]);
-        foreach (['theme_primary_color' => '#343b34', 'theme_accent_color' => '#b8965a', 'theme_background_color' => '#faf8f4', 'theme_surface_color' => '#fffefb', 'theme_text_color' => '#343b34', 'theme_font' => 'modern', 'theme_container_width' => 1520, 'theme_radius' => 0, 'theme_header_style' => 'standard'] as $key => $value) {
+        foreach (['theme_primary_color' => '#343b34', 'theme_accent_color' => '#b8965a', 'theme_background_color' => '#faf8f4', 'theme_surface_color' => '#fffefb', 'theme_text_color' => '#343b34', 'theme_font' => 'poppins', 'theme_container_width' => 1520, 'theme_radius' => 0, 'theme_header_style' => 'standard'] as $key => $value) {
             Setting::firstOrCreate(['key' => $key], ['value' => $value]);
         }
         foreach (['header_announcement_enabled' => true, 'header_categories_enabled' => true, 'header_tracking_enabled' => true, 'header_sticky' => true, 'footer_pages_enabled' => true, 'footer_social_enabled' => true, 'footer_copyright' => '', 'floating_whatsapp_enabled' => true, 'social_proof_enabled' => true, 'social_proof_interval' => 24, 'social_proof_cities' => 'Jakarta, Bandung, Surabaya, Yogyakarta, Makassar, Medan', 'hero_content_style' => 'editorial'] as $key => $value) {

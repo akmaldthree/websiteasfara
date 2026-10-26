@@ -1,5 +1,5 @@
-@php($themeFonts=['classic'=>['Arial,Helvetica,sans-serif',"Georgia,'Times New Roman',serif"],'modern'=>['Helvetica,Arial,sans-serif','Helvetica,Arial,sans-serif'],'system'=>['system-ui,-apple-system,sans-serif','system-ui,-apple-system,sans-serif']])
-@php($themeFont=$themeFonts[$shop['theme_font'] ?? 'modern'] ?? $themeFonts['modern'])
+@php($themeFonts=['poppins'=>["'Poppins',Arial,sans-serif","'Poppins',Arial,sans-serif"],'classic'=>['Arial,Helvetica,sans-serif',"Georgia,'Times New Roman',serif"],'modern'=>['Helvetica,Arial,sans-serif','Helvetica,Arial,sans-serif'],'system'=>['system-ui,-apple-system,sans-serif','system-ui,-apple-system,sans-serif']])
+@php($themeFont=$themeFonts[$shop['theme_font'] ?? 'poppins'] ?? $themeFonts['poppins'])
 <!doctype html>
 <html lang="{{ app()->getLocale() }}">
 <head>
@@ -9,6 +9,11 @@
     <title>@yield('title',$shop['default_seo_title'] ?? 'Dthree — Dalam setiap cerita')</title>
     <link rel="canonical" href="@yield('canonical',url()->current())">
     @if(!empty($shop['favicon']))<link rel="icon" href="{{ asset('storage/'.$shop['favicon']) }}">@endif
+    @if(($shop['theme_font'] ?? 'poppins') === 'poppins')
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    @endif
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/dthree.css') }}?v={{ filemtime(public_path('css/dthree.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/storefront.css') }}?v={{ filemtime(public_path('css/storefront.css')) }}">

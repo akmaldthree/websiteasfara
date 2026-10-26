@@ -366,7 +366,7 @@ class DemoSeeder extends Seeder
             'story_title' => 'Busana yang menyertai momen keluarga',
             'story_text' => 'Kami menghadirkan koleksi dengan siluet santun, warna mudah dipadukan, dan kenyamanan yang mendukung aktivitas Anda.',
             'hero_height_desktop' => 633,
-            'theme_font' => 'modern',
+            'theme_font' => 'poppins',
             'header_sticky' => true,
             'storefront_animation_speed' => 550,
             'product_grid_columns' => 4,

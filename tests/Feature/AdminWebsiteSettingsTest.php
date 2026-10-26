@@ -37,7 +37,7 @@ class AdminWebsiteSettingsTest extends TestCase
             'theme_background_color' => '#F8F4EE',
             'theme_surface_color' => '#FFFFFF',
             'theme_text_color' => '#202020',
-            'theme_font' => 'modern',
+            'theme_font' => 'poppins',
             'theme_container_width' => 1400,
             'theme_radius' => 12,
             'theme_header_style' => 'compact',
@@ -63,10 +63,11 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame(['ABC-1'], Setting::get('cod_excluded_skus'));
         $this->assertSame(['abaya'], Setting::get('cod_excluded_categories'));
         $this->assertSame('compact', Setting::get('hero_content_style'));
+        $this->assertSame('poppins', Setting::get('theme_font'));
         $this->assertSame(30, Setting::get('social_proof_interval'));
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertSame(['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Nilai poin lebih tinggi', 'value_bonus_percent' => 5], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));
-        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('--ink:#112233', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
+        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('--ink:#112233', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
     }
 }
