@@ -45,7 +45,7 @@
             <div class="container-xxl commerce-hero-copy"><span>{{ $slide['eyebrow'] }}</span><h1>{{ $slide['title'] }}</h1><p>{{ $slide['text'] }}</p><a class="btn btn-light" href="{{ $slide['url'] }}">{{ strtoupper($slide['label']) }}</a></div>
         </article>
     @endforeach
-    @if($heroSlides->count()>1)<button class="hero-arrow hero-arrow-prev" type="button" data-hero-prev aria-label="Banner sebelumnya">‹</button><button class="hero-arrow hero-arrow-next" type="button" data-hero-next aria-label="Banner berikutnya">›</button><div class="hero-dots" aria-label="Pilih banner">@foreach($heroSlides as $slide)<button type="button" class="{{ $loop->first?'is-active':'' }}" data-hero-dot="{{ $loop->index }}" aria-label="Banner {{ $loop->iteration }}"></button>@endforeach</div>@endif
+    @if($heroSlides->count()>1)<div class="hero-dots" aria-label="Posisi banner">@foreach($heroSlides as $slide)<span class="{{ $loop->first?'is-active':'' }}" data-hero-dot="{{ $loop->index }}" aria-hidden="true"></span>@endforeach</div>@endif
     <a class="hero-next-section" href="#featured" aria-label="Ke produk unggulan">↓</a>
 </section>
 @if(($shop['home_featured_enabled'] ?? true) && ($featured=$featuredCollection))
