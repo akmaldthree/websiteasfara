@@ -76,8 +76,16 @@ class CommerceTest extends TestCase
             ->getJson(route('cart.summary'))
             ->assertOk()
             ->assertJsonPath('count', 2)
+            ->assertJsonPath('lines.0.variant_id', $this->variant->id)
             ->assertJsonPath('lines.0.variant', 'Black · L')
             ->assertJsonPath('subtotal', 'Rp 600.000');
+
+        $this->withSession(['cart' => [$this->variant->id => 2]])
+            ->postJson(route('cart.update'), ['variant_id' => $this->variant->id, 'quantity' => 3])
+            ->assertOk()
+            ->assertJsonPath('count', 3)
+            ->assertJsonPath('lines.0.quantity', 3)
+            ->assertJsonPath('subtotal', 'Rp 900.000');
     }
 
     public function test_server_prices_snapshot_and_idempotency(): void

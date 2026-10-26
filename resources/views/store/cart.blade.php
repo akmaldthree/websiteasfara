@@ -1,5 +1,6 @@
 @extends('layouts.store')
 @section('title','Keranjang — Dthree')
+@section('body_class','cart-body')
 @section('content')
 <section class="container-xxl section cart-page">
     @php($cartSubtotal=array_sum(array_column($lines,'total')))
@@ -49,6 +50,6 @@
         </div>
     @endif
 </section>
-@if(!empty($lines) && ($shop['cart_recommendations_enabled'] ?? true) && $recommendations->isNotEmpty())<section class="recently-viewed container-xxl"><span class="eyebrow">LENGKAPI PILIHAN ANDA</span><h2>YOU MAY ALSO LIKE</h2><div class="product-carousel" data-drag-scroll>@foreach($recommendations as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div></section>@endif
-@if($recentlyViewed->isNotEmpty())<section class="recently-viewed container-xxl"><h2>RECENTLY VIEWED PRODUCTS</h2><div class="product-carousel" data-drag-scroll>@foreach($recentlyViewed as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div></section>@endif
+@if(!empty($lines) && ($shop['cart_recommendations_enabled'] ?? true) && $recommendations->isNotEmpty())<section class="recently-viewed container-xxl"><span class="eyebrow">LENGKAPI PILIHAN ANDA</span><h2>YOU MAY ALSO LIKE</h2><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($recommendations as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></section>@endif
+@if($recentlyViewed->isNotEmpty())<section class="recently-viewed container-xxl"><h2>RECENTLY VIEWED PRODUCTS</h2><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($recentlyViewed as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></section>@endif
 @endsection

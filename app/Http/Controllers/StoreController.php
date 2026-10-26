@@ -221,6 +221,7 @@ class StoreController extends Controller
             'free_shipping_remaining' => max(0, $target - $subtotal),
             'free_shipping_progress' => $target > 0 ? min(100, (int) round($subtotal / $target * 100)) : 100,
             'lines' => collect($lines)->map(fn ($line) => [
+                'variant_id' => $line['variant']->id,
                 'name' => $line['variant']->series->name,
                 'variant' => $line['variant']->label,
                 'quantity' => $line['quantity'],
@@ -281,7 +282,7 @@ class StoreController extends Controller
             ->withCount('reviews')->withAvg('reviews', 'rating')->orderByDesc('featured')->take(8)->get();
     }
 
-    public function updateCart(Request $r, CartService $cartService)
+    public function updateCart(Request $r, CartService $cartService, CheckoutService $checkoutService)
     {
         $d = $r->validate(['variant_id' => 'required|integer', 'quantity' => 'required|integer|min:0|max:100']);
         $cart = $r->session()->get('cart', []);
@@ -298,6 +299,10 @@ class StoreController extends Controller
             $cartService->sync($r->user(), $cart, $r->session()->get('cart_customizations', []));
         }
         $r->session()->forget('checkout_key');
+
+        if ($r->expectsJson()) {
+            return $this->cartSummary($r, $checkoutService);
+        }
 
         return back();
     }

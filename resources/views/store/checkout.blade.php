@@ -1,5 +1,6 @@
 @extends('layouts.store')
 @section('title','Checkout — Dthree')
+@section('body_class','checkout-body')
 @section('content')
 <section class="container-xxl section checkout-page"><div class="checkout-steps"><span class="is-active"><b>1</b>{{ __('store.address_shipping') }}</span><span><b>2</b>{{ __('store.review_order') }}</span><span><b>3</b>{{ __('store.payment') }}</span></div><h1 class="my-4">{{ strtoupper(__('store.checkout')) }}</h1><div class="row g-5 checkout-layout"><div class="col-lg-7"><form action="{{ route('checkout.review') }}" method="post">@csrf
 <div class="panel"><h2>Kontak & alamat penerima</h2>@auth @if(auth()->user()->addresses->count())<label for="saved-address">Alamat tersimpan</label><select id="saved-address" class="form-select mb-4"><option value="">Isi alamat baru</option>@foreach(auth()->user()->addresses as $a)<option value="{{ $a->id }}" data-address="{{ json_encode($a->only('name','phone','province','city','district','postal_code','detail')) }}">{{ $a->name }} — {{ $a->city }}, {{ $a->detail }}</option>@endforeach</select>@endif @endauth
