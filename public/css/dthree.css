@@ -267,3 +267,21 @@
     .admin-sidebar{box-shadow:18px 0 42px color-mix(in srgb,var(--ink) 18%,transparent)}
     .admin-sidebar-close{color:var(--ink)}
 }
+
+/* Use one natural ease curve for interactive CMS feedback as well. */
+.admin-body{
+    --admin-motion-fast:180ms;
+    --admin-motion-base:320ms;
+    --admin-motion-ease:cubic-bezier(.22,1,.36,1);
+}
+.admin-body :where(a,button,summary,[role="button"],input,select,textarea,.admin-quick-card,.setup-item,.product-row-card,.workspace-media-row,.panel){
+    transition-property:color,background-color,border-color,box-shadow,opacity,transform;
+    transition-duration:var(--admin-motion-base);
+    transition-timing-function:var(--admin-motion-ease);
+}
+.admin-body :where(input,select,textarea):hover{border-color:color-mix(in srgb,var(--palette-gold) 72%,var(--palette-taupe))}
+.admin-body :where(a,button,summary,[role="button"]):active{transition-duration:var(--admin-motion-fast)}
+
+@media(prefers-reduced-motion:reduce){
+    .admin-body *,.admin-body *:before,.admin-body *:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
