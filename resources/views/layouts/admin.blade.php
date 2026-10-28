@@ -64,7 +64,53 @@
 </div>
 <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
 <script>
-const adminBody=document.body;const menuButton=document.querySelector('[data-sidebar-open]');const sidebarClose=document.querySelector('.admin-sidebar-close');const sidebarBackdrop=document.querySelector('.admin-sidebar-backdrop');const syncAdminMenu=()=>{const mobile=window.innerWidth<901;menuButton.hidden=!mobile;sidebarClose.hidden=!mobile;if(!mobile){adminBody.classList.remove('admin-menu-open');sidebarBackdrop.hidden=true}};const closeMenu=()=>{adminBody.classList.remove('admin-menu-open');sidebarBackdrop.hidden=true;menuButton?.setAttribute('aria-expanded','false')};menuButton?.addEventListener('click',()=>{const open=!adminBody.classList.contains('admin-menu-open');adminBody.classList.toggle('admin-menu-open',open);sidebarBackdrop.hidden=!open;menuButton.setAttribute('aria-expanded',open?'true':'false')});document.querySelectorAll('[data-sidebar-close]').forEach(button=>button.addEventListener('click',closeMenu));document.querySelectorAll('.admin-sidebar nav a').forEach(link=>link.addEventListener('click',()=>{if(window.innerWidth<901)closeMenu()}));window.addEventListener('resize',syncAdminMenu);syncAdminMenu();
+const adminBody=document.body;
+const adminSidebar=document.getElementById('admin-sidebar');
+const menuButton=document.querySelector('[data-sidebar-open]');
+const sidebarClose=document.querySelector('.admin-sidebar-close');
+const sidebarBackdrop=document.querySelector('.admin-sidebar-backdrop');
+const sidebarScrollKey='dthree-admin-sidebar-scroll';
+const saveSidebarScroll=()=>{
+    if(window.innerWidth>=901&&adminSidebar){
+        sessionStorage.setItem(sidebarScrollKey,String(adminSidebar.scrollTop));
+    }
+};
+const restoreSidebarScroll=()=>{
+    if(window.innerWidth<901||!adminSidebar)return;
+    const savedPosition=Number(sessionStorage.getItem(sidebarScrollKey));
+    if(Number.isFinite(savedPosition))adminSidebar.scrollTop=savedPosition;
+};
+const syncAdminMenu=()=>{
+    const mobile=window.innerWidth<901;
+    menuButton.hidden=!mobile;
+    sidebarClose.hidden=!mobile;
+    if(!mobile){
+        adminBody.classList.remove('admin-menu-open');
+        sidebarBackdrop.hidden=true;
+        restoreSidebarScroll();
+    }
+};
+const closeMenu=()=>{
+    adminBody.classList.remove('admin-menu-open');
+    sidebarBackdrop.hidden=true;
+    menuButton?.setAttribute('aria-expanded','false');
+};
+menuButton?.addEventListener('click',()=>{
+    const open=!adminBody.classList.contains('admin-menu-open');
+    adminBody.classList.toggle('admin-menu-open',open);
+    sidebarBackdrop.hidden=!open;
+    menuButton.setAttribute('aria-expanded',open?'true':'false');
+});
+document.querySelectorAll('[data-sidebar-close]').forEach(button=>button.addEventListener('click',closeMenu));
+document.querySelectorAll('.admin-sidebar nav a').forEach(link=>link.addEventListener('click',()=>{
+    if(window.innerWidth<901)closeMenu();
+    else saveSidebarScroll();
+}));
+adminSidebar?.addEventListener('scroll',saveSidebarScroll,{passive:true});
+window.addEventListener('pagehide',saveSidebarScroll);
+window.addEventListener('resize',syncAdminMenu);
+restoreSidebarScroll();
+syncAdminMenu();
 </script>
 @stack('scripts')
 </body></html>
