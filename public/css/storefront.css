@@ -156,6 +156,65 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 .home-transparent-header .site-header:not(.is-scrolled) .wordmark,.home-transparent-header .site-header:not(.is-scrolled) .desktop-nav a,.home-transparent-header .site-header:not(.is-scrolled) .header-actions a{color:#fff}
 @media(max-width:767px){.catalog-sidebar,.checkout-body,.checkout-body .checkout-summary{background:var(--palette-sand)}}
 
+/* Final readable type scale: comfortable Poppins without oversized tracking. */
+.store-body{font-size:16px;line-height:1.7}
+.store-body p{line-height:1.75}
+.store-body h1,.store-body h2,.store-body h3{letter-spacing:.025em}
+.store-body .desktop-nav{font-size:13px;letter-spacing:.045em}
+.store-body .announcement{font-size:11px;letter-spacing:.075em}
+.store-body .language-picker>summary{font-size:11px;letter-spacing:.055em}
+.store-body .btn{font-size:13px;font-weight:600;letter-spacing:.035em;line-height:1.35}
+.commerce-hero-copy>span,.commerce-campaign-copy>span,.commerce-story span,.shop-look-copy>span,.store-body .eyebrow{font-size:12px;letter-spacing:.1em}
+.commerce-hero-copy p{font-size:17px;line-height:1.75}
+.featured-product-home>h2,.commerce-heading h2{font-size:31px;letter-spacing:.04em}
+.featured-product-info>span,.featured-options small{font-size:12px;letter-spacing:.07em}
+.featured-product-info>p,.commerce-campaign-copy p,.commerce-story p,.shop-look-copy p{font-size:16px;line-height:1.8}
+.commerce-heading a,.collection-tabs button{font-size:12px;letter-spacing:.055em}
+.store-body .product-tag{font-size:11px;letter-spacing:.045em}
+.product-quick{font-size:12px;letter-spacing:.045em}
+.store-body .product-meta h3{font-size:15px;line-height:1.5;letter-spacing:.02em}
+.store-body .product-meta span,.product-card-prices span,.product-card-prices del{font-size:14px;line-height:1.5}
+.product-card-prices small{font-size:11px;letter-spacing:.02em}
+.store-body .product-card>p,.product-rating{font-size:11px;line-height:1.55;letter-spacing:.025em}
+.catalog-title p{font-size:16px}
+.catalog-title>span,.catalog-title>div>span,.catalog-filter>summary,.catalog-toolbar>strong,.catalog-toolbar>label,.catalog-toolbar select{font-size:12px;letter-spacing:.055em}
+.catalog-sidebar summary,.catalog-filter-list label,.catalog-sidebar details>label,.catalog-reset{font-size:12px;line-height:1.5;letter-spacing:.035em}
+.product-page .breadcrumb{font-size:13px;letter-spacing:.025em}
+.product-info-column .eyebrow{font-size:12px;letter-spacing:.07em}
+.product-info-column .product-description,.product-introduction p{font-size:15px;line-height:1.8}
+.variant-option-groups label,.product-detail-body .variant-option-groups label,.product-detail-body .variant-option-label{font-size:14px}
+.variant-choice{font-size:13px}
+.product-quantity-block>label,.product-details summary,.product-share-link{font-size:12px;letter-spacing:.055em}
+.product-details details>p,.product-details details>.size-chart-wrap{font-size:14px}
+.store-body label,.checkout-page label{font-size:13px;line-height:1.5}
+.store-body .form-control,.store-body .form-select{font-size:15px;line-height:1.5}
+.checkout-product span,.checkout-product strong{font-size:14px}
+.secure-checkout,.shipping-progress p,.drawer-shipping p{font-size:11px}
+.checkout-steps span,.payment-methods small{font-size:12px}
+.store-body .site-footer h2{font-size:13px;letter-spacing:.055em}
+.store-body .site-footer a{font-size:13px;line-height:1.6}
+.store-body .site-footer p{font-size:14px}
+.store-body .footer-bottom{font-size:12px;letter-spacing:.02em}
+.social-proof small{font-size:10px}.social-proof b{font-size:13px}.social-proof em{font-size:11px}
+.store-benefits span{font-size:12px}.store-benefits b{font-size:13px;letter-spacing:.07em}
+
+@media(max-width:767px){
+    .store-body{font-size:15px;line-height:1.7}
+    .store-body .announcement{font-size:11px;letter-spacing:.035em}
+    .mobile-nav>a{font-size:14px;letter-spacing:.035em}
+    .commerce-hero-copy h1{font-size:36px;line-height:1.18}
+    .commerce-hero-copy p{font-size:15px;line-height:1.7}
+    .featured-product-home>h2,.commerce-heading h2{font-size:22px;letter-spacing:.035em}
+    .store-body .product-meta h3{font-size:14px;line-height:1.5}
+    .store-body .product-meta span,.product-card-prices span,.product-card-prices del{font-size:13px;line-height:1.5}
+    .product-card-prices small{font-size:10px}
+    .store-body .product-card>p,.product-rating{font-size:11px}
+    .product-detail-body .product-info-column>h1{font-size:22px!important}
+    .catalog-title h1{font-size:30px}
+    .checkout-page>h1,.cart-page>h1{font-size:27px;line-height:1.4}
+    .store-benefits span{font-size:11px;line-height:1.55}.store-benefits b{font-size:12px}
+}
+
 /* Searchable shipping region selector. */
 .shipping-region-picker{position:relative;z-index:12}
 .shipping-region-control{position:relative}

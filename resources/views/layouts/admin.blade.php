@@ -3,6 +3,9 @@
 <head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
     <title>@yield('title','Dashboard') · Dthree Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}"><link rel="stylesheet" href="{{ asset('css/dthree.css') }}?v={{ filemtime(public_path('css/dthree.css')) }}">
     <style>:root{--palette-sage:{{ \App\Models\Setting::get('theme_palette_base',config('theme.palette.theme_palette_base.color')) }};--palette-sand:{{ \App\Models\Setting::get('theme_palette_surface',config('theme.palette.theme_palette_surface.color')) }};--palette-taupe:{{ \App\Models\Setting::get('theme_palette_structure',config('theme.palette.theme_palette_structure.color')) }};--palette-gold:{{ \App\Models\Setting::get('theme_palette_accent',config('theme.palette.theme_palette_accent.color')) }};--palette-cream:{{ \App\Models\Setting::get('theme_palette_base',config('theme.palette.theme_palette_base.color')) }};--ink:{{ \App\Models\Setting::get('theme_text_color',config('theme.text_color')) }};--gold:var(--palette-gold);--cream:var(--palette-cream);--paper:var(--palette-sage);--surface:var(--palette-sand);--line:var(--palette-taupe)}</style>
 </head>
