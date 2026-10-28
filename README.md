@@ -51,7 +51,7 @@ Password admin diminta secara tersembunyi. Tidak ada akun atau password bawaan. 
 
 ## Data demonstrasi lokal
 
-Gunakan database development terpisah, `APP_ENV=local`. Jalankan `php artisan db:seed --class=DemoSeeder` untuk membuat contoh katalog, varian, tarif, voucher `DEMO10`, konten CMS, rekening demo, dan halaman kebijakan. Semua SKU diawali `DEMO-`; ilustrasi bukan foto produk Dthree. Seeder demo membuka checkout lokal agar alur transaksi dapat diuji, tetapi tidak membuat akun admin. Jangan menjalankannya pada database penjualan.
+Gunakan database development terpisah, `APP_ENV=local`. Jalankan `php artisan db:seed --class=DemoSeeder` untuk mengisi contoh lengkap pada seluruh area CMS: kategori, 10 series, 169 varian, galeri, bundling, ukuran custom, harga B2B, stok, pelanggan, tujuh kondisi pesanan, retur, notifikasi, ulasan, pertanyaan produk, newsletter, voucher, tarif, lokasi toko, banner, Shop the Look, journal, lookbook, campaign, menu, dan halaman kebijakan. Semua SKU diawali `DEMO-`; gambar generatif bukan foto produk Dthree. Aset mengikuti rasio slot CMS: hero 2:1, produk 4:5, promo 3:4, editorial 3:2, dan Shop the Look 4:5. Seeder aman dijalankan ulang dan tidak membuat akun admin. Seeder membuka checkout serta memasang rekening contoh, jadi gunakan hanya untuk pratinjau atau staging dan ganti semua data contoh sebelum menerima transaksi nyata.
 
 ## Pembaruan
 

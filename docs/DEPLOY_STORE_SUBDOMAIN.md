@@ -255,7 +255,7 @@ ALLOW_DEMO_SEEDING=true php artisan db:seed --class=DemoSeeder --force
 php artisan optimize
 ```
 
-Seeder aman dijalankan ulang: kategori, produk, varian, konten, voucher, dan tarif yang sama akan diperbarui tanpa digandakan. Nilai `ALLOW_DEMO_SEEDING` hanya diberikan pada perintah tersebut sehingga tidak perlu disimpan di `.env`. Ganti seluruh informasi contoh, rekening demo, kontak, harga, stok, serta gambar dari CMS sebelum toko menerima transaksi nyata.
+Seeder aman dijalankan ulang: katalog, produk, varian, galeri, bundling, ukuran custom, harga B2B, pelanggan, contoh pesanan, retur, konten, voucher, dan tarif yang sama akan diperbarui tanpa digandakan. Aset gambar bawaannya sudah mengikuti rasio hero 2:1, produk 4:5, promo 3:4, editorial 3:2, dan Shop the Look 4:5. Nilai `ALLOW_DEMO_SEEDING` hanya diberikan pada perintah tersebut sehingga tidak perlu disimpan di `.env`. Ganti seluruh informasi contoh, rekening demo, kontak, harga, stok, pelanggan, pesanan, serta gambar dari CMS sebelum toko menerima transaksi nyata.
 
 ## 12. Update setelah perubahan GitHub
 
