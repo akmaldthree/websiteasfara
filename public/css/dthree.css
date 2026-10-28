@@ -270,9 +270,9 @@
 
 /* Use one natural ease curve for interactive CMS feedback as well. */
 .admin-body{
-    --admin-motion-fast:180ms;
-    --admin-motion-base:320ms;
-    --admin-motion-ease:cubic-bezier(.22,1,.36,1);
+    --admin-motion-fast:260ms;
+    --admin-motion-base:480ms;
+    --admin-motion-ease:cubic-bezier(.22,.68,.28,1);
 }
 .admin-body :where(a,button,summary,[role="button"],input,select,textarea,.admin-quick-card,.setup-item,.product-row-card,.workspace-media-row,.panel){
     transition-property:color,background-color,border-color,box-shadow,opacity,transform;

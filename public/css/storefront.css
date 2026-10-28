@@ -502,11 +502,11 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 }
 
 /* Unified motion system and stable desktop catalog interaction. */
-.store-body{--motion-fast:220ms;--motion-base:380ms;--motion-slow:680ms;--motion-ease:cubic-bezier(.22,1,.36,1);--motion-ease-soft:cubic-bezier(.4,0,.2,1)}
+.store-body{--motion-fast:300ms;--motion-base:520ms;--motion-slow:850ms;--motion-ease:cubic-bezier(.22,.68,.28,1);--motion-ease-soft:cubic-bezier(.4,0,.2,1)}
 .store-body .site-header{transition:background-color var(--motion-base) var(--motion-ease-soft),color var(--motion-base) var(--motion-ease-soft),box-shadow var(--motion-base) var(--motion-ease-soft),transform var(--motion-base) var(--motion-ease)}
 .desktop-nav a:after,.site-footer a:after{transition:right var(--motion-base) var(--motion-ease)}
 .header-actions a,.header-search-button{transition:color var(--motion-fast) var(--motion-ease-soft),transform var(--motion-base) var(--motion-ease)}
-.catalog-mega-menu{transform:translateY(-12px);transition:opacity 280ms var(--motion-ease-soft),transform var(--motion-base) var(--motion-ease),visibility 0s linear var(--motion-base);will-change:opacity,transform}
+.catalog-mega-menu{transform:translateY(-12px);transition:opacity var(--motion-base) var(--motion-ease-soft),transform var(--motion-base) var(--motion-ease),visibility 0s linear var(--motion-base);will-change:opacity,transform}
 .site-header.is-catalog-open .catalog-mega-menu,.site-header:has(.catalog-nav-link:hover) .catalog-mega-menu,.site-header:has(.catalog-nav-link:focus-visible) .catalog-mega-menu,.catalog-mega-menu:hover,.catalog-mega-menu:focus-within{visibility:visible;opacity:1;transform:none;pointer-events:auto;transition-delay:0s}
 .catalog-nav-link:before{content:"";position:absolute;top:100%;right:-16px;left:-16px;height:38px}.home-transparent-header .catalog-nav-link:before{height:44px}
 .catalog-mega-menu a{transition:color var(--motion-fast) var(--motion-ease-soft),border-color var(--motion-fast) var(--motion-ease-soft),padding-left var(--motion-base) var(--motion-ease),opacity var(--motion-fast) var(--motion-ease-soft)}
