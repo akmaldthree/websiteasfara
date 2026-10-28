@@ -18,7 +18,7 @@
                 @foreach($lines as $line)
                     @php($v=$line['variant'])
                     <div class="cart-item">
-                        <img src="{{ $v->series->image_url }}" alt="{{ $v->series->name }}">
+                        <img src="{{ $v->series->image_url }}" alt="{{ $v->series->name }}" width="240" height="300" loading="lazy" decoding="async">
                         <div class="flex-grow-1">
                             <h2>{{ $v->series->name }}</h2>
                             <p>{{ $v->label }} · {{ $v->sku }}<br>@rupiah($line['unit_price']) / item @if($line['price_tier_minimum'])· Tier {{ $line['price_tier_minimum'] }}+@endif · Tersedia {{ $v->available }}</p>

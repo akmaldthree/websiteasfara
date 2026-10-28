@@ -78,7 +78,7 @@
                 </div>
             </form>
         </div>
-        <div class="col-lg-5"><div class="panel checkout-summary"><h2>RINGKASAN PESANAN</h2>@foreach($lines as $line)<div class="checkout-product"><img src="{{ $line['variant']->series->image_url }}" alt="{{ $line['variant']->series->name }}"><span>{{ $line['variant']->series->name }}<br><small>{{ $line['variant']->label }} × {{ $line['quantity'] }}</small></span><strong>@rupiah($line['total'])</strong></div>@endforeach<div class="summary-row total"><span>Subtotal</span><span>@rupiah(array_sum(array_column($lines,'total')))</span></div><p class="small">Belum termasuk ongkir dan biaya pembayaran. Rincian akhir tampil sebelum konfirmasi.</p><div class="secure-checkout">⌾ TRANSAKSI AMAN & DATA TERLINDUNGI</div></div></div>
+        <div class="col-lg-5"><div class="panel checkout-summary"><h2>RINGKASAN PESANAN</h2>@foreach($lines as $line)<div class="checkout-product"><img src="{{ $line['variant']->series->image_url }}" alt="{{ $line['variant']->series->name }}" width="140" height="176" loading="lazy" decoding="async"><span>{{ $line['variant']->series->name }}<br><small>{{ $line['variant']->label }} × {{ $line['quantity'] }}</small></span><strong>@rupiah($line['total'])</strong></div>@endforeach<div class="summary-row total"><span>Subtotal</span><span>@rupiah(array_sum(array_column($lines,'total')))</span></div><p class="small">Belum termasuk ongkir dan biaya pembayaran. Rincian akhir tampil sebelum konfirmasi.</p><div class="secure-checkout">⌾ TRANSAKSI AMAN & DATA TERLINDUNGI</div></div></div>
     </div>
 </section>
 @endsection

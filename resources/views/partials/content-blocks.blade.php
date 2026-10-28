@@ -13,7 +13,7 @@
             <p><a class="btn btn-dark" href="{{ $block['url'] }}">{{ $block['label'] }} ↗</a></p>
             @break
         @case('image')
-            <figure class="my-4"><img class="w-100" src="{{ $block['url'] }}" alt="{{ $block['label'] }}"><figcaption class="small text-muted mt-2">{{ $block['label'] }}</figcaption></figure>
+            <figure class="my-4"><img class="w-100" src="{{ $block['url'] }}" alt="{{ $block['label'] }}" width="1200" height="800" loading="lazy" decoding="async"><figcaption class="small text-muted mt-2">{{ $block['label'] }}</figcaption></figure>
             @break
         @case('columns')
             <div class="row g-4 my-4">

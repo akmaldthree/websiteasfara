@@ -5,8 +5,8 @@
     @php($quickVariants=$collection->variants->where('active',true)->where('fulfillment','!=','custom_made')->map(fn($variant)=>['id'=>$variant->id,'type'=>$variant->product_type,'color'=>$variant->color,'size'=>$variant->size,'label'=>$variant->label,'price'=>(int)$variant->price,'available'=>$variant->available])->values())
     @php($availableStock=$collection->variants->sum(fn($variant)=>max(0,(int)$variant->stock-(int)$variant->reserved)))
     <a @class(['product-image', 'has-secondary-image' => $cardImages->count() > 1]) href="{{ route('product',$collection->slug) }}">
-        <img class="product-image-primary" src="{{ $cardImages->first() }}" alt="{{ $collection->name }}{{ $collection->image ? '' : ' — ilustrasi koleksi' }}" loading="lazy">
-        @if($cardImages->count()>1)<img class="product-image-secondary" src="{{ $cardImages->get(1) }}" alt="{{ $collection->name }} — tampilan berikutnya" loading="lazy">@endif
+        <img class="product-image-primary" src="{{ $cardImages->first() }}" alt="{{ $collection->name }}{{ $collection->image ? '' : ' — ilustrasi koleksi' }}" width="800" height="1000" loading="lazy" decoding="async">
+        @if($cardImages->count()>1)<img class="product-image-secondary" src="{{ $cardImages->get(1) }}" alt="{{ $collection->name }} — tampilan berikutnya" width="800" height="1000" loading="lazy" decoding="async">@endif
         @if($availableStock<=0)<span class="product-tag product-tag-sold">SOLD OUT</span>@elseif($saving>0)<span class="product-tag product-tag-sale">SAVE IDR {{ number_format($saving,0,',','.') }},00</span>@elseif($collection->featured)<span class="product-tag">FEATURED</span>@endif
     </a>
     @if($quickVariants->isNotEmpty())
