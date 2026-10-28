@@ -320,7 +320,13 @@ class StoreController extends Controller
             $r->session()->put('checkout_key', Str::random(64));
         }
         $lines = $service->lines($cart, false, $r->user(), $r->session()->get('cart_customizations', []));
-        $rates = ShippingRate::where('active', true)->get();
+        $weight = array_sum(array_map(fn ($line) => $line['unit_weight'] * $line['quantity'], $lines));
+        $billableKilograms = max(1, (int) ceil($weight / 1000));
+        $rates = ShippingRate::where('active', true)->get()
+            ->each(fn (ShippingRate $rate) => $rate->setAttribute('checkout_cost', $rate->first_kg + ($billableKilograms - 1) * $rate->extra_kg))
+            ->sortBy(fn (ShippingRate $rate) => [$rate->checkout_cost, $rate->id])
+            ->unique(fn (ShippingRate $rate) => Str::lower(trim($rate->province).'|'.trim($rate->city)))
+            ->values();
 
         $businessAccount = $r->user()?->businessAccount;
         $analytics->record($r, 'begin_checkout', ['items' => array_sum(array_column($lines, 'quantity')), 'value' => array_sum(array_column($lines, 'total'))]);

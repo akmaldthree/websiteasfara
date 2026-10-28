@@ -301,6 +301,32 @@ class CommerceTest extends TestCase
         $this->assertDatabaseCount('orders', 1);
     }
 
+    public function test_checkout_searches_unique_shipping_regions_without_exposing_carriers(): void
+    {
+        $cheapest = ShippingRate::create([
+            'courier' => 'POS',
+            'service' => 'KILAT',
+            'province' => 'Jawa Barat',
+            'city' => 'Tasikmalaya',
+            'first_kg' => 12000,
+            'extra_kg' => 8000,
+            'estimate' => '1–2 hari',
+        ]);
+
+        $this->post('/keranjang', ['variant_id' => $this->variant->id, 'quantity' => 3]);
+        $response = $this->get('/checkout');
+
+        $response->assertOk()
+            ->assertSee('Kota / kabupaten atau provinsi')
+            ->assertSee('Contoh: Bandung atau Jawa Barat')
+            ->assertDontSee('JNE REG')
+            ->assertDontSee('POS KILAT');
+
+        $this->assertSame(1, substr_count($response->getContent(), '"city":"Tasikmalaya"'));
+        $this->assertStringContainsString('"id":'.$cheapest->id, $response->getContent());
+        $this->assertStringContainsString('"price_label":"Rp 20.000"', $response->getContent());
+    }
+
     public function test_buy_now_adds_the_selected_variant_and_opens_checkout(): void
     {
         $this->post('/keranjang', ['variant_id' => $this->variant->id, 'quantity' => 1, 'buy_now' => 1])

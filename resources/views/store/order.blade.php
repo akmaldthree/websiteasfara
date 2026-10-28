@@ -7,7 +7,7 @@
 @auth @if(!$order->user_id && (($order->email && mb_strtolower($order->email)===mb_strtolower(auth()->user()->email)) || trim($order->phone)===trim((string)auth()->user()->phone)))<div class="alert alert-info"><form method="post" action="{{ URL::signedRoute('orders.claim',['order'=>$order->id]) }}">@csrf Pesanan tamu ini cocok dengan akun Anda. <button class="btn btn-dark btn-sm ms-2">Tambahkan ke riwayat akun</button></form></div>@endif @endauth
 <div class="row g-4"><div class="col-lg-7">
 <div class="panel">@include('partials.order-summary')</div>
-<div class="panel mt-4"><h2>Alamat & pengiriman</h2><p>{{ $order->name }} · {{ $order->phone }}<br>{{ $order->address['detail'] }}<br>{{ $order->address['district'] }}, {{ $order->address['city'] }}, {{ $order->address['province'] }} {{ $order->address['postal_code'] }}</p><p>{{ $order->shipping['courier'] }} {{ $order->shipping['service'] }} · {{ $order->shipping['estimate'] }}</p>@if($order->tracking_number)<p><strong>Nomor resi: {{ $order->tracking_number }}</strong></p>@endif</div>
+<div class="panel mt-4"><h2>Alamat & pengiriman</h2><p>{{ $order->name }} · {{ $order->phone }}<br>{{ $order->address['detail'] }}<br>{{ $order->address['district'] }}, {{ $order->address['city'] }}, {{ $order->address['province'] }} {{ $order->address['postal_code'] }}</p><p>Estimasi pengiriman: {{ $order->shipping['estimate'] }}</p>@if($order->tracking_number)<p><strong>Nomor resi: {{ $order->tracking_number }}</strong></p>@endif</div>
 @include('partials.refunds')
 @include('partials.order-events')
 </div><div class="col-lg-5">
