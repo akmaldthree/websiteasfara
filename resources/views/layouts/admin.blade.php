@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id">
+<html lang="id" class="admin-document">
 <head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
     <title>@yield('title','Dashboard') · Dthree Admin</title>
@@ -57,14 +57,14 @@
 </aside>
 <div class="admin-sidebar-backdrop" data-sidebar-close hidden></div>
 <div class="admin-main">
-    <header class="admin-topbar"><div class="d-flex align-items-center gap-3"><button class="admin-menu-button" type="button" aria-controls="admin-sidebar" aria-expanded="false" data-sidebar-open hidden>☰</button><div><small>CMS Dthree</small><strong>@yield('title','Ringkasan')</strong></div></div><div class="admin-topbar-actions"><a href="{{ route('home') }}" target="_blank" rel="noopener">Lihat website ↗</a><span class="admin-user">{{ auth()->user()->name }}<small>{{ auth()->user()->role }}</small></span><form method="post" action="{{ route('logout') }}">@csrf<button class="btn btn-outline-dark btn-sm">Keluar</button></form></div></header>
+    <header class="admin-topbar"><div class="d-flex align-items-center gap-3"><button class="admin-menu-button" type="button" aria-label="Buka menu" aria-controls="admin-sidebar" aria-expanded="false" data-sidebar-open hidden>☰</button><div><small>CMS Dthree</small><strong>@yield('title','Ringkasan')</strong></div></div><div class="admin-topbar-actions"><a href="{{ route('home') }}" target="_blank" rel="noopener">Lihat website ↗</a><span class="admin-user">{{ auth()->user()->name }}<small>{{ auth()->user()->role }}</small></span><form method="post" action="{{ route('logout') }}">@csrf<button class="btn btn-outline-dark btn-sm">Keluar</button></form></div></header>
     @include('partials.alerts')
     <main class="admin-content" id="main-content" tabindex="-1">@yield('content')</main>
 </div>
 </div>
 <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
 <script>
-const adminBody=document.body;const menuButton=document.querySelector('[data-sidebar-open]');const sidebarClose=document.querySelector('.admin-sidebar-close');const sidebarBackdrop=document.querySelector('.admin-sidebar-backdrop');const syncAdminMenu=()=>{const mobile=window.innerWidth<768;menuButton.hidden=!mobile;sidebarClose.hidden=!mobile;if(!mobile){adminBody.classList.remove('admin-menu-open');sidebarBackdrop.hidden=true}};const closeMenu=()=>{adminBody.classList.remove('admin-menu-open');sidebarBackdrop.hidden=true;menuButton?.setAttribute('aria-expanded','false')};menuButton?.addEventListener('click',()=>{const open=!adminBody.classList.contains('admin-menu-open');adminBody.classList.toggle('admin-menu-open',open);sidebarBackdrop.hidden=!open;menuButton.setAttribute('aria-expanded',open?'true':'false')});document.querySelectorAll('[data-sidebar-close]').forEach(button=>button.addEventListener('click',closeMenu));document.querySelectorAll('.admin-sidebar nav a').forEach(link=>link.addEventListener('click',()=>{if(window.innerWidth<768)closeMenu()}));window.addEventListener('resize',syncAdminMenu);syncAdminMenu();
+const adminBody=document.body;const menuButton=document.querySelector('[data-sidebar-open]');const sidebarClose=document.querySelector('.admin-sidebar-close');const sidebarBackdrop=document.querySelector('.admin-sidebar-backdrop');const syncAdminMenu=()=>{const mobile=window.innerWidth<901;menuButton.hidden=!mobile;sidebarClose.hidden=!mobile;if(!mobile){adminBody.classList.remove('admin-menu-open');sidebarBackdrop.hidden=true}};const closeMenu=()=>{adminBody.classList.remove('admin-menu-open');sidebarBackdrop.hidden=true;menuButton?.setAttribute('aria-expanded','false')};menuButton?.addEventListener('click',()=>{const open=!adminBody.classList.contains('admin-menu-open');adminBody.classList.toggle('admin-menu-open',open);sidebarBackdrop.hidden=!open;menuButton.setAttribute('aria-expanded',open?'true':'false')});document.querySelectorAll('[data-sidebar-close]').forEach(button=>button.addEventListener('click',closeMenu));document.querySelectorAll('.admin-sidebar nav a').forEach(link=>link.addEventListener('click',()=>{if(window.innerWidth<901)closeMenu()}));window.addEventListener('resize',syncAdminMenu);syncAdminMenu();
 </script>
 @stack('scripts')
 </body></html>
