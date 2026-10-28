@@ -119,6 +119,16 @@ class AdminOperationsEnhancementTest extends TestCase
             ->assertSee('Queue');
     }
 
+    public function test_order_filters_show_a_readable_credit_payment_label(): void
+    {
+        $admin = $this->staff('admin');
+
+        $this->actingAs($admin)->get(route('admin.orders'))
+            ->assertOk()
+            ->assertSee('Termin kredit')
+            ->assertDontSee('status.credit');
+    }
+
     /** @param array<string, mixed> $overrides */
     private function order(array $overrides = []): Order
     {
