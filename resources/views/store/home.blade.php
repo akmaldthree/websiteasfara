@@ -37,7 +37,7 @@
     ])->values());
 @endphp
 @push('head')<style>.home-transparent-header #main{display:flex;flex-direction:column}</style>@endpush
-@php($heroAutoplayMs=(int)round((float)($shop['hero_autoplay_seconds'] ?? 6.5)*1000))
+@php($heroAutoplayMs=(int)round((float)($shop['hero_autoplay_seconds'] ?? 5)*1000))
 <section class="commerce-hero hero-content-{{ $shop['hero_content_style'] ?? 'editorial' }}" style="order:{{ $homePosition('hero') }}" data-hero-slider aria-roledescription="carousel">
     @foreach($heroSlides as $slide)
         <article class="commerce-hero-slide hero-align-{{ $slide['align'] }} hero-tone-{{ $slide['tone'] }} {{ $loop->first?'is-active':'' }}" data-hero-slide data-duration="{{ $heroAutoplayMs }}" aria-hidden="{{ $loop->first?'false':'true' }}">

@@ -24,7 +24,7 @@
 <a href="#main" class="visually-hidden-focusable skip-link">Langsung ke konten</a>
 @php($announcements=collect(preg_split('/[\r\n]+/',$shop['announcement_lines'] ?? ''))->map(fn($line)=>trim($line))->filter())
 @php($announcements=$announcements->isEmpty()?collect([$shop['tagline'] ?? '','WORLDWIDE SHIPPING'])->filter():$announcements)
-@if($shop['header_announcement_enabled'] ?? true)<div class="announcement" data-announcement-interval="{{ (int)round((float)($shop['announcement_interval_seconds'] ?? 4)*1000) }}"><div>@foreach($announcements as $notice)<span class="{{ $loop->first?'is-active':'' }}">{{ $notice }}</span>@endforeach</div></div>@endif
+@if($shop['header_announcement_enabled'] ?? true)<div class="announcement" data-announcement-interval="{{ (int)round((float)($shop['announcement_interval_seconds'] ?? 5)*1000) }}"><div>@foreach($announcements as $notice)<span class="{{ $loop->first?'is-active':'' }}">{{ $notice }}</span>@endforeach</div></div>@endif
 <header @class(['site-header','sticky-top'=>($shop['header_sticky'] ?? true)])>
     <div class="container-xxl header-row">
         <button class="menu-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#mobile-nav" aria-label="Buka menu" aria-controls="mobile-nav" aria-expanded="false"><span></span><span></span><span></span></button>
@@ -97,7 +97,7 @@
     const play=()=>{
         clearTimeout(timer);
         if(document.hidden)return;
-        const delay=Math.max(2000,Number(bar.dataset.announcementInterval)||4000);
+        const delay=Math.max(2000,Number(bar.dataset.announcementInterval)||5000);
         timer=setTimeout(()=>{show(active+1);play()},delay);
     };
     document.addEventListener('visibilitychange',play);
@@ -119,7 +119,7 @@
     const play=()=>{
         clearTimeout(timer);
         if(document.hidden)return;
-        const delay=Math.max(2500,Number(slides[active]?.dataset.duration)||6500);
+        const delay=Math.max(2500,Number(slides[active]?.dataset.duration)||5000);
         timer=setTimeout(()=>{show(active+1);play()},delay);
     };
     hero.addEventListener('pointerdown',event=>{startX=event.clientX});
