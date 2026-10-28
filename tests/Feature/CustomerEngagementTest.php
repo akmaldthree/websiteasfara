@@ -38,13 +38,20 @@ class CustomerEngagementTest extends TestCase
         $this->checkout = ['name' => 'Pelanggan', 'phone' => '081234567890', 'email' => 'test@example.com', 'province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'district' => 'Cihideung', 'postal_code' => '46111', 'detail' => 'Alamat uji', 'payment_method' => 'transfer', 'shipping_rate_id' => $rate->id, 'terms' => '1'];
     }
 
-    public function test_customer_can_toggle_wishlist(): void
+    public function test_customer_can_toggle_one_wishlist_entry_per_product_series(): void
     {
         $user = User::factory()->create();
-        $this->actingAs($user)->post(route('wishlist.toggle', $this->variant))->assertRedirect();
-        $this->assertDatabaseHas('wishlist_items', ['user_id' => $user->id, 'variant_id' => $this->variant->id]);
-        $this->post(route('wishlist.toggle', $this->variant))->assertRedirect();
-        $this->assertDatabaseMissing('wishlist_items', ['user_id' => $user->id, 'variant_id' => $this->variant->id]);
+        $series = $this->variant->series;
+        Variant::create(['series_id' => $series->id, 'sku' => 'REVIEW-DRESS-M', 'color' => 'Sage', 'size' => 'M', 'price' => 300000, 'stock' => 5, 'weight' => 500]);
+
+        $productPage = $this->actingAs($user)->get(route('product', $series->slug))->assertOk();
+        $this->assertSame(1, substr_count($productPage->getContent(), route('wishlist.toggle', $series)));
+        $productPage->assertSee('Simpan ke wishlist')->assertDontSee('Simpan varian ke wishlist');
+
+        $this->post(route('wishlist.toggle', $series))->assertRedirect();
+        $this->assertDatabaseHas('wishlist_items', ['user_id' => $user->id, 'series_id' => $series->id]);
+        $this->post(route('wishlist.toggle', $series))->assertRedirect();
+        $this->assertDatabaseMissing('wishlist_items', ['user_id' => $user->id, 'series_id' => $series->id]);
     }
 
     public function test_verified_review_requires_received_purchase_and_admin_moderation(): void

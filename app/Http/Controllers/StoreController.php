@@ -151,7 +151,7 @@ class StoreController extends Controller
         $reviews = Review::where('status', 'approved')->whereHas('variant', fn ($query) => $query->where('series_id', $series->id))->with('user')->withCount('helpfulVotes')->latest()->get();
         $questions = ProductQuestion::where('series_id', $series->id)->where('status', 'answered')->with('user')->latest('answered_at')->get();
         $helpfulReviewIds = $r->user() ? ReviewHelpfulVote::where('user_id', $r->user()->id)->whereIn('review_id', $reviews->pluck('id'))->pluck('review_id')->all() : [];
-        $wishlistIds = $r->user()?->wishlistItems()->whereIn('variant_id', $series->variants->pluck('id'))->pluck('variant_id')->all() ?? [];
+        $isWishlisted = $r->user()?->wishlistItems()->where('series_id', $series->id)->exists() ?? false;
         $relatedProducts = Series::published()
             ->whereKeyNot($series->id)
             ->where('category_id', $series->category_id)
@@ -164,7 +164,7 @@ class StoreController extends Controller
         $r->session()->put('recently_viewed', $recentlyViewedIds);
         $analytics->record($r, 'view_item', ['series_id' => $series->id, 'variant_id' => $r->integer('variant') ?: null]);
 
-        return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'reviews', 'questions', 'helpfulReviewIds', 'wishlistIds', 'relatedProducts'));
+        return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'reviews', 'questions', 'helpfulReviewIds', 'isWishlisted', 'relatedProducts'));
     }
 
     public function question(Request $request, Series $series)

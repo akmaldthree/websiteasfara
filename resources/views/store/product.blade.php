@@ -70,7 +70,16 @@
                 </div>
                 @endif
             @endforeach
-            @auth<div class="mt-4"><p class="small mb-2"><strong>Simpan varian ke wishlist</strong></p><div class="d-flex flex-wrap gap-2">@foreach($series->variants as $v)<form method="post" action="{{ route('wishlist.toggle',$v) }}">@csrf<button class="btn btn-outline-dark btn-sm">{{ in_array($v->id,$wishlistIds)?'♥ Tersimpan':'♡ Simpan' }} · {{ $v->label }}</button></form>@endforeach</div></div>@endauth
+            @auth
+                <div class="mt-4">
+                    <form method="post" action="{{ route('wishlist.toggle', $series) }}">
+                        @csrf
+                        <button class="btn btn-outline-dark w-100" type="submit" aria-pressed="{{ $isWishlisted ? 'true' : 'false' }}">
+                            {{ $isWishlisted ? '♥ Tersimpan di wishlist' : '♡ Simpan ke wishlist' }}
+                        </button>
+                    </form>
+                </div>
+            @endauth
             @if($priceGroup && $businessTiers->flatten()->isNotEmpty())
                 <details class="mt-4"><summary>Lihat tier harga akun {{ $priceGroup->name }}</summary>
                     @foreach($series->variants as $v)

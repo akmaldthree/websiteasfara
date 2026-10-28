@@ -6,6 +6,7 @@ use App\Models\BusinessAccount;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Review;
+use App\Models\Series;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\Variant;
@@ -112,7 +113,7 @@ class AccountController extends Controller
             'addresses' => $r->user()->addresses,
             'businessAccount' => $r->user()->businessAccount()->with('priceGroup')->first(),
             'customQuotes' => $r->user()->customQuotes()->with('variant.series')->latest()->get(),
-            'wishlist' => $r->user()->wishlistItems()->with('variant.series')->latest()->get(),
+            'wishlist' => $r->user()->wishlistItems()->with('series.category')->latest()->get(),
             'reviewableItems' => OrderItem::with('order')->whereHas('order', fn ($query) => $query->where('user_id', $r->user()->id)->whereIn('fulfillment_status', ['received']))->doesntHave('review')->latest()->get(),
             'myReviews' => $r->user()->reviews()->with('variant.series')->latest()->get(),
             'loyaltyBalance' => $loyalty->balance($r->user()),
@@ -163,14 +164,14 @@ class AccountController extends Controller
         return redirect()->route('cart')->with('success', count($cart).' SKU dimasukkan ke keranjang. Tinjau harga, minimum, dan stok sebelum checkout.');
     }
 
-    public function wishlist(Request $request, Variant $variant)
+    public function wishlist(Request $request, Series $series)
     {
-        $item = $request->user()->wishlistItems()->where('variant_id', $variant->id)->first();
+        $item = $request->user()->wishlistItems()->where('series_id', $series->id)->first();
         if ($item) {
             $item->delete();
             $message = 'Produk dihapus dari wishlist.';
         } else {
-            $request->user()->wishlistItems()->create(['variant_id' => $variant->id]);
+            $request->user()->wishlistItems()->create(['series_id' => $series->id]);
             $message = 'Produk disimpan ke wishlist.';
         }
 

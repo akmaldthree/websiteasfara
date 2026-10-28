@@ -8,8 +8,8 @@ class WishlistItem extends Model
 {
     protected $guarded = [];
 
-    public function variant()
+    public function series()
     {
-        return $this->belongsTo(Variant::class);
+        return $this->belongsTo(Series::class);
     }
 }
