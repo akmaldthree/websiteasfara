@@ -37,6 +37,7 @@ use App\Models\Variant;
 use App\Models\VariantPrice;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class DemoSeeder extends Seeder
 {
@@ -176,7 +177,7 @@ class DemoSeeder extends Seeder
         }
 
         $businessUser = User::updateOrCreate(['email' => 'reseller.demo@dthree.co.id'], [
-            'name' => 'Reseller Demo Dthree', 'phone' => '6281211112222', 'password' => 'demo-password-change-me',
+            'name' => 'Reseller Demo Dthree', 'phone' => '6281211112222', 'password' => Str::random(64),
             'marketing_email' => true, 'marketing_whatsapp' => true, 'consent_updated_at' => now(),
         ]);
         BusinessAccount::updateOrCreate(['user_id' => $businessUser->id], [
@@ -204,7 +205,7 @@ class DemoSeeder extends Seeder
             ['Rani Permata', 'rani.demo@dthree.co.id', '6281210010006'],
             ['Kania Putri', 'kania.demo@dthree.co.id', '6281210010007'],
         ])->map(fn ($row) => User::updateOrCreate(['email' => $row[1]], [
-            'name' => $row[0], 'phone' => $row[2], 'password' => 'demo-password-change-me',
+            'name' => $row[0], 'phone' => $row[2], 'password' => Str::random(64),
             'marketing_email' => true, 'marketing_whatsapp' => true, 'consent_updated_at' => now()->subDays(30),
         ]))->values();
         $variants = Variant::where('sku', 'like', 'DEMO-%')->where('fulfillment', 'ready_stock')->with('series')->orderBy('id')->take(7)->get();
@@ -325,7 +326,7 @@ class DemoSeeder extends Seeder
         $customer = User::updateOrCreate(['email' => 'pelanggan.demo@dthree.co.id'], [
             'name' => 'Pelanggan Dthree',
             'phone' => '6281234567890',
-            'password' => 'demo-password-change-me',
+            'password' => Str::random(64),
         ]);
         $order = Order::updateOrCreate(['number' => 'DEMO-REVIEW-001'], [
             'checkout_key' => 'demo-review-order-001',
