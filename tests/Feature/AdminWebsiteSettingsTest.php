@@ -50,6 +50,7 @@ class AdminWebsiteSettingsTest extends TestCase
             'social_proof_interval' => 30,
             'social_proof_cities' => 'Jakarta, Bandung',
             'header_announcement_enabled' => '1',
+            'announcement_interval_seconds' => 3.5,
             'header_categories_enabled' => '1',
             'header_tracking_enabled' => '1',
             'header_sticky' => '1',
@@ -78,12 +79,13 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame('#F9F8F6', Setting::get('theme_palette_base'));
         $this->assertSame('#C9B59C', Setting::get('theme_palette_accent'));
         $this->assertSame(30, Setting::get('social_proof_interval'));
+        $this->assertSame(3.5, (float) Setting::get('announcement_interval_seconds'));
         $this->assertSame('KOLEKSI PILIHAN CMS', Setting::get('storefront_copy_id')['featured_collection']);
         $this->assertSame(['hero', 'collections', 'featured', 'categories', 'look', 'sale', 'editorial', 'story'], Setting::get('home_section_order'));
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertSame(['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Nilai poin lebih tinggi', 'value_bonus_percent' => 5], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));
-        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('data-duration="5500"', false)->assertSee('--palette-sage:#F9F8F6', false)->assertSee('--palette-gold:#C9B59C', false)->assertSee('--text:#202020', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
+        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('data-duration="5500"', false)->assertSee('data-announcement-interval="3500"', false)->assertDontSee('data-notice-prev', false)->assertDontSee('data-notice-next', false)->assertSee('--palette-sage:#F9F8F6', false)->assertSee('--palette-gold:#C9B59C', false)->assertSee('--text:#202020', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
         $this->get('/koleksi')->assertOk()->assertSee('BUSANA');
         $this->withSession(['locale' => 'en'])->get('/')->assertOk()->assertSee('CMS CURATED COLLECTION');
     }

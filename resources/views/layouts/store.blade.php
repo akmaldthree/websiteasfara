@@ -24,7 +24,7 @@
 <a href="#main" class="visually-hidden-focusable skip-link">Langsung ke konten</a>
 @php($announcements=collect(preg_split('/[\r\n]+/',$shop['announcement_lines'] ?? ''))->map(fn($line)=>trim($line))->filter())
 @php($announcements=$announcements->isEmpty()?collect([$shop['tagline'] ?? '','WORLDWIDE SHIPPING'])->filter():$announcements)
-@if($shop['header_announcement_enabled'] ?? true)<div class="announcement"><button type="button" data-notice-prev aria-label="Pengumuman sebelumnya">‹</button><div>@foreach($announcements as $notice)<span class="{{ $loop->first?'is-active':'' }}">{{ $notice }}</span>@endforeach</div><button type="button" data-notice-next aria-label="Pengumuman berikutnya">›</button></div>@endif
+@if($shop['header_announcement_enabled'] ?? true)<div class="announcement" data-announcement-interval="{{ (int)round((float)($shop['announcement_interval_seconds'] ?? 4)*1000) }}"><div>@foreach($announcements as $notice)<span class="{{ $loop->first?'is-active':'' }}">{{ $notice }}</span>@endforeach</div></div>@endif
 <header @class(['site-header','sticky-top'=>($shop['header_sticky'] ?? true)])>
     <div class="container-xxl header-row">
         <button class="menu-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#mobile-nav" aria-label="Buka menu" aria-controls="mobile-nav" aria-expanded="false"><span></span><span></span><span></span></button>
@@ -86,6 +86,26 @@
 <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
 <script>
 (()=>{
+    const bar=document.querySelector('.announcement');
+    const notices=[...document.querySelectorAll('.announcement div>span')];
+    if(!bar||notices.length<2)return;
+    let active=Math.max(0,notices.findIndex(notice=>notice.classList.contains('is-active'))),timer;
+    const show=index=>{
+        active=(index+notices.length)%notices.length;
+        notices.forEach((notice,i)=>notice.classList.toggle('is-active',i===active));
+    };
+    const play=()=>{
+        clearTimeout(timer);
+        if(document.hidden)return;
+        const delay=Math.max(2000,Number(bar.dataset.announcementInterval)||4000);
+        timer=setTimeout(()=>{show(active+1);play()},delay);
+    };
+    document.addEventListener('visibilitychange',play);
+    play();
+})();
+</script>
+<script>
+(()=>{
     const hero=document.querySelector('[data-hero-slider]');
     const slides=[...document.querySelectorAll('[data-hero-slide]')];
     const dots=[...document.querySelectorAll('[data-hero-dot]')];
@@ -111,7 +131,6 @@
 <script>
 (()=>{const header=document.querySelector('.site-header');const syncHeader=()=>header?.classList.toggle('is-scrolled',scrollY>24);syncHeader();addEventListener('scroll',syncHeader,{passive:true});
 const catalogTrigger=document.querySelector('.catalog-nav-link'),catalogMenu=document.querySelector('.catalog-mega-menu');let catalogCloseTimer;const setCatalogOpen=open=>{clearTimeout(catalogCloseTimer);header?.classList.toggle('is-catalog-open',open);catalogTrigger?.setAttribute('aria-expanded',open?'true':'false');catalogMenu?.setAttribute('aria-hidden',open?'false':'true')};const openCatalog=()=>setCatalogOpen(true),closeCatalog=()=>setCatalogOpen(false),scheduleCatalogClose=()=>{clearTimeout(catalogCloseTimer);catalogCloseTimer=setTimeout(closeCatalog,90)};catalogTrigger?.addEventListener('pointerenter',openCatalog);catalogTrigger?.addEventListener('pointerleave',scheduleCatalogClose);catalogTrigger?.addEventListener('focus',openCatalog);catalogMenu?.addEventListener('pointerenter',openCatalog);catalogMenu?.addEventListener('pointerleave',scheduleCatalogClose);catalogMenu?.addEventListener('focusin',openCatalog);header?.addEventListener('focusout',()=>setTimeout(()=>{if(!header.contains(document.activeElement))closeCatalog()}));document.querySelectorAll('.desktop-nav a:not(.catalog-nav-link)').forEach(link=>link.addEventListener('pointerenter',closeCatalog));document.addEventListener('pointerdown',event=>{if(!catalogTrigger?.contains(event.target)&&!catalogMenu?.contains(event.target))closeCatalog()});
-const notices=[...document.querySelectorAll('.announcement div>span')];let notice=0;const showNotice=index=>{if(!notices.length)return;notices[notice].classList.remove('is-active');notice=(index+notices.length)%notices.length;notices[notice].classList.add('is-active')};document.querySelector('[data-notice-prev]')?.addEventListener('click',()=>showNotice(notice-1));document.querySelector('[data-notice-next]')?.addEventListener('click',()=>showNotice(notice+1));if(notices.length>1&&!matchMedia('(prefers-reduced-motion: reduce)').matches)setInterval(()=>showNotice(notice+1),4000);
 const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
 const storefrontCopy=@json($storeCopy);
 const searchDrawer=document.getElementById('search-drawer'),searchInput=document.getElementById('global-search'),searchResults=document.getElementById('predictive-search');document.getElementById('open-search')?.addEventListener('click',()=>{searchDrawer.showModal();setTimeout(()=>searchInput?.focus(),50)});document.getElementById('close-search')?.addEventListener('click',()=>searchDrawer.close());searchDrawer?.addEventListener('click',event=>{if(event.target===searchDrawer)searchDrawer.close()});let searchTimer;searchInput?.addEventListener('input',()=>{clearTimeout(searchTimer);const query=searchInput.value.trim();if(query.length<2){searchResults.innerHTML='';return}searchResults.innerHTML='<p>Mencari…</p>';searchTimer=setTimeout(async()=>{try{const response=await fetch(@json(route('search.suggestions'))+'?q='+encodeURIComponent(query),{headers:{Accept:'application/json'}});const data=await response.json();searchResults.innerHTML=data.products.length?data.products.map(item=>`<a href="${esc(item.url)}"><img src="${esc(item.image)}" alt=""><span><b>${esc(item.name)}</b><small>${esc(item.price)}</small></span><i>→</i></a>`).join(''):'<p>Produk tidak ditemukan.</p>'}catch(error){searchResults.innerHTML='<p>Pencarian belum dapat dimuat.</p>'}},250)});
