@@ -202,3 +202,68 @@
     .admin-body .resource-table tbody td{font-size:13px;line-height:1.55}
     .admin-body .resource-table tbody td::before{font-size:11px}
 }
+
+/* Final CMS palette: mirror the storefront's ivory, warm white, taupe and beige. */
+.admin-body{
+    --admin-muted:color-mix(in srgb,var(--ink) 68%,var(--palette-sage));
+    --admin-hover:color-mix(in srgb,var(--palette-gold) 45%,var(--palette-sand));
+    background:var(--palette-sage);
+    color:var(--ink);
+}
+.admin-sidebar{
+    background:var(--palette-sand);
+    color:var(--ink);
+    border-right:1px solid var(--palette-taupe);
+    box-shadow:8px 0 28px color-mix(in srgb,var(--ink) 5%,transparent);
+}
+.admin-sidebar .wordmark,.admin-sidebar .wordmark span,.admin-sidebar footer,.admin-sidebar nav .admin-nav-group>p,.admin-sidebar small{color:var(--ink)}
+.admin-sidebar nav .admin-nav-group>p,.admin-sidebar small,.admin-sidebar footer{color:var(--admin-muted)}
+.admin-nav-group{border-color:color-mix(in srgb,var(--palette-taupe) 78%,transparent)}
+.admin-sidebar nav a{color:var(--ink);border:1px solid transparent}
+.admin-sidebar nav a:hover{background:var(--admin-hover);border-color:color-mix(in srgb,var(--palette-gold) 65%,transparent);color:var(--ink)}
+.admin-sidebar nav a.active{background:var(--palette-gold);border-color:var(--palette-gold);color:var(--ink);font-weight:500}
+.admin-sidebar-close,.admin-menu-button{color:var(--ink)}
+.admin-sidebar-backdrop{background:color-mix(in srgb,var(--ink) 48%,transparent)}
+.admin-topbar{background:color-mix(in srgb,var(--palette-sand) 94%,transparent);border-color:var(--palette-taupe);backdrop-filter:blur(12px)}
+.admin-heading p,.admin-body small,.admin-body .text-muted,.admin-body .stat span,.admin-body .stat small,.admin-body .setup-item p,.admin-body .admin-quick-card span{color:var(--admin-muted)}
+.admin-body .panel,.admin-body .table-panel,.admin-body .stat,.admin-body .admin-quick-card,.admin-body .setup-item,.admin-body .product-row-card,.admin-body .seller-product-table,.admin-body .seller-product-filter,.admin-body .seller-status-tabs,.admin-body .workspace-media-row,.admin-body .import-steps>div,.admin-body .workspace-media-upload,.admin-body .workspace-gallery>a,.admin-body .seller-mass-menu>div,.admin-body .seller-row-actions details>div{
+    background:var(--palette-sand);
+    border-color:var(--palette-taupe);
+}
+.admin-body .stat:first-child,.admin-body .admin-quick-card:hover{background:color-mix(in srgb,var(--palette-gold) 18%,var(--palette-sand));border-color:var(--palette-gold)}
+.admin-body .form-control,.admin-body .form-select,.admin-body .checkbox-card,.admin-body .settings-jump a,.admin-body .workspace-tabs a,.admin-body .home-order-list li,.admin-body .workspace-media-drop,.admin-body .batch-color-group{
+    background:var(--palette-sage);
+    border-color:var(--palette-taupe);
+    color:var(--ink);
+}
+.admin-body .form-control:disabled,.admin-body .form-select:disabled{background:color-mix(in srgb,var(--palette-taupe) 45%,var(--palette-sage));color:var(--admin-muted)}
+.admin-body .admin-help,.admin-body .context-help,.admin-body .workspace-summary,.admin-body .seller-bulk-bar,.admin-body .stock-balance,.admin-body .image-upload-guideline{
+    background:var(--palette-cream);
+    border-color:var(--palette-gold);
+    color:var(--ink);
+}
+.admin-body .settings-jump,.admin-body .workspace-tabs,.admin-body .form-actions{background:color-mix(in srgb,var(--palette-sage) 94%,transparent);border-color:var(--palette-taupe)}
+.admin-body .workspace-tabs a:hover,.admin-body .settings-jump a:hover,.admin-body .seller-status-tabs a:hover,.admin-body .seller-mass-menu a:hover,.admin-body .seller-row-actions details button:hover,.admin-body .seller-row-actions details a:hover{background:var(--admin-hover);color:var(--ink)}
+.admin-body .seller-status-tabs a.active{color:var(--ink);border-bottom-color:var(--palette-gold);background:color-mix(in srgb,var(--palette-gold) 16%,var(--palette-sand))}
+.admin-body .badge,.admin-body .setup-state,.admin-body .workspace-status-warning,.admin-body .seller-status-tabs b{background:var(--palette-taupe);color:var(--ink)}
+.admin-body .workspace-status-live,.admin-body .setup-item.complete .setup-state{background:var(--palette-gold);color:var(--ink)}
+.admin-body .btn-dark,.admin-body .pagination{
+    --bs-btn-bg:var(--palette-gold);
+    --bs-btn-border-color:var(--palette-gold);
+    --bs-btn-color:var(--ink);
+    --bs-btn-hover-bg:var(--palette-taupe);
+    --bs-btn-hover-border-color:var(--palette-gold);
+    --bs-btn-hover-color:var(--ink);
+    --bs-pagination-active-bg:var(--palette-gold);
+    --bs-pagination-active-border-color:var(--palette-gold);
+}
+.admin-body .btn-outline-dark{--bs-btn-color:var(--ink);--bs-btn-border-color:var(--palette-taupe);--bs-btn-hover-bg:var(--palette-gold);--bs-btn-hover-border-color:var(--palette-gold);--bs-btn-hover-color:var(--ink)}
+.admin-body .table{--bs-table-color:var(--ink);--bs-table-border-color:var(--palette-taupe);--bs-table-striped-bg:color-mix(in srgb,var(--palette-taupe) 20%,transparent);--bs-table-hover-bg:color-mix(in srgb,var(--palette-gold) 14%,transparent)}
+.admin-body .table th{color:var(--admin-muted)}
+.admin-body .pagination{--bs-pagination-bg:var(--palette-sand);--bs-pagination-border-color:var(--palette-taupe);--bs-pagination-hover-bg:var(--admin-hover);--bs-pagination-hover-color:var(--ink);--bs-pagination-color:var(--ink)}
+.admin-body input:focus-visible,.admin-body a:focus-visible,.admin-body button:focus-visible,.admin-body summary:focus-visible{outline-color:var(--palette-gold)}
+
+@media(max-width:900px){
+    .admin-sidebar{box-shadow:18px 0 42px color-mix(in srgb,var(--ink) 18%,transparent)}
+    .admin-sidebar-close{color:var(--ink)}
+}
