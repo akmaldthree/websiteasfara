@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\NotificationDelivery;
 use App\Models\User;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -85,5 +87,17 @@ class AdminUsabilityTest extends TestCase
         $this->get(route('admin.create', 'curated-links'))
             ->assertOk()
             ->assertSee('900 × 1200 px');
+    }
+
+    public function test_notification_page_handles_legacy_message_payloads(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $delivery = NotificationDelivery::firstOrFail();
+        $delivery->update(['payload' => ['subject' => 'Status pesanan', 'message' => 'Pesanan sedang diproses.']]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.notifications'))
+            ->assertOk()
+            ->assertSee('Pesanan sedang diproses.');
     }
 }

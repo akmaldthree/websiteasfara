@@ -69,16 +69,31 @@ const adminSidebar=document.getElementById('admin-sidebar');
 const menuButton=document.querySelector('[data-sidebar-open]');
 const sidebarClose=document.querySelector('.admin-sidebar-close');
 const sidebarBackdrop=document.querySelector('.admin-sidebar-backdrop');
+const activeSidebarLink=adminSidebar?.querySelector('nav a.active');
 const sidebarScrollKey='dthree-admin-sidebar-scroll';
+const revealActiveSidebarLink=(center=false)=>{
+    if(!adminSidebar||!activeSidebarLink)return;
+    const sidebarBox=adminSidebar.getBoundingClientRect();
+    const linkBox=activeSidebarLink.getBoundingClientRect();
+    const linkTop=linkBox.top-sidebarBox.top+adminSidebar.scrollTop;
+    const linkBottom=linkTop+linkBox.height;
+    if(center||linkTop<adminSidebar.scrollTop||linkBottom>adminSidebar.scrollTop+adminSidebar.clientHeight){
+        adminSidebar.scrollTop=Math.max(0,linkTop-(adminSidebar.clientHeight-linkBox.height)/2);
+    }
+};
 const saveSidebarScroll=()=>{
     if(window.innerWidth>=901&&adminSidebar){
-        sessionStorage.setItem(sidebarScrollKey,String(adminSidebar.scrollTop));
+        try{sessionStorage.setItem(sidebarScrollKey,String(adminSidebar.scrollTop))}catch(error){}
     }
 };
 const restoreSidebarScroll=()=>{
     if(window.innerWidth<901||!adminSidebar)return;
-    const savedPosition=Number(sessionStorage.getItem(sidebarScrollKey));
-    if(Number.isFinite(savedPosition))adminSidebar.scrollTop=savedPosition;
+    let savedPosition=null;
+    try{savedPosition=sessionStorage.getItem(sidebarScrollKey)}catch(error){}
+    if(savedPosition!==null&&Number.isFinite(Number(savedPosition))){
+        adminSidebar.scrollTop=Number(savedPosition);
+        revealActiveSidebarLink();
+    }else revealActiveSidebarLink(true);
 };
 const syncAdminMenu=()=>{
     const mobile=window.innerWidth<901;
@@ -87,21 +102,35 @@ const syncAdminMenu=()=>{
     if(!mobile){
         adminBody.classList.remove('admin-menu-open');
         sidebarBackdrop.hidden=true;
+        adminSidebar?.removeAttribute('aria-hidden');
+        if(adminSidebar)adminSidebar.inert=false;
         restoreSidebarScroll();
+    }else if(!adminBody.classList.contains('admin-menu-open')){
+        adminSidebar?.setAttribute('aria-hidden','true');
+        if(adminSidebar)adminSidebar.inert=true;
     }
 };
-const closeMenu=()=>{
+const closeMenu=(restoreFocus=false)=>{
     adminBody.classList.remove('admin-menu-open');
     sidebarBackdrop.hidden=true;
+    adminSidebar?.setAttribute('aria-hidden','true');
+    if(adminSidebar)adminSidebar.inert=true;
     menuButton?.setAttribute('aria-expanded','false');
+    if(restoreFocus)menuButton?.focus();
 };
 menuButton?.addEventListener('click',()=>{
     const open=!adminBody.classList.contains('admin-menu-open');
     adminBody.classList.toggle('admin-menu-open',open);
     sidebarBackdrop.hidden=!open;
     menuButton.setAttribute('aria-expanded',open?'true':'false');
+    if(open){
+        adminSidebar?.removeAttribute('aria-hidden');
+        if(adminSidebar)adminSidebar.inert=false;
+        revealActiveSidebarLink(true);
+        sidebarClose?.focus();
+    }else closeMenu();
 });
-document.querySelectorAll('[data-sidebar-close]').forEach(button=>button.addEventListener('click',closeMenu));
+document.querySelectorAll('[data-sidebar-close]').forEach(button=>button.addEventListener('click',()=>closeMenu(true)));
 document.querySelectorAll('.admin-sidebar nav a').forEach(link=>link.addEventListener('click',()=>{
     if(window.innerWidth<901)closeMenu();
     else saveSidebarScroll();
@@ -109,6 +138,14 @@ document.querySelectorAll('.admin-sidebar nav a').forEach(link=>link.addEventLis
 adminSidebar?.addEventListener('scroll',saveSidebarScroll,{passive:true});
 window.addEventListener('pagehide',saveSidebarScroll);
 window.addEventListener('resize',syncAdminMenu);
+document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&adminBody.classList.contains('admin-menu-open'))closeMenu(true);
+});
+document.addEventListener('click',event=>{
+    document.querySelectorAll('.seller-mass-menu[open],.seller-row-actions details[open]').forEach(details=>{
+        if(!details.contains(event.target))details.removeAttribute('open');
+    });
+});
 restoreSidebarScroll();
 syncAdminMenu();
 </script>

@@ -259,7 +259,7 @@ class DemoSeeder extends Seeder
             ]);
             NotificationDelivery::updateOrCreate(['dedupe_key' => hash('sha256', 'demo-notification-'.$event->id)], [
                 'order_event_id' => $event->id, 'channel' => 'email', 'recipient' => $customer->email,
-                'payload' => ['subject' => 'Pembaruan pesanan '.$order->number, 'message' => $event->message],
+                'payload' => ['subject' => 'Pembaruan pesanan '.$order->number, 'body' => $event->message, 'message' => $event->message],
                 'status' => $index < 4 ? 'sent' : 'pending', 'attempts' => $index < 4 ? 1 : 0,
                 'available_at' => now(), 'sent_at' => $index < 4 ? now()->subHours($index + 1) : null,
             ]);

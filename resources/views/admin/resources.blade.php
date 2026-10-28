@@ -30,10 +30,10 @@ $typeLabels=['banner'=>'Banner','home_section'=>'Section beranda','menu'=>'Menu'
     <div class="admin-toolbar-actions">@if(array_key_exists($resource,app(\App\Services\BulkImportService::class)->definitions()))<a class="btn btn-outline-dark" href="{{ route('admin.import',['type'=>$resource]) }}">Import / export Excel</a>@endif<a class="btn btn-dark" href="{{ route('admin.create',$resource) }}">+ Tambah data</a></div>
 </div>
 
-<div class="table-panel"><div class="section-top mb-2"><div><h2 class="mb-1">Daftar data</h2><small>{{ $rows->total() }} hasil{{ request()->filled('q')?' untuk “'.request('q').'”':'' }}</small></div></div><div class="table-responsive"><table class="table">
+<div class="table-panel"><div class="section-top mb-2"><div><h2 class="mb-1">Daftar data</h2><small>{{ $rows->total() }} hasil{{ request()->filled('q')?' untuk “'.request('q').'”':'' }}</small></div></div><div class="table-responsive"><table class="table resource-table">
     <thead><tr>@foreach($schema['columns'] as $label)<th>{{ $label }}</th>@endforeach<th><span class="visually-hidden">Tindakan</span></th></tr></thead>
     <tbody>@forelse($rows as $row)<tr>
-        @foreach($schema['columns'] as $key=>$label)<td>
+        @foreach($schema['columns'] as $key=>$label)<td data-label="{{ $label }}">
             @if($resource==='variant-prices' && $key==='variant_id'){{ $row->variant?->sku }}
             @elseif($resource==='variant-prices' && $key==='price_group_id'){{ $row->priceGroup?->name }}
             @elseif($resource==='product-media' && $key==='series_id'){{ $row->series?->name }}
@@ -45,7 +45,7 @@ $typeLabels=['banner'=>'Banner','home_section'=>'Section beranda','menu'=>'Menu'
             @else{{ $row->$key }}
             @endif
         </td>@endforeach
-        <td class="text-nowrap">@if($resource === 'content')<a href="{{ route('admin.content.preview',$row) }}" target="_blank">Preview</a> · @endif @if(in_array($resource, ['pages', 'content'], true))<a href="{{ route('admin.content.history',[$resource,$row->id]) }}">Riwayat</a> · @endif<a class="fw-semibold" href="{{ route('admin.edit',[$resource,$row->id]) }}">Edit →</a></td>
+        <td class="text-nowrap" data-label="Tindakan">@if($resource === 'content')<a href="{{ route('admin.content.preview',$row) }}" target="_blank">Preview</a> · @endif @if(in_array($resource, ['pages', 'content'], true))<a href="{{ route('admin.content.history',[$resource,$row->id]) }}">Riwayat</a> · @endif<a class="fw-semibold" href="{{ route('admin.edit',[$resource,$row->id]) }}">Edit →</a></td>
     </tr>@empty<tr><td colspan="{{ count($schema['columns'])+1 }}"><div class="admin-empty"><h3>{{ request()->filled('q')?'Data tidak ditemukan':'Belum ada data' }}</h3><p>{{ request()->filled('q')?'Coba kata pencarian lain atau reset pencarian.':'Tambahkan data pertama untuk mulai mengisi bagian ini.' }}</p>@if(!request()->filled('q'))<a class="btn btn-dark" href="{{ route('admin.create',$resource) }}">+ Tambah data pertama</a>@endif</div></td></tr>@endforelse</tbody>
 </table></div>{{ $rows->links() }}</div>
 @endsection

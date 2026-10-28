@@ -103,6 +103,7 @@
 
 @media(max-width:900px){
     .admin-shell{display:block}
+    .admin-body.admin-menu-open{overflow:hidden}
     .admin-sidebar{
         position:fixed;
         left:0;
@@ -132,9 +133,23 @@
     .admin-sidebar-backdrop{position:fixed;inset:0;z-index:1040;background:#15201588}
     .admin-menu-open .admin-sidebar-backdrop{display:block}
     .admin-topbar{padding:0 18px}
+    .admin-topbar>div:first-of-type{flex:1;min-width:0}
+    .admin-topbar-actions{flex:0 0 auto}
     .admin-topbar-actions>a,
     .admin-user{display:none}
     .admin-content{padding:24px 18px}
 }
 
 @media(max-width:900px){.admin-menu-button{font-size:22px;line-height:1}}
+
+@media(max-width:767px){
+    .resource-table,.resource-table tbody,.resource-table tr,.resource-table td{display:block;width:100%}
+    .resource-table thead{display:none}
+    .resource-table tbody{display:grid;gap:12px}
+    .resource-table tbody tr{padding:12px 14px;border:1px solid var(--line);background:var(--palette-cream)}
+    .resource-table tbody td{display:grid;grid-template-columns:minmax(86px,34%) minmax(0,1fr);gap:12px;padding:9px 0;border:0;border-bottom:1px solid color-mix(in srgb,var(--palette-taupe) 65%,transparent);white-space:normal!important;overflow-wrap:anywhere}
+    .resource-table tbody td:last-child{border-bottom:0}
+    .resource-table tbody td::before{content:attr(data-label);font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+    .resource-table tbody td[colspan]{display:block;text-align:center}
+    .resource-table tbody td[colspan]::before{content:none}
+}
