@@ -25,6 +25,7 @@
                 <label class="checkbox-card"><input type="checkbox" name="active" value="1" @checked($asset->active)><span>Tampilkan dalam pilihan gambar di editor konten.</span></label>
                 <button class="btn btn-outline-dark btn-sm mt-3">Simpan perubahan</button>
             </form>
+            <form method="post" action="{{ route('admin.media.destroy',$asset) }}" class="mt-2" onsubmit="return confirm('Hapus gambar ini secara permanen dari pustaka media?')">@csrf @method('DELETE')<button class="btn btn-outline-danger btn-sm">Hapus media</button></form>
         </article></div>
     @empty
         <div class="col-12"><div class="empty-state"><strong>Belum ada gambar.</strong><span>Unggah gambar pertama melalui formulir di atas.</span></div></div>

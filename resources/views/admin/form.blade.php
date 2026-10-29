@@ -79,6 +79,9 @@ $hints=[
     </div>
     <div class="form-actions"><a href="{{ route('admin.resources',$resource) }}">Batal</a><div><button class="btn btn-outline-dark" name="after_save" value="new">Simpan & tambah lagi</button><button class="btn btn-outline-dark" name="after_save" value="edit">Simpan tanpa keluar</button><button class="btn btn-dark" name="after_save" value="list">Simpan & kembali</button></div></div>
 </form>
+@if($record->exists)
+<section class="panel mt-4 border-danger-subtle"><div class="section-top"><div><h2 class="mb-1">Hapus data</h2><p class="small mb-0">Data yang sudah dipakai transaksi mungkin tidak dapat dihapus dan sebaiknya dinonaktifkan agar riwayat tetap utuh.</p></div><form method="post" action="{{ route('admin.destroy',[$resource,$record->id]) }}" onsubmit="return confirm('Hapus data ini secara permanen? Tindakan ini tidak dapat dibatalkan.')">@csrf @method('DELETE')<button class="btn btn-outline-danger" type="submit">Hapus permanen</button></form></div></section>
+@endif
 @endsection
 @push('scripts')
 <script>

@@ -12,6 +12,7 @@ use App\Models\CommissionEntry;
 use App\Models\CommissionPayout;
 use App\Models\ContentEntry;
 use App\Models\ContentRevision;
+use App\Models\Coupon;
 use App\Models\CustomQuote;
 use App\Models\MediaAsset;
 use App\Models\Order;
@@ -38,6 +39,7 @@ use App\Services\CommissionPayoutService;
 use App\Services\CustomProductService;
 use App\Services\OrderWorkflow;
 use App\Services\SystemHealthService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -135,6 +137,22 @@ class AdminController extends Controller
         return back()->with('success', 'Media diperbarui.');
     }
 
+    public function mediaDestroy(MediaAsset $asset)
+    {
+        $fileName = basename($asset->path);
+        if (Page::where('blocks', 'like', '%'.$fileName.'%')->exists() || ContentEntry::where('blocks', 'like', '%'.$fileName.'%')->exists()) {
+            return back()->withErrors(['delete' => 'Media masih digunakan di halaman atau konten. Ganti gambar pada konten terkait terlebih dahulu.']);
+        }
+        $before = $asset->toArray();
+        DB::transaction(function () use ($asset, $before) {
+            $asset->delete();
+            Audit::record('media.deleted', 'media_asset:'.$asset->id, $before, null);
+        });
+        Storage::disk('public')->delete($asset->path);
+
+        return back()->with('success', 'Media dan file gambarnya berhasil dihapus.');
+    }
+
     public function reviews(Request $request)
     {
         $query = Review::with(['user', 'variant.series', 'item.order']);
@@ -157,6 +175,19 @@ class AdminController extends Controller
         return back()->with('success', 'Moderasi ulasan disimpan.');
     }
 
+    public function reviewDestroy(Review $review)
+    {
+        $before = $review->toArray();
+        $photos = $review->photos ?? [];
+        DB::transaction(function () use ($review, $before) {
+            $review->delete();
+            Audit::record('review.deleted', 'review:'.$review->id, $before, null);
+        });
+        Storage::disk('public')->delete($photos);
+
+        return back()->with('success', 'Ulasan berhasil dihapus.');
+    }
+
     public function questionAction(Request $request, ProductQuestion $question)
     {
         $data = $request->validate(['status' => 'required|in:answered,rejected', 'answer' => 'nullable|required_if:status,answered|string|min:3|max:3000']);
@@ -173,6 +204,17 @@ class AdminController extends Controller
         }
 
         return back()->with('success', 'Pertanyaan produk diperbarui.');
+    }
+
+    public function questionDestroy(ProductQuestion $question)
+    {
+        $before = $question->toArray();
+        DB::transaction(function () use ($question, $before) {
+            $question->delete();
+            Audit::record('product_question.deleted', 'product_question:'.$question->id, $before, null);
+        });
+
+        return back()->with('success', 'Pertanyaan produk berhasil dihapus.');
     }
 
     public function customQuoteAction(Request $request, CustomQuote $customQuote, CustomProductService $service)
@@ -544,6 +586,110 @@ class AdminController extends Controller
             'new' => redirect()->route('admin.create', $resource)->with('success', 'Data berhasil disimpan. Form baru sudah disiapkan.'),
             default => redirect()->route('admin.resources', $resource)->with('success', 'Data berhasil disimpan.'),
         };
+    }
+
+    public function destroy(Request $request, string $resource, int $id)
+    {
+        $schema = $this->resource($resource);
+        $record = $schema['model']::findOrFail($id);
+        $before = $record->toArray();
+        $files = $this->resourceFiles($resource, $record);
+
+        try {
+            DB::transaction(function () use ($resource, $record, $before) {
+                $this->deleteResourceRecord($resource, $record);
+                Audit::record($resource.'.deleted', $resource.':'.$record->id, $before, null);
+            });
+        } catch (QueryException) {
+            return back()->withErrors(['delete' => 'Data tidak dapat dihapus karena masih digunakan oleh transaksi atau data lain. Nonaktifkan data ini atau hapus data terkait terlebih dahulu.']);
+        }
+
+        if ($files) {
+            Storage::disk('public')->delete($files);
+        }
+
+        $route = $resource === 'series' && $request->input('return_to') === 'products' ? 'admin.products' : 'admin.resources';
+        $parameters = $route === 'admin.products' ? [] : [$resource];
+
+        return redirect()->route($route, $parameters)->with('success', $schema['title'].' berhasil dihapus.');
+    }
+
+    private function deleteResourceRecord(string $resource, $record): void
+    {
+        if ($resource === 'categories' && Series::where('category_id', $record->id)->exists()) {
+            throw ValidationException::withMessages(['delete' => 'Kategori masih memiliki produk. Pindahkan atau hapus produk terkait terlebih dahulu.']);
+        }
+        if ($resource === 'categories') {
+            $this->ensureNoTargetedRules('category', $record->id);
+        }
+
+        if ($resource === 'series') {
+            $variantIds = $record->variants()->pluck('id');
+            if (OrderItem::whereIn('variant_id', $variantIds)->exists() || DB::table('order_item_components')->whereIn('variant_id', $variantIds)->exists()) {
+                throw ValidationException::withMessages(['delete' => 'Produk sudah memiliki riwayat pesanan dan tidak boleh dihapus. Nonaktifkan produk agar tidak tampil di storefront.']);
+            }
+            if (Variant::whereIn('id', $variantIds)->where('reserved', '>', 0)->exists()) {
+                throw ValidationException::withMessages(['delete' => 'Produk masih memiliki stok yang direservasi. Selesaikan atau batalkan reservasi terlebih dahulu.']);
+            }
+            if (CustomQuote::whereIn('variant_id', $variantIds)->exists()) {
+                throw ValidationException::withMessages(['delete' => 'Produk masih digunakan pada penawaran custom. Selesaikan data penawaran tersebut terlebih dahulu.']);
+            }
+            if (BundleComponent::whereIn('component_variant_id', $variantIds)->whereNotIn('bundle_variant_id', $variantIds)->exists()) {
+                throw ValidationException::withMessages(['delete' => 'Salah satu SKU masih menjadi komponen bundle produk lain. Hapus hubungan bundle terlebih dahulu.']);
+            }
+            $this->ensureNoTargetedRules('series', $record->id);
+            foreach ($variantIds as $variantId) {
+                $this->ensureNoTargetedRules('variant', $variantId);
+            }
+            StockMovement::whereIn('variant_id', $variantIds)->delete();
+            BundleComponent::whereIn('bundle_variant_id', $variantIds)->delete();
+            VariantPrice::whereIn('variant_id', $variantIds)->delete();
+            Variant::whereIn('id', $variantIds)->delete();
+            ContentRevision::where('content_type', 'series')->where('content_id', $record->id)->delete();
+        } elseif ($resource === 'variants') {
+            if (OrderItem::where('variant_id', $record->id)->exists() || DB::table('order_item_components')->where('variant_id', $record->id)->exists()) {
+                throw ValidationException::withMessages(['delete' => 'SKU sudah memiliki riwayat pesanan dan tidak boleh dihapus. Nonaktifkan SKU agar tidak dapat dibeli.']);
+            }
+            if ($record->reserved > 0) {
+                throw ValidationException::withMessages(['delete' => 'SKU masih memiliki stok yang direservasi.']);
+            }
+            if (CustomQuote::where('variant_id', $record->id)->exists()) {
+                throw ValidationException::withMessages(['delete' => 'SKU masih digunakan pada penawaran custom.']);
+            }
+            if (BundleComponent::where('component_variant_id', $record->id)->exists()) {
+                throw ValidationException::withMessages(['delete' => 'SKU masih menjadi komponen bundle. Hapus hubungan bundle terlebih dahulu.']);
+            }
+            $this->ensureNoTargetedRules('variant', $record->id);
+            StockMovement::where('variant_id', $record->id)->delete();
+            BundleComponent::where('bundle_variant_id', $record->id)->delete();
+            VariantPrice::where('variant_id', $record->id)->delete();
+        } elseif (in_array($resource, ['pages', 'content'], true)) {
+            ContentRevision::where('content_type', $resource)->where('content_id', $record->id)->delete();
+        }
+
+        $record->delete();
+    }
+
+    private function ensureNoTargetedRules(string $targetType, int $targetId): void
+    {
+        if (BusinessOrderRule::where('target_type', $targetType)->where('target_id', $targetId)->exists()) {
+            throw ValidationException::withMessages(['delete' => 'Data masih menjadi target aturan minimum B2B. Hapus aturan tersebut terlebih dahulu.']);
+        }
+        if (Coupon::where('target_type', $targetType)->where('target_id', $targetId)->exists()) {
+            throw ValidationException::withMessages(['delete' => 'Data masih menjadi target voucher. Hapus atau ubah target voucher terlebih dahulu.']);
+        }
+    }
+
+    private function resourceFiles(string $resource, $record): array
+    {
+        if ($resource === 'series') {
+            return collect([$record->image])->merge($record->media()->pluck('image'))->filter()->unique()->values()->all();
+        }
+        if ($resource === 'variants') {
+            return $record->series->media()->where('variant_id', $record->id)->pluck('image')->filter()->unique()->values()->all();
+        }
+
+        return in_array($resource, ['curated-links', 'product-media', 'content'], true) && $record->image ? [$record->image] : [];
     }
 
     private function validatedContentBlocks(?string $json): ?array
@@ -950,6 +1096,28 @@ class AdminController extends Controller
         return back()->with('success', 'Akses pengguna diperbarui.');
     }
 
+    public function teamDestroy(Request $request, User $user)
+    {
+        abort_if($user->role === 'customer', 404);
+        if ($user->is($request->user())) {
+            throw ValidationException::withMessages(['delete' => 'Akun yang sedang digunakan tidak dapat dihapus.']);
+        }
+        if ($user->role === 'admin' && User::where('role', 'admin')->where('active', true)->count() <= 1) {
+            throw ValidationException::withMessages(['delete' => 'Minimal satu admin aktif harus dipertahankan.']);
+        }
+        $before = $user->only('name', 'email', 'role', 'active');
+        try {
+            DB::transaction(function () use ($user, $before) {
+                $user->delete();
+                Audit::record('user.deleted', 'user:'.$user->id, $before, null);
+            });
+        } catch (QueryException) {
+            return back()->withErrors(['delete' => 'Pengguna masih terhubung dengan transaksi atau tugas operasional. Nonaktifkan akun untuk mempertahankan riwayat.']);
+        }
+
+        return back()->with('success', 'Pengguna operasional berhasil dihapus.');
+    }
+
     public function roleSave(Request $r, Role $role)
     {
         abort_if($role->name === 'admin', 422, 'Peran admin utama dipertahankan.');
@@ -959,6 +1127,21 @@ class AdminController extends Controller
         Audit::record('role.updated', 'role:'.$role->id, $before, $role->permissions);
 
         return back()->with('success', 'Hak akses diperbarui.');
+    }
+
+    public function roleDestroy(Role $role)
+    {
+        if ($role->name === 'admin') {
+            throw ValidationException::withMessages(['delete' => 'Peran admin utama tidak dapat dihapus.']);
+        }
+        if (User::where('role', $role->name)->exists()) {
+            throw ValidationException::withMessages(['delete' => 'Peran masih digunakan oleh pengguna. Pindahkan pengguna ke peran lain terlebih dahulu.']);
+        }
+        $before = $role->toArray();
+        $role->delete();
+        Audit::record('role.deleted', 'role:'.$role->id, $before, null);
+
+        return back()->with('success', 'Peran berhasil dihapus.');
     }
 
     public function reports(Request $r)

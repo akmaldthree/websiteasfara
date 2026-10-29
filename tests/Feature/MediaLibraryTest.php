@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\MediaAsset;
+use App\Models\Page;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -31,5 +32,15 @@ class MediaLibraryTest extends TestCase
         $this->assertSame('Alt text diperbarui', $asset->fresh()->alt_text);
         $this->assertFalse($asset->fresh()->active);
         $this->assertDatabaseHas('audit_logs', ['action' => 'media.uploaded']);
+
+        $page = Page::create(['title' => 'Landing media', 'slug' => 'landing-media', 'body' => 'Isi', 'blocks' => [['type' => 'image', 'url' => $asset->url, 'label' => 'Media']], 'editorial_status' => 'draft', 'active' => false]);
+        $this->delete(route('admin.media.destroy', $asset))->assertSessionHasErrors('delete');
+        $this->assertDatabaseHas('media_assets', ['id' => $asset->id]);
+        $page->delete();
+
+        $this->delete(route('admin.media.destroy', $asset))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('media_assets', ['id' => $asset->id]);
+        Storage::disk('public')->assertMissing($asset->path);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'media.deleted', 'subject' => 'media_asset:'.$asset->id]);
     }
 }

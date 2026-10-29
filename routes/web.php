@@ -84,10 +84,13 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/ulasan', [Admin::class, 'reviews'])->middleware('permission:content.write')->name('reviews');
     Route::get('/konten/{contentEntry}/preview', [Admin::class, 'contentPreview'])->middleware('permission:content.write')->name('content.preview');
     Route::post('/ulasan/{review}', [Admin::class, 'reviewAction'])->middleware('permission:content.write')->name('reviews.update');
+    Route::delete('/ulasan/{review}', [Admin::class, 'reviewDestroy'])->middleware('permission:content.write')->name('reviews.destroy');
     Route::get('/media', [Admin::class, 'mediaLibrary'])->middleware('permission:content.write')->name('media');
     Route::post('/media', [Admin::class, 'mediaUpload'])->middleware('permission:content.write')->name('media.upload');
     Route::post('/media/{asset}', [Admin::class, 'mediaUpdate'])->middleware('permission:content.write')->name('media.update');
+    Route::delete('/media/{asset}', [Admin::class, 'mediaDestroy'])->middleware('permission:content.write')->name('media.destroy');
     Route::post('/pertanyaan-produk/{question}', [Admin::class, 'questionAction'])->middleware('permission:content.write')->name('questions.update');
+    Route::delete('/pertanyaan-produk/{question}', [Admin::class, 'questionDestroy'])->middleware('permission:content.write')->name('questions.destroy');
     Route::get('/konten-riwayat/{resource}/{id}', [Admin::class, 'contentHistory'])->middleware('permission:content.write')->whereNumber('id')->name('content.history');
     Route::post('/konten-riwayat/{revision}/pulihkan', [Admin::class, 'restoreContent'])->middleware('permission:content.write')->name('content.restore');
     Route::get('/bukti/{proof}', [Admin::class, 'proof'])->middleware('permission:payments.read')->name('proof');
@@ -115,7 +118,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/tim', [Admin::class, 'team'])->middleware('permission:users.write')->name('team');
     Route::post('/tim', [Admin::class, 'teamSave'])->middleware('permission:users.write')->name('team.save');
     Route::post('/tim/{user}', [Admin::class, 'teamUpdate'])->middleware('permission:users.write')->name('team.update');
+    Route::delete('/tim/{user}', [Admin::class, 'teamDestroy'])->middleware('permission:users.write')->name('team.destroy');
     Route::post('/peran/{role}', [Admin::class, 'roleSave'])->middleware('permission:users.write')->name('role.save');
+    Route::delete('/peran/{role}', [Admin::class, 'roleDestroy'])->middleware('permission:users.write')->name('role.destroy');
     Route::get('/laporan', [Admin::class, 'reports'])->middleware('permission:reports.read')->name('reports');
     Route::post('/laporan/payout-komisi', [Admin::class, 'commissionPayout'])->middleware('permission:payments.verify')->name('commission-payout.store');
     Route::get('/laporan/payout-komisi/{payout}/bukti', [Admin::class, 'commissionPayoutProof'])->middleware('permission:payments.read')->name('commission-payout.proof');
@@ -146,4 +151,5 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/master/{resource}/{id}/ubah', [Admin::class, 'form'])->whereNumber('id')->name('edit');
     Route::post('/master/{resource}', [Admin::class, 'save'])->name('store');
     Route::post('/master/{resource}/{id}', [Admin::class, 'save'])->whereNumber('id')->name('update');
+    Route::delete('/master/{resource}/{id}', [Admin::class, 'destroy'])->whereNumber('id')->name('destroy');
 });
