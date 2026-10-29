@@ -30,6 +30,36 @@ class ContentManagementTest extends TestCase
         $this->get(route('content.show', ['journal', $future->slug]))->assertNotFound();
     }
 
+    public function test_custom_seo_titles_are_rendered_verbatim_without_a_duplicate_brand_suffix(): void
+    {
+        $entry = ContentEntry::create([
+            'type' => 'journal',
+            'title' => 'Panduan Bahan',
+            'slug' => 'panduan-bahan-seo',
+            'body' => 'Isi panduan.',
+            'seo_title' => 'Panduan Bahan — Dthree',
+            'editorial_status' => 'approved',
+            'active' => true,
+        ]);
+        $page = Page::create([
+            'title' => 'Tentang Kami',
+            'slug' => 'tentang-kami-seo',
+            'body' => 'Cerita Dthree.',
+            'seo_title' => 'Tentang Kami — Dthree',
+            'editorial_status' => 'approved',
+            'active' => true,
+        ]);
+
+        $this->get(route('content.show', [$entry->type, $entry->slug]))
+            ->assertOk()
+            ->assertSee('<title>Panduan Bahan — Dthree</title>', false)
+            ->assertDontSee('Dthree — Dthree');
+        $this->get(route('page', $page->slug))
+            ->assertOk()
+            ->assertSee('<title>Tentang Kami — Dthree</title>', false)
+            ->assertDontSee('Dthree — Dthree');
+    }
+
     public function test_home_sections_and_menu_follow_publish_schedule(): void
     {
         ContentEntry::create(['type' => 'banner', 'title' => 'Banner Aktif', 'slug' => 'banner-aktif', 'summary' => 'Pesan banner.', 'sort_order' => 2, 'active' => true]);

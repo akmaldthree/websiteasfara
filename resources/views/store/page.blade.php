@@ -1,5 +1,5 @@
 @extends('layouts.store')
-@section('title',($page->seo_title ?: $page->title).' — Dthree')
+@section('title',$page->seo_title ?: $page->title.' — '.($shop['brand_name'] ?? 'Dthree'))
 @section('description',$page->seo_description ?: \Illuminate\Support\Str::limit($page->body,160))
 @php($template=$page->template ?: 'standard')
 @section('content')
