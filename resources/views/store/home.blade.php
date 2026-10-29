@@ -47,7 +47,9 @@
         </article>
     @endforeach
     @if($heroSlides->count()>1)<div class="hero-dots" aria-label="Posisi banner">@foreach($heroSlides as $slide)<span class="{{ $loop->first?'is-active':'' }}" data-hero-dot="{{ $loop->index }}" aria-hidden="true"></span>@endforeach</div>@endif
-    <a class="hero-next-section" href="#featured" aria-label="Ke produk unggulan">↓</a>
+    <a class="hero-next-section" href="#featured" aria-label="Ke produk unggulan">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </a>
 </section>
 @if(($shop['home_featured_enabled'] ?? true) && ($featured=$featuredCollection))
 @php($featuredVariants=$featured->variants->where('fulfillment','!=','custom_made')->filter(fn($variant)=>$variant->available>0))
