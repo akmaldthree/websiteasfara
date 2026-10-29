@@ -43,7 +43,12 @@ class StorefrontEditorialTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasNoErrors();
         $this->assertSame($this->series->id, $entry->fresh()->blocks[0]['series_id']);
-        $this->get(route('home'))->assertOk()->assertSee('SHOP THE LOOK')->assertSee('data-look-product="look-product-'.$this->series->id.'"', false);
+        $this->get(route('home'))->assertOk()
+            ->assertSee('SHOP THE LOOK')
+            ->assertSee('data-look-product="look-product-'.$this->series->id.'"', false)
+            ->assertSee('class="look-hotspot-marker"', false)
+            ->assertSee('<span class="look-hotspot-label">Zayna Series</span>', false)
+            ->assertSee('aria-label="Pilih Zayna Series" aria-pressed="false"', false);
 
         $payload['blocks'] = json_encode([['type' => 'product_hotspot', 'series_id' => $this->series->id, 'x' => 120, 'y' => 50]]);
         $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasErrors('blocks');
