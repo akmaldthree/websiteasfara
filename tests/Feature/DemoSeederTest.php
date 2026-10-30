@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\ContentEntry;
-use App\Models\Coupon;
+use App\Models\BundleComponent;
 use App\Models\BusinessAccount;
 use App\Models\BusinessOrderRule;
-use App\Models\BundleComponent;
+use App\Models\ContentEntry;
+use App\Models\Coupon;
 use App\Models\CustomQuote;
-use App\Models\MediaAsset;
 use App\Models\MeasurementTemplate;
+use App\Models\MediaAsset;
 use App\Models\NewsletterSubscriber;
 use App\Models\NotificationDelivery;
 use App\Models\Order;
@@ -59,15 +59,15 @@ class DemoSeederTest extends TestCase
         $this->assertTrue(Setting::get('checkout_enabled'));
         $this->assertTrue(Setting::get('cod_enabled'));
         $this->assertSame('BANK DEMO', Setting::get('bank_accounts')[0]['bank']);
-        $this->assertSame('demo/hero-family-2x1.png', Setting::get('hero_image'));
-        Storage::disk('public')->assertExists('demo/hero-family-2x1.png');
-        Storage::disk('public')->assertExists('demo/product-olive-4x5.png');
-        $this->assertImageRatio('hero-family-2x1.png', 2.0);
-        $this->assertImageRatio('product-olive-4x5.png', 0.8);
-        $this->assertImageRatio('promo-taupe-3x4.png', 0.75);
-        $this->assertImageRatio('editorial-fabrics-3x2.png', 1.5);
-        $this->assertImageRatio('look-olive-beige-4x5.png', 0.8);
-        $this->assertImageRatio('payment-proof-demo-3x4.png', 0.75);
+        $this->assertSame('demo/hero-family-2x1.webp', Setting::get('hero_image'));
+        Storage::disk('public')->assertExists('demo/hero-family-2x1.webp');
+        Storage::disk('public')->assertExists('demo/product-olive-4x5.webp');
+        $this->assertImageRatio('hero-family-2x1.webp', 2.0);
+        $this->assertImageRatio('product-olive-4x5.webp', 0.8);
+        $this->assertImageRatio('promo-taupe-3x4.webp', 0.75);
+        $this->assertImageRatio('editorial-fabrics-3x2.webp', 1.5);
+        $this->assertImageRatio('look-olive-beige-4x5.webp', 0.8);
+        $this->assertImageRatio('payment-proof-demo-3x4.webp', 0.75);
         $this->get('/')->assertOk()->assertSee('Tumbuh bersama dalam setiap cerita')->assertSee('Kebersamaan dalam satu warna')->assertSee('SAVE IDR')->assertSee('4.');
         $this->get('/koleksi')->assertOk()->assertSee('Raffah Signature')->assertSee('Hana Flow Khimar');
         $this->get('/koleksi/raffah-signature')->assertOk()->assertSee('Raffah Signature')->assertSee('Olive');
