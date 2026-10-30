@@ -343,23 +343,66 @@ class AdminController extends Controller
         $query = $schema['model']::latest();
         $searchFields = match ($resource) {
             'categories', 'series', 'price-groups' => ['name', 'slug'],
+            'curated-links' => ['section', 'title', 'url', 'eyebrow'],
             'measurement-templates' => ['name', 'product_type'],
             'variants' => ['sku', 'product_type', 'color', 'size'],
             'product-media' => ['color', 'alt_text', 'image'],
             'shipping-rates' => ['courier', 'service', 'province', 'city'],
             'coupons' => ['code', 'type', 'segment'],
             'content', 'pages' => ['title', 'slug'],
+            'newsletter' => ['email', 'name', 'source'],
+            'store-locations' => ['name', 'city', 'address'],
             default => [],
         };
-        if ($r->filled('q') && $searchFields) {
+        $relationSearch = in_array($resource, ['product-media', 'bundle-components', 'business-order-rules', 'variant-prices'], true);
+        if ($r->filled('q') && ($searchFields || $relationSearch)) {
             $term = mb_substr(trim((string) $r->input('q')), 0, 100);
-            $query->where(function ($search) use ($searchFields, $term) {
+            $query->where(function ($search) use ($searchFields, $term, $resource) {
                 foreach ($searchFields as $index => $field) {
                     $method = $index === 0 ? 'where' : 'orWhere';
                     $search->{$method}($field, 'like', '%'.$term.'%');
                 }
+                $relationMethod = $searchFields ? 'orWhereHas' : 'whereHas';
+                match ($resource) {
+                    'product-media' => $search->{$relationMethod}('series', fn ($related) => $related->where('name', 'like', '%'.$term.'%')->orWhere('slug', 'like', '%'.$term.'%'))
+                        ->orWhereHas('variant', fn ($related) => $related->where('sku', 'like', '%'.$term.'%')),
+                    'bundle-components' => $search->{$relationMethod}('bundleVariant', fn ($related) => $related->where('sku', 'like', '%'.$term.'%'))
+                        ->orWhereHas('componentVariant', fn ($related) => $related->where('sku', 'like', '%'.$term.'%')),
+                    'business-order-rules' => $search->{$relationMethod}('priceGroup', fn ($related) => $related->where('name', 'like', '%'.$term.'%')->orWhere('slug', 'like', '%'.$term.'%')),
+                    'variant-prices' => $search->{$relationMethod}('variant', fn ($related) => $related->where('sku', 'like', '%'.$term.'%'))
+                        ->orWhereHas('priceGroup', fn ($related) => $related->where('name', 'like', '%'.$term.'%')->orWhere('slug', 'like', '%'.$term.'%')),
+                    default => null,
+                };
             });
         }
+        $filterFields = match ($resource) {
+            'content' => ['type', 'editorial_status'],
+            'pages' => ['editorial_status'],
+            'variants' => ['fulfillment'],
+            'coupons' => ['type', 'segment'],
+            'shipping-rates' => ['courier'],
+            'curated-links' => ['section'],
+            'measurement-templates' => ['pricing_mode'],
+            'price-groups' => ['business_type'],
+            default => [],
+        };
+        $filters = [];
+        foreach ($filterFields as $field) {
+            $definition = $schema['fields'][$field];
+            $filters[$field] = ['label' => $definition[0], 'options' => $definition[3]];
+            if ($r->filled($field) && array_key_exists((string) $r->input($field), $definition[3])) {
+                $query->where($field, $r->input($field));
+            }
+        }
+        if (isset($schema['fields']['active'])) {
+            $filters['status'] = ['label' => 'Status', 'options' => ['active' => 'Aktif', 'inactive' => 'Nonaktif']];
+            if ($r->input('status') === 'active') {
+                $query->where('active', true);
+            } elseif ($r->input('status') === 'inactive') {
+                $query->where('active', false);
+            }
+        }
+        $bulkStatus = in_array($resource, $this->bulkStatusResources(), true);
         if ($resource === 'variant-prices') {
             $query->with('variant', 'priceGroup');
         }
@@ -367,7 +410,31 @@ class AdminController extends Controller
             $query->with('series', 'variant');
         }
 
-        return view('admin.resources', ['resource' => $resource, 'schema' => $schema, 'rows' => $query->paginate(20)->withQueryString(), 'searchable' => (bool) $searchFields]);
+        return view('admin.resources', ['resource' => $resource, 'schema' => $schema, 'rows' => $query->paginate(20)->withQueryString(), 'searchable' => (bool) ($searchFields || $relationSearch), 'filters' => $filters, 'bulkStatus' => $bulkStatus]);
+    }
+
+    public function bulkResourceAction(Request $request, string $resource)
+    {
+        $schema = $this->resource($resource);
+        abort_unless(in_array($resource, $this->bulkStatusResources(), true), 404);
+        $data = $request->validate([
+            'ids' => 'required|array|min:1|max:100',
+            'ids.*' => 'required|integer|min:1',
+            'action' => 'required|in:activate,deactivate',
+        ]);
+        $active = $data['action'] === 'activate';
+        $ids = collect($data['ids'])->map(fn ($id) => (int) $id)->unique()->values();
+        $records = $schema['model']::whereKey($ids)->get();
+        abort_if($records->count() !== $ids->count(), 404);
+        $schema['model']::whereKey($ids)->update(['active' => $active, 'updated_at' => now()]);
+        Audit::record($resource.'.bulk_status_updated', $resource.':bulk', null, ['ids' => $ids->all(), 'active' => $active]);
+
+        return back()->with('success', $records->count().' data berhasil '.($active ? 'diaktifkan.' : 'dinonaktifkan.'));
+    }
+
+    private function bulkStatusResources(): array
+    {
+        return ['curated-links', 'product-media', 'measurement-templates', 'price-groups', 'business-order-rules', 'variant-prices', 'categories', 'series', 'variants', 'shipping-rates', 'coupons', 'newsletter', 'store-locations'];
     }
 
     public function form(string $resource, ?int $id = null)

@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Series;
 use App\Models\Setting;
 use App\Models\ShippingRate;
+use App\Models\StoreLocation;
 use App\Models\User;
 use App\Models\Variant;
 use App\Services\BulkImportService;
@@ -74,6 +75,24 @@ class BulkImportTest extends TestCase
         $this->actingAs($this->admin)->post(route('admin.import.preview'), ['type' => 'shipping-rates', 'file' => UploadedFile::fake()->createWithContent('rates.csv', $csv)])->assertOk();
         $this->post(route('admin.import.commit'))->assertRedirect();
         $this->assertTrue(ShippingRate::where(['courier' => 'JNE', 'city' => 'Bandung'])->exists());
+    }
+
+    public function test_store_locations_can_be_created_and_updated_from_excel_workflow(): void
+    {
+        $columns = app(BulkImportService::class)->definitions()['store-locations']['columns'];
+        $create = implode(',', $columns)."\nDthree Bandung,Jl. Asia Afrika 10,Bandung,https://maps.example.com,09.00-21.00,1,1\n";
+
+        $this->actingAs($this->admin)->post(route('admin.import.preview'), ['type' => 'store-locations', 'mode' => 'create', 'file' => UploadedFile::fake()->createWithContent('locations.csv', $create)])->assertOk();
+        $this->post(route('admin.import.commit'))->assertRedirect();
+        $this->assertDatabaseHas('store_locations', ['name' => 'Dthree Bandung', 'city' => 'Bandung', 'active' => 1]);
+
+        $update = implode(',', $columns)."\nDthree Bandung,Jl. Asia Afrika 20,Bandung,https://maps.example.com,10.00-22.00,2,0\n";
+        $this->post(route('admin.import.preview'), ['type' => 'store-locations', 'mode' => 'upsert', 'file' => UploadedFile::fake()->createWithContent('locations.csv', $update)])->assertOk();
+        $this->post(route('admin.import.commit'))->assertRedirect();
+
+        $location = StoreLocation::where('name', 'Dthree Bandung')->firstOrFail();
+        $this->assertSame('Jl. Asia Afrika 20', $location->address);
+        $this->assertFalse($location->active);
     }
 
     public function test_generated_xlsx_can_be_read_back_without_losing_values(): void

@@ -8,7 +8,9 @@ use App\Models\BusinessOrderRule;
 use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\Coupon;
+use App\Models\CuratedLink;
 use App\Models\MeasurementTemplate;
+use App\Models\NewsletterSubscriber;
 use App\Models\Page;
 use App\Models\PriceGroup;
 use App\Models\ProductMedia;
@@ -16,6 +18,7 @@ use App\Models\Series;
 use App\Models\Setting;
 use App\Models\ShippingRate;
 use App\Models\StockMovement;
+use App\Models\StoreLocation;
 use App\Models\User;
 use App\Models\Variant;
 use App\Models\VariantPrice;
@@ -34,6 +37,9 @@ class BulkImportService
     public function definitions(): array
     {
         return [
+            'curated-links' => $this->definition('Menu koleksi kurasi', 'content.write', CuratedLink::class,
+                ['section', 'title', 'url', 'eyebrow', 'image', 'sort_order', 'active'],
+                ['section' => 'required|in:fit,promo', 'title' => 'required|string|max:150', 'url' => 'required|string|max:500', 'eyebrow' => 'nullable|string|max:100', 'image' => 'nullable|string|max:255', 'sort_order' => 'required|integer|between:0,10000', 'active' => 'required|in:0,1'], ['section', 'title']),
             'categories' => $this->definition('Kategori', 'catalog.write', Category::class,
                 ['name', 'slug', 'description', 'seo_title', 'seo_description', 'active'],
                 ['name' => 'required|string|max:100', 'slug' => 'required|alpha_dash|max:100', 'description' => 'nullable|string|max:5000', 'seo_title' => 'nullable|string|max:200', 'seo_description' => 'nullable|string|max:300', 'active' => 'required|in:0,1'], ['slug']),
@@ -46,8 +52,8 @@ class BulkImportService
             'stock-adjustments' => $this->definition('Penyesuaian stok', 'inventory.write', null,
                 ['sku', 'stock_delta', 'reason'], ['sku' => 'required|exists:variants,sku', 'stock_delta' => 'required|integer|between:-1000000,1000000|not_in:0', 'reason' => 'required|string|max:255'], ['variant_id']),
             'product-media' => $this->definition('Galeri produk', 'catalog.write', ProductMedia::class,
-                ['series_slug', 'sku', 'color', 'image', 'alt_text', 'sort_order', 'active'],
-                ['series_slug' => 'required|exists:series,slug', 'sku' => 'nullable|exists:variants,sku', 'color' => 'nullable|string|max:80', 'image' => 'required|string|max:255', 'alt_text' => 'required|string|max:200', 'sort_order' => 'required|integer|between:0,10000', 'active' => 'required|in:0,1'], ['image']),
+                ['series_slug', 'sku', 'color', 'image', 'alt_text', 'focal_x', 'focal_y', 'sort_order', 'active'],
+                ['series_slug' => 'required|exists:series,slug', 'sku' => 'nullable|exists:variants,sku', 'color' => 'nullable|string|max:80', 'image' => 'required|string|max:255', 'alt_text' => 'required|string|max:200', 'focal_x' => 'nullable|integer|between:0,100', 'focal_y' => 'nullable|integer|between:0,100', 'sort_order' => 'required|integer|between:0,10000', 'active' => 'required|in:0,1'], ['image']),
             'bundle-components' => $this->definition('Komponen bundle', 'catalog.write', BundleComponent::class,
                 ['bundle_sku', 'component_sku', 'quantity'], ['bundle_sku' => 'required|exists:variants,sku', 'component_sku' => 'required|different:bundle_sku|exists:variants,sku', 'quantity' => 'required|integer|between:1,1000'], ['bundle_variant_id', 'component_variant_id']),
             'measurement-templates' => $this->definition('Template ukuran custom', 'catalog.write', MeasurementTemplate::class,
@@ -76,11 +82,17 @@ class BulkImportService
             'loyalty-tiers' => $this->definition('Level loyalty', 'settings.write', null,
                 ['name', 'minimum_points', 'benefit', 'value_bonus_percent'], ['name' => 'required|string|max:100', 'minimum_points' => 'required|integer|between:0,100000000', 'benefit' => 'nullable|string|max:500', 'value_bonus_percent' => 'required|integer|between:0,100'], ['minimum_points']),
             'content' => $this->definition('Konten website', 'content.write', ContentEntry::class,
-                ['type', 'title', 'slug', 'summary', 'body', 'template', 'blocks_json', 'image', 'link_url', 'link_label', 'seo_title', 'seo_description', 'sort_order', 'editorial_status', 'starts_at', 'ends_at', 'active'],
-                ['type' => 'required|in:banner,home_section,menu,faq,journal,campaign', 'title' => 'required|string|max:200', 'slug' => 'required|alpha_dash|max:180', 'summary' => 'nullable|string|max:2000', 'body' => 'nullable|string|max:50000', 'template' => 'required|in:standard,wide,landing', 'blocks_json' => 'nullable|json|max:50000', 'image' => 'nullable|string|max:255', 'link_url' => 'nullable|string|max:500', 'link_label' => 'nullable|string|max:100', 'seo_title' => 'nullable|string|max:200', 'seo_description' => 'nullable|string|max:300', 'sort_order' => 'required|integer|between:0,10000', 'editorial_status' => 'required|in:draft,review,approved', 'starts_at' => 'nullable|date', 'ends_at' => 'nullable|date|after:starts_at', 'active' => 'required|in:0,1'], ['slug']),
+                ['type', 'placement', 'title', 'slug', 'summary', 'body', 'template', 'blocks_json', 'image', 'link_url', 'link_label', 'seo_title', 'seo_description', 'sort_order', 'editorial_status', 'review_note', 'starts_at', 'ends_at', 'active'],
+                ['type' => 'required|in:banner,home_section,menu,faq,journal,lookbook,campaign', 'placement' => 'required|in:both,desktop,mobile', 'title' => 'required|string|max:200', 'slug' => 'required|alpha_dash|max:180', 'summary' => 'nullable|string|max:2000', 'body' => 'nullable|string|max:50000', 'template' => 'required|in:standard,wide,landing', 'blocks_json' => 'nullable|json|max:50000', 'image' => 'nullable|string|max:255', 'link_url' => 'nullable|string|max:500', 'link_label' => 'nullable|string|max:100', 'seo_title' => 'nullable|string|max:200', 'seo_description' => 'nullable|string|max:300', 'sort_order' => 'required|integer|between:0,10000', 'editorial_status' => 'required|in:draft,review,approved', 'review_note' => 'nullable|string|max:1000', 'starts_at' => 'nullable|date', 'ends_at' => 'nullable|date|after:starts_at', 'active' => 'required|in:0,1'], ['slug']),
             'pages' => $this->definition('Halaman & kebijakan', 'content.write', Page::class,
-                ['title', 'slug', 'body', 'template', 'blocks_json', 'seo_title', 'seo_description', 'editorial_status', 'starts_at', 'ends_at', 'active'],
-                ['title' => 'required|string|max:150', 'slug' => 'required|alpha_dash|max:150', 'body' => 'required|string|max:50000', 'template' => 'required|in:standard,wide,landing', 'blocks_json' => 'nullable|json|max:50000', 'seo_title' => 'nullable|string|max:200', 'seo_description' => 'nullable|string|max:300', 'editorial_status' => 'required|in:draft,review,approved', 'starts_at' => 'nullable|date', 'ends_at' => 'nullable|date|after:starts_at', 'active' => 'required|in:0,1'], ['slug']),
+                ['title', 'slug', 'body', 'template', 'blocks_json', 'seo_title', 'seo_description', 'editorial_status', 'review_note', 'starts_at', 'ends_at', 'active'],
+                ['title' => 'required|string|max:150', 'slug' => 'required|alpha_dash|max:150', 'body' => 'required|string|max:50000', 'template' => 'required|in:standard,wide,landing', 'blocks_json' => 'nullable|json|max:50000', 'seo_title' => 'nullable|string|max:200', 'seo_description' => 'nullable|string|max:300', 'editorial_status' => 'required|in:draft,review,approved', 'review_note' => 'nullable|string|max:1000', 'starts_at' => 'nullable|date', 'ends_at' => 'nullable|date|after:starts_at', 'active' => 'required|in:0,1'], ['slug']),
+            'newsletter' => $this->definition('Pelanggan newsletter', 'content.write', NewsletterSubscriber::class,
+                ['email', 'name', 'source', 'subscribed_at', 'active'],
+                ['email' => 'required|email|max:150', 'name' => 'nullable|string|max:100', 'source' => 'required|string|max:80', 'subscribed_at' => 'required|date', 'active' => 'required|in:0,1'], ['email']),
+            'store-locations' => $this->definition('Lokasi toko', 'content.write', StoreLocation::class,
+                ['name', 'address', 'city', 'map_url', 'hours', 'sort_order', 'active'],
+                ['name' => 'required|string|max:150', 'address' => 'required|string|max:1000', 'city' => 'nullable|string|max:100', 'map_url' => 'nullable|url|max:500', 'hours' => 'nullable|string|max:150', 'sort_order' => 'required|integer|between:0,10000', 'active' => 'required|in:0,1'], ['name', 'city']),
         ];
     }
 
@@ -248,6 +260,10 @@ class BulkImportService
         if ($type === 'product-media' && ! empty($row['variant_id']) && Variant::whereKey($row['variant_id'])->value('series_id') !== $row['series_id']) {
             $messages[] = 'SKU galeri harus berasal dari series yang dipilih.';
         }
+        if ($type === 'product-media') {
+            $row['focal_x'] = (int) ($row['focal_x'] ?? 50);
+            $row['focal_y'] = (int) ($row['focal_y'] ?? 30);
+        }
         if ($type === 'series' && ! empty($row['compare_at_price'])) {
             $minimumPrice = Series::where('slug', $input['slug'])->first()?->variants()->min('price');
             if ($minimumPrice && (int) $row['compare_at_price'] <= $minimumPrice) {
@@ -260,7 +276,14 @@ class BulkImportService
                 $messages[] = 'Harga coret series harus lebih besar dari harga jual terendah produk.';
             }
         }
-        if (in_array($type, ['series', 'product-media', 'content'], true) && ! empty($row['image'])) {
+        if ($type === 'curated-links') {
+            $url = (string) $row['url'];
+            $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+            if (! str_starts_with($url, '/') && ! str_starts_with($url, '#') && ! in_array($scheme, ['http', 'https'], true)) {
+                $messages[] = 'Tautan kurasi harus berupa path internal atau URL http/https.';
+            }
+        }
+        if (in_array($type, ['series', 'product-media', 'content', 'curated-links'], true) && ! empty($row['image'])) {
             if (str_contains($row['image'], '..') || str_starts_with($row['image'], '/') || ! Storage::disk('public')->exists($row['image'])) {
                 $messages[] = 'Path gambar tidak ditemukan di media publik.';
             }

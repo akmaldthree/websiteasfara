@@ -147,6 +147,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/import/generate', [Import::class, 'generate'])->name('import.generate');
     Route::post('/import/commit', [Import::class, 'commit'])->name('import.commit');
     Route::get('/master/{resource}', [Admin::class, 'resources'])->name('resources');
+    Route::post('/master/{resource}/tindakan-massal', [Admin::class, 'bulkResourceAction'])->name('resources.bulk');
     Route::get('/master/{resource}/baru', [Admin::class, 'form'])->name('create');
     Route::get('/master/{resource}/{id}/ubah', [Admin::class, 'form'])->whereNumber('id')->name('edit');
     Route::post('/master/{resource}', [Admin::class, 'save'])->name('store');

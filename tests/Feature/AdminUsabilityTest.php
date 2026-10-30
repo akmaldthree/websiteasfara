@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\NotificationDelivery;
+use App\Models\ProductMedia;
+use App\Models\Series;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,6 +35,40 @@ class AdminUsabilityTest extends TestCase
             ->assertSee('Abaya Khusus')
             ->assertDontSee('Sarimbit Keluarga')
             ->assertSee('value="Abaya"', false);
+    }
+
+    public function test_resource_filters_and_bulk_status_actions_are_consistent(): void
+    {
+        $active = Category::create(['name' => 'Kategori Aktif', 'slug' => 'kategori-aktif', 'active' => true]);
+        $inactive = Category::create(['name' => 'Kategori Nonaktif', 'slug' => 'kategori-nonaktif', 'active' => false]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.resources', ['categories', 'status' => 'inactive']))
+            ->assertOk()
+            ->assertSee('Kategori Nonaktif')
+            ->assertDontSee('Kategori Aktif')
+            ->assertSee('bulk-resource-form', false);
+
+        $this->post(route('admin.resources.bulk', 'categories'), ['ids' => [$active->id], 'action' => 'deactivate'])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertFalse($active->fresh()->active);
+        $this->assertFalse($inactive->fresh()->active);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'categories.bulk_status_updated', 'subject' => 'categories:bulk']);
+    }
+
+    public function test_resource_search_can_find_related_product_names(): void
+    {
+        $category = Category::create(['name' => 'Koleksi', 'slug' => 'koleksi', 'active' => true]);
+        $series = Series::create(['category_id' => $category->id, 'name' => 'Mahira Signature', 'slug' => 'mahira-signature', 'active' => true]);
+        ProductMedia::create(['series_id' => $series->id, 'image' => 'product-gallery/neutral.webp', 'alt_text' => 'Foto netral', 'sort_order' => 0, 'active' => true]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.resources', ['product-media', 'q' => 'Mahira']))
+            ->assertOk()
+            ->assertSee('Mahira Signature')
+            ->assertSee('Foto netral');
     }
 
     public function test_admin_can_choose_where_to_continue_after_saving(): void
