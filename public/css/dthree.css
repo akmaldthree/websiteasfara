@@ -261,7 +261,12 @@
 .admin-body .table{--bs-table-color:var(--ink);--bs-table-border-color:var(--palette-taupe);--bs-table-striped-bg:color-mix(in srgb,var(--palette-taupe) 20%,transparent);--bs-table-hover-bg:color-mix(in srgb,var(--palette-gold) 14%,transparent)}
 .admin-body .table th{color:var(--admin-muted)}
 .admin-body .pagination{--bs-pagination-bg:var(--palette-sand);--bs-pagination-border-color:var(--palette-taupe);--bs-pagination-hover-bg:var(--admin-hover);--bs-pagination-hover-color:var(--ink);--bs-pagination-color:var(--ink)}
-.admin-body input:focus-visible,.admin-body a:focus-visible,.admin-body button:focus-visible,.admin-body summary:focus-visible{outline-color:var(--palette-gold)}
+.admin-body input:focus-visible,.admin-body select:focus-visible,.admin-body textarea:focus-visible,.admin-body a:focus-visible,.admin-body button:focus-visible,.admin-body summary:focus-visible{outline:2px solid var(--palette-gold);outline-offset:3px}
+
+@media(forced-colors:active){
+    a,button,input,select,textarea,summary{forced-color-adjust:auto}
+    .badge,.btn,.panel,.product-image{border:1px solid CanvasText}
+}
 
 @media(max-width:900px){
     .admin-sidebar{box-shadow:18px 0 42px color-mix(in srgb,var(--ink) 18%,transparent)}

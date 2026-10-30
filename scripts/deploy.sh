@@ -13,6 +13,11 @@ git fetch origin main
 git merge-base --is-ancestor HEAD origin/main || { echo 'Branch tidak dapat diperbarui dengan fast-forward.' >&2; exit 1; }
 "$PHP_BIN" -r 'exit(version_compare(PHP_VERSION, "8.4.0", ">=") ? 0 : 1);'
 echo 'Pastikan backup database dan storage terbaru tersedia sebelum menjalankan deployment.'
+if [[ "${SKIP_LOCAL_BACKUP:-0}" != '1' ]]; then
+    PHP_BIN="$PHP_BIN" bash scripts/backup.sh
+else
+    echo 'Backup lokal dilewati karena SKIP_LOCAL_BACKUP=1. Pastikan backup eksternal sudah diverifikasi.'
+fi
 "$PHP_BIN" artisan down --retry=60
 trap 'echo "Deployment gagal. Website tetap maintenance. Periksa log, perbaiki, jalankan ulang; lihat docs/HOSTING.md." >&2' ERR
 git pull --ff-only origin main
@@ -21,6 +26,7 @@ git pull --ff-only origin main
 "$PHP_BIN" artisan migrate --force
 "$PHP_BIN" artisan optimize
 "$PHP_BIN" artisan queue:restart
+"$PHP_BIN" artisan system:production-check --no-interaction
 "$PHP_BIN" artisan up
 trap - ERR
 echo "Deployment selesai: $(git rev-parse --short HEAD)"

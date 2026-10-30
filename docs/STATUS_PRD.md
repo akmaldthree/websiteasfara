@@ -27,7 +27,7 @@ Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **
 | Fulfillment | Status packing/kirim/terima, resi, riwayat pelanggan, picking list, packing slip, label, invoice | Tracking kurir tetap manual |
 | Laporan | Omzet bruto/bersih, refund, AOV, pelanggan berulang, produk, ongkir, stok rendah, export CSV, serta funnel analytics internal anonim yang dapat dinonaktifkan admin | Belum margin, cohort, grafik, serta segmentasi promo lanjutan |
 | Layanan | Aturan retur/garansi, batas waktu, alasan, pengecualian SKU, bukti privat, item kasus, keputusan CS, pemeriksaan Gudang, restock terpisah, refund ledger | Belum ongkir balik otomatis, loyalty adjustment, dan SLA lanjutan |
-| Deployment | Repo GitHub, lockfile, tes, CI SQLite/MySQL, script pull-hosting, panduan, heartbeat scheduler, dan dashboard monitoring database/queue/notifikasi/storage/runtime | Hosting aktual, domain, SMTP, alert eksternal, backup/restore dan load test belum diverifikasi |
+| Deployment | Repo GitHub, lockfile, tes, CI SQLite/MySQL, script pull-hosting, backup MySQL/storage otomatis, pemeriksaan produksi, panduan, heartbeat scheduler, dan dashboard monitoring database/queue/notifikasi/storage/runtime/backup | Hosting aktual, domain, SMTP, alert eksternal, restore backup dan load test belum diverifikasi |
 
 ## Belum diimplementasikan
 

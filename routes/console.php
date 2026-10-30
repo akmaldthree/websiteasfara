@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Audit;
 use App\Services\DeliveryService;
 use App\Services\OrderWorkflow;
+use App\Services\SystemHealthService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Validation\ValidationException;
@@ -74,3 +75,39 @@ Artisan::command('system:heartbeat', function () {
     $this->info('Heartbeat scheduler dicatat.');
 })->purpose('Mencatat heartbeat untuk monitoring scheduler');
 Schedule::command('system:heartbeat')->everyMinute()->withoutOverlapping();
+
+Artisan::command('system:backup-record {file}', function () {
+    $file = basename((string) $this->argument('file'));
+    if ($file === '' || $file === '.' || $file === '..') {
+        $this->error('Nama backup tidak valid.');
+
+        return 1;
+    }
+
+    Setting::put('system_backup_last_seen', ['at' => now()->toIso8601String(), 'file' => $file]);
+    $this->info('Backup dicatat untuk monitoring.');
+
+    return 0;
+})->purpose('Mencatat backup database dan storage yang berhasil dibuat');
+
+Artisan::command('system:production-check', function (SystemHealthService $health) {
+    $blockingChecks = ['Database', 'Storage', 'Environment', 'Mode aplikasi', 'HTTPS', 'Cookie sesi', 'Kunci aplikasi', 'Email transaksi', 'Ruang disk'];
+    $failed = false;
+
+    foreach ($health->checks() as $check) {
+        $this->line(sprintf('[%s] %s — %s', strtoupper($check['status']), $check['name'], $check['detail']));
+        if (in_array($check['name'], $blockingChecks, true) && $check['status'] === 'error') {
+            $failed = true;
+        }
+    }
+
+    if ($failed) {
+        $this->error('Pemeriksaan produksi gagal. Perbaiki item ERROR sebelum website dibuka.');
+
+        return 1;
+    }
+
+    $this->info('Pemeriksaan wajib produksi lulus. Tindak lanjuti item WARNING melalui CMS.');
+
+    return 0;
+})->purpose('Memvalidasi konfigurasi wajib sebelum website produksi dibuka');

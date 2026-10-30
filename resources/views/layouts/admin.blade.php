@@ -6,7 +6,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}"><link rel="stylesheet" href="{{ asset('css/dthree.css') }}?v={{ filemtime(public_path('css/dthree.css')) }}">
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}?v={{ filemtime(public_path('vendor/bootstrap/bootstrap.min.css')) }}"><link rel="stylesheet" href="{{ asset('css/dthree.css') }}?v={{ filemtime(public_path('css/dthree.css')) }}">
     <style>:root{--palette-sage:{{ \App\Models\Setting::get('theme_palette_base',config('theme.palette.theme_palette_base.color')) }};--palette-sand:{{ \App\Models\Setting::get('theme_palette_surface',config('theme.palette.theme_palette_surface.color')) }};--palette-taupe:{{ \App\Models\Setting::get('theme_palette_structure',config('theme.palette.theme_palette_structure.color')) }};--palette-gold:{{ \App\Models\Setting::get('theme_palette_accent',config('theme.palette.theme_palette_accent.color')) }};--palette-cream:{{ \App\Models\Setting::get('theme_palette_base',config('theme.palette.theme_palette_base.color')) }};--ink:{{ \App\Models\Setting::get('theme_text_color',config('theme.text_color')) }};--gold:var(--palette-gold);--cream:var(--palette-cream);--paper:var(--palette-sage);--surface:var(--palette-sand);--line:var(--palette-taupe)}</style>
 </head>
 <body class="admin-body">
@@ -17,14 +17,14 @@
     <nav aria-label="Navigasi CMS">
         <div class="admin-nav-group"><p>Operasional</p>
             @foreach(['admin.dashboard'=>['Ringkasan','dashboard'],'admin.orders'=>['Pesanan','orders.read'],'admin.inventory'=>['Stok & inventori','inventory.read'],'admin.customers'=>['Pelanggan','customers.read'],'admin.cases'=>['Retur & layanan','orders.read'],'admin.notifications'=>['Notifikasi','cases.write'],'admin.reports'=>['Laporan','reports.read']] as $route=>$nav)
-                @if(auth()->user()->allowed($nav[1]))<a href="{{ route($route) }}" @class(['active'=>request()->routeIs($route)])>{{ $nav[0] }}</a>@endif
+                @if(auth()->user()->allowed($nav[1]))<a href="{{ route($route) }}" @class(['active'=>request()->routeIs($route)]) @if(request()->routeIs($route)) aria-current="page" @endif>{{ $nav[0] }}</a>@endif
             @endforeach
         </div>
         @if(auth()->user()->allowed('catalog.write'))
         <div class="admin-nav-group"><p>Katalog produk</p>
-            <a href="{{ route('admin.products') }}" @class(['active'=>request()->routeIs('admin.products*')])>Kelola produk</a>
-            @foreach(['categories','bundle-components','measurement-templates'] as $key)@php($item=config('admin_resources.'.$key))<a href="{{ route('admin.resources',$key) }}" @class(['active'=>request()->route('resource')===$key])>{{ $item['title'] }}</a>@endforeach
-            <a href="{{ route('admin.custom-quotes') }}" @class(['active'=>request()->routeIs('admin.custom-quotes*')])>Penawaran custom</a>
+            <a href="{{ route('admin.products') }}" @class(['active'=>request()->routeIs('admin.products*')]) @if(request()->routeIs('admin.products*')) aria-current="page" @endif>Kelola produk</a>
+            @foreach(['categories','bundle-components','measurement-templates'] as $key)@php($item=config('admin_resources.'.$key))<a href="{{ route('admin.resources',$key) }}" @class(['active'=>request()->route('resource')===$key]) @if(request()->route('resource')===$key) aria-current="page" @endif>{{ $item['title'] }}</a>@endforeach
+            <a href="{{ route('admin.custom-quotes') }}" @class(['active'=>request()->routeIs('admin.custom-quotes*')]) @if(request()->routeIs('admin.custom-quotes*')) aria-current="page" @endif>Penawaran custom</a>
         </div>
         @endif
         @if(auth()->user()->allowed('content.write') || auth()->user()->allowed('promotions.write'))
@@ -65,7 +65,7 @@
     <main class="admin-content" id="main-content" tabindex="-1">@yield('content')</main>
 </div>
 </div>
-<script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}?v={{ filemtime(public_path('vendor/bootstrap/bootstrap.bundle.min.js')) }}"></script>
 <script>
 const adminBody=document.body;
 const adminSidebar=document.getElementById('admin-sidebar');
@@ -151,6 +151,8 @@ document.addEventListener('click',event=>{
 });
 restoreSidebarScroll();
 syncAdminMenu();
+const pageAlert=document.querySelector('[data-focus-alert]');
+if(pageAlert)requestAnimationFrame(()=>pageAlert.focus());
 </script>
 @stack('scripts')
 </body></html>

@@ -214,6 +214,7 @@ cd ~/store.dthree.co.id
 php artisan schedule:list
 php artisan schedule:run
 php artisan system:heartbeat
+php artisan system:production-check
 ```
 
 Kemudian buka **Admin → Monitoring sistem**.
@@ -259,7 +260,7 @@ Seeder aman dijalankan ulang: katalog, produk, varian, galeri, bundling, ukuran 
 
 ## 12. Update setelah perubahan GitHub
 
-Backup database dan `storage/app`, kemudian:
+Script berikut membuat backup database dan `storage/app` secara otomatis sebelum deployment:
 
 ```bash
 cd ~/store.dthree.co.id
@@ -274,6 +275,8 @@ Jika binary server berbeda:
 PHP_BIN=<PATH_PHP_84> COMPOSER_BIN=<PATH_COMPOSER> bash scripts/deploy.sh
 ```
 
+Backup memerlukan `mysqldump`, `gzip`, dan `tar`. Hasil privat disimpan di `storage/app/backups` selama 14 hari dan statusnya tampil pada **Admin → Monitoring sistem**. Tetap salin backup ke penyimpanan eksternal terenkripsi.
+
 ## 13. Pemeriksaan akhir
 
 ```bash
@@ -282,6 +285,7 @@ cd ~/store.dthree.co.id
 php artisan about
 php artisan migrate:status
 php artisan schedule:list
+php artisan system:production-check
 git status --short
 git log -1 --oneline
 curl -I https://store.dthree.co.id/up

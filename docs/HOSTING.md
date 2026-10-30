@@ -231,6 +231,7 @@ php artisan about
 php artisan migrate:status
 php artisan route:list
 php artisan schedule:list
+php artisan system:production-check
 curl -I https://dthree.co.id/up
 ```
 
@@ -246,7 +247,7 @@ Lakukan transaksi uji lengkap sebelum checkout dibuka. Jangan menjalankan `DemoS
 
 ## 10. Update setelah push GitHub
 
-Backup database dan seluruh `storage/app`, lalu dari root aplikasi jalankan:
+Script deployment membuat backup database dan seluruh `storage/app` terlebih dahulu, lalu dari root aplikasi jalankan:
 
 ```bash
 bash scripts/deploy.sh
@@ -259,6 +260,14 @@ PHP_BIN=/path/php84 COMPOSER_BIN=/path/composer bash scripts/deploy.sh
 ```
 
 Script memastikan branch `main` dan working tree bersih, menarik fast-forward, mengaktifkan maintenance, memasang dependency production, menjalankan migration/cache, restart queue, lalu membuka website.
+
+Backup otomatis memerlukan `mysqldump`, `gzip`, dan `tar`. Hasilnya disimpan privat di `storage/app/backups`, dilengkapi checksum bila `sha256sum` tersedia, dan dipertahankan 14 hari. Atur binary atau retensi bila hosting memakai lokasi berbeda:
+
+```bash
+MYSQLDUMP_BIN=/usr/bin/mysqldump BACKUP_RETENTION_DAYS=30 bash scripts/backup.sh
+```
+
+Gunakan `SKIP_LOCAL_BACKUP=1 bash scripts/deploy.sh` hanya jika backup eksternal terbaru sudah diverifikasi dan dapat dipulihkan.
 
 Alternatif manual:
 
@@ -283,6 +292,14 @@ Backup minimum:
 - `storage/app` untuk bukti pembayaran, dokumen bisnis, dan referensi desain privat.
 - `storage/app/public` untuk gambar produk dan branding.
 - `.env` secara terenkripsi.
+
+Buat backup aplikasi secara manual dengan:
+
+```bash
+bash scripts/backup.sh
+```
+
+Status dan usia backup terakhir tampil pada **CMS → Monitoring sistem**. Salin hasil backup ke lokasi eksternal yang terenkripsi; folder backup lokal bukan satu-satunya salinan.
 
 Jadwalkan backup harian dan uji restore di staging. Untuk rollback kode, gunakan commit baik yang diketahui dan rencana migration yang ditinjau. Jangan menjalankan `migrate:rollback`, `reset --hard`, `migrate:fresh`, atau mengganti `APP_KEY` tanpa backup dan analisis data.
 

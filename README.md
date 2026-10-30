@@ -61,7 +61,7 @@ Perubahan diuji, di-commit, dan di-push ke `main`. Pemilik melakukan pembaruan d
 bash scripts/deploy.sh
 ```
 
-Script melakukan `git pull --ff-only`, Composer install, migration, cache, dan restart queue. `.env`, database, serta upload tidak masuk Git. Jangan mengedit kode langsung di hosting. Backup dilakukan oleh hosting/operator sebelum deployment.
+Script membuat backup MySQL dan `storage/app`, melakukan `git pull --ff-only`, Composer install, migration, cache, restart queue, serta pemeriksaan konfigurasi produksi. `.env`, database, upload, dan hasil backup tidak masuk Git. Jangan mengedit kode langsung di hosting; salin backup ke penyimpanan eksternal dan uji restore secara berkala.
 
 ## Pengujian
 
