@@ -289,15 +289,17 @@ class StoreController extends Controller
     {
         $d = $r->validate(['variant_id' => 'required|integer', 'quantity' => 'required|integer|min:0|max:100']);
         $cart = $this->normalizedCart($r, $cartService);
+        $customizations = $r->session()->get('cart_customizations', []);
         if ($d['quantity'] === 0) {
             unset($cart[$d['variant_id']]);
-            $customizations = $r->session()->get('cart_customizations', []);
             unset($customizations[$d['variant_id']]);
-            $r->session()->put('cart_customizations', $customizations);
         } elseif (isset($cart[$d['variant_id']])) {
             $cart[$d['variant_id']] = $d['quantity'];
         }
-        $r->session()->put('cart', $cart);
+        if ($cart) {
+            $checkoutService->lines($cart, false, $r->user(), $customizations);
+        }
+        $r->session()->put(['cart' => $cart, 'cart_customizations' => $customizations]);
         if ($r->user()) {
             $cartService->sync($r->user(), $cart, $r->session()->get('cart_customizations', []));
         }
@@ -337,7 +339,7 @@ class StoreController extends Controller
     private function normalizedCart(Request $request, CartService $cartService): array
     {
         $original = $request->session()->get('cart', []);
-        $cart = $cartService->normalize(is_array($original) ? $original : []);
+        $cart = $cartService->reconcile(is_array($original) ? $original : []);
         if ($cart !== $original) {
             $storedCustomizations = $request->session()->get('cart_customizations', []);
             $customizations = array_intersect_key(is_array($storedCustomizations) ? $storedCustomizations : [], $cart);
@@ -345,6 +347,7 @@ class StoreController extends Controller
             if ($request->user()) {
                 $cartService->sync($request->user(), $cart, $customizations);
             }
+            $request->session()->flash('warning', 'Keranjang disesuaikan karena stok atau ketersediaan produk berubah. Periksa kembali jumlah sebelum melanjutkan.');
         }
 
         return $cart;
@@ -352,6 +355,12 @@ class StoreController extends Controller
 
     private function checkoutData(Request $r): array
     {
+        foreach (['phone', 'sender_phone'] as $field) {
+            if ($r->filled($field)) {
+                $r->merge([$field => preg_replace('/[\s().-]+/', '', (string) $r->input($field))]);
+            }
+        }
+
         return $r->validate([
             'name' => 'required|string|max:100', 'phone' => ['required', 'regex:/^\+?[0-9]{9,15}$/'], 'email' => 'nullable|email|max:150',
             'province' => 'required|string|max:100', 'city' => 'required|string|max:100', 'district' => 'required|string|max:100',
@@ -361,10 +370,14 @@ class StoreController extends Controller
         ]);
     }
 
-    public function review(Request $r, CheckoutService $service, Analytics $analytics)
+    public function review(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics)
     {
         $data = $this->checkoutData($r);
-        $quote = $service->quote($r->session()->get('cart', []), $data, false, $r->user(), $r->session()->get('cart_customizations', []));
+        $cart = $this->normalizedCart($r, $cartService);
+        if (! $cart) {
+            return redirect()->route('cart')->withErrors(['checkout' => 'Keranjang kosong. Pilih produk sebelum checkout.']);
+        }
+        $quote = $service->quote($cart, $data, false, $r->user(), $r->session()->get('cart_customizations', []));
         $r->session()->put('checkout_data', $data);
         $r->session()->put('checkout_quote', $service->fingerprint($quote));
         $analytics->record($r, 'shipping_selected', ['courier' => $quote['rate']->courier, 'service' => $quote['rate']->service, 'value' => $quote['shipping_cost']]);
@@ -383,7 +396,17 @@ class StoreController extends Controller
         $data = $r->session()->get('checkout_data');
         abort_unless($data, 419);
         abort_unless($r->session()->has('checkout_quote'), 419);
-        $o = $service->place($r->session()->get('cart', []), $data, $r->input('checkout_key'), $r->user()?->id, $r->session()->get('checkout_quote'), $r->session()->get('cart_customizations', []));
+        $cart = $this->normalizedCart($r, $cartService);
+        if (! $cart) {
+            return redirect()->route('cart')->withErrors(['checkout' => 'Keranjang kosong. Pilih produk sebelum checkout.']);
+        }
+        try {
+            $o = $service->place($cart, $data, $r->input('checkout_key'), $r->user()?->id, $r->session()->get('checkout_quote'), $r->session()->get('cart_customizations', []));
+        } catch (ValidationException $exception) {
+            $r->session()->forget('checkout_quote');
+
+            return redirect()->route('checkout')->withErrors($exception->errors());
+        }
         $r->session()->forget(['cart', 'cart_customizations', 'checkout_data', 'checkout_quote']);
         if ($r->user()) {
             $cartService->sync($r->user(), []);

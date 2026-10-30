@@ -22,7 +22,7 @@
     <h1 class="my-4">{{ strtoupper(__('store.checkout')) }}</h1>
     <div class="row g-5 checkout-layout">
         <div class="col-lg-7">
-            <form action="{{ route('checkout.review') }}" method="post" id="checkout-form">@csrf
+            <form action="{{ route('checkout.review') }}" method="post" id="checkout-form" data-submit-once>@csrf
                 <div class="panel">
                     <h2>Kontak & alamat penerima</h2>
                     @auth

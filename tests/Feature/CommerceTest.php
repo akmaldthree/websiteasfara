@@ -88,6 +88,53 @@ class CommerceTest extends TestCase
             ->assertJsonPath('subtotal', 'Rp 900.000');
     }
 
+    public function test_cart_rejects_quantity_above_available_stock_without_corrupting_session(): void
+    {
+        $this->withSession(['cart' => [$this->variant->id => 1]])
+            ->post(route('cart.update'), ['variant_id' => $this->variant->id, 'quantity' => 4])
+            ->assertRedirect()
+            ->assertSessionHasErrors('checkout')
+            ->assertSessionHas('cart', [$this->variant->id => 1]);
+    }
+
+    public function test_stale_cart_is_reconciled_when_stock_changes(): void
+    {
+        $this->variant->update(['stock' => 2]);
+
+        $this->withSession(['cart' => [$this->variant->id => 3]])
+            ->get(route('cart'))
+            ->assertOk()
+            ->assertSee('Keranjang disesuaikan')
+            ->assertSessionHas('cart', [$this->variant->id => 2]);
+
+        $this->variant->update(['stock' => 0]);
+        $this->get(route('checkout'))
+            ->assertRedirect(route('cart'))
+            ->assertSessionHas('cart', []);
+    }
+
+    public function test_complete_http_checkout_is_idempotent_and_normalizes_phone(): void
+    {
+        $this->post(route('cart.add'), ['variant_id' => $this->variant->id, 'quantity' => 1])
+            ->assertRedirect(route('cart'));
+        $this->get(route('checkout'))->assertOk();
+        $key = session('checkout_key');
+        $input = array_merge($this->input, ['phone' => '0812-3456 7890']);
+
+        $this->post(route('checkout.review'), $input)
+            ->assertOk()
+            ->assertSee('Buat pesanan');
+        $first = $this->post(route('checkout.place'), ['checkout_key' => $key]);
+        $order = Order::sole();
+        $first->assertRedirect($order->customerUrl());
+        $this->assertSame('081234567890', $order->phone);
+
+        $this->post(route('checkout.place'), ['checkout_key' => $key])
+            ->assertRedirect($order->customerUrl());
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertSame(1, $this->variant->fresh()->reserved);
+    }
+
     public function test_server_prices_snapshot_and_idempotency(): void
     {
         $this->input['total'] = 1;
@@ -401,7 +448,10 @@ class CommerceTest extends TestCase
         $this->post('/checkout/tinjau', $this->input)->assertOk();
         $this->variant->update(['price' => 400000]);
 
-        $this->post('/checkout', ['checkout_key' => $key])->assertSessionHasErrors('checkout');
+        $this->post('/checkout', ['checkout_key' => $key])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHasErrors('checkout')
+            ->assertSessionMissing('checkout_quote');
 
         $this->assertDatabaseCount('orders', 0);
         $this->assertEquals(0, $this->variant->fresh()->reserved);

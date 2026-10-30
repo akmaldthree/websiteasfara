@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\Variant;
 use Illuminate\Support\Facades\DB;
 
 class CartService
@@ -25,6 +26,34 @@ class CartService
         }
 
         return $normalized;
+    }
+
+    /**
+     * Remove unavailable lines and cap quantities after stock or catalog data
+     * changes, so an old session cannot trap a customer on cart or checkout.
+     */
+    public function reconcile(array $cart): array
+    {
+        $cart = $this->normalize($cart);
+        if (! $cart) {
+            return [];
+        }
+
+        $variants = Variant::with(['series.category', 'bundleComponents.componentVariant'])
+            ->whereIn('id', array_keys($cart))->get()->keyBy('id');
+        $reconciled = [];
+        foreach ($cart as $variantId => $quantity) {
+            $variant = $variants->get($variantId);
+            if (! $variant || ! $variant->active || ! $variant->series?->active || ! $variant->series?->category?->active) {
+                continue;
+            }
+            $quantity = min($quantity, $variant->available);
+            if ($quantity > 0) {
+                $reconciled[$variantId] = $quantity;
+            }
+        }
+
+        return $reconciled;
     }
 
     public function merge(User $user, array $cart, array $customizations): array

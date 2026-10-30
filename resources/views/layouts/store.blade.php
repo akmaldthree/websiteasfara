@@ -149,5 +149,20 @@ document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;close
 const welcomeVoucher=document.getElementById('welcome-voucher');if(welcomeVoucher&&!localStorage.getItem('dthree-welcome-voucher')){setTimeout(()=>{welcomeVoucher.showModal();localStorage.setItem('dthree-welcome-voucher','shown')},900)}document.querySelector('[data-close-welcome]')?.addEventListener('click',()=>welcomeVoucher.close());welcomeVoucher?.addEventListener('click',event=>{if(event.target===welcomeVoucher)welcomeVoucher.close()});document.querySelector('[data-copy-voucher]')?.addEventListener('click',async event=>{await navigator.clipboard.writeText(event.currentTarget.dataset.copyVoucher);event.currentTarget.querySelector('small').textContent='KODE TERSALIN'});})();
 </script>
 @stack('scripts')
+<script>
+document.querySelectorAll('form[data-submit-once]').forEach(form=>form.addEventListener('submit',event=>{
+    if(!form.checkValidity()||form.dataset.submitting==='true'){
+        if(form.dataset.submitting==='true')event.preventDefault();
+        return;
+    }
+    form.dataset.submitting='true';
+    form.setAttribute('aria-busy','true');
+    form.querySelectorAll('button[type="submit"],button:not([type])').forEach(button=>{
+        button.disabled=true;
+        button.dataset.originalText=button.textContent;
+        button.textContent=button.dataset.submittingText||'Memproses…';
+    });
+}));
+</script>
 </body>
 </html>
