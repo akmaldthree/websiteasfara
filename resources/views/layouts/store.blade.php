@@ -151,7 +151,7 @@ const welcomeVoucher=document.getElementById('welcome-voucher');if(welcomeVouche
 @stack('scripts')
 <script>
 document.querySelectorAll('form[data-submit-once]').forEach(form=>form.addEventListener('submit',event=>{
-    if(!form.checkValidity()||form.dataset.submitting==='true'){
+    if(event.defaultPrevented||!form.checkValidity()||form.dataset.submitting==='true'){
         if(form.dataset.submitting==='true')event.preventDefault();
         return;
     }

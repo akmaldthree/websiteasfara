@@ -405,7 +405,7 @@ class StoreController extends Controller
         } catch (ValidationException $exception) {
             $r->session()->forget('checkout_quote');
 
-            return redirect()->route('checkout')->withErrors($exception->errors());
+            return redirect()->route('checkout')->withErrors($exception->errors())->withInput($data);
         }
         $r->session()->forget(['cart', 'cart_customizations', 'checkout_data', 'checkout_quote']);
         if ($r->user()) {

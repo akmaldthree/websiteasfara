@@ -113,6 +113,25 @@ class CommerceTest extends TestCase
             ->assertSessionHas('cart', []);
     }
 
+    public function test_mobile_checkout_uses_default_address_and_compact_summary(): void
+    {
+        $customer = $this->user('customer');
+        $customer->addresses()->create([
+            'name' => 'Penerima Utama', 'phone' => '081299998888', 'province' => 'Jawa Barat',
+            'city' => 'Tasikmalaya', 'district' => 'Cihideung', 'postal_code' => '46111',
+            'detail' => 'Jalan Utama Nomor 10', 'is_default' => true,
+        ]);
+
+        $this->actingAs($customer)->withSession(['cart' => [$this->variant->id => 1]])
+            ->get(route('checkout'))
+            ->assertOk()
+            ->assertSee('Penerima Utama')
+            ->assertSee('Tasikmalaya, Jawa Barat')
+            ->assertSee('checkout-summary-details', false)
+            ->assertSee('mobile-checkout-action', false)
+            ->assertSee('autocomplete="postal-code"', false);
+    }
+
     public function test_complete_http_checkout_is_idempotent_and_normalizes_phone(): void
     {
         $this->post(route('cart.add'), ['variant_id' => $this->variant->id, 'quantity' => 1])
@@ -442,6 +461,7 @@ class CommerceTest extends TestCase
 
     public function test_changed_price_requires_review_before_checkout_is_created(): void
     {
+        $this->input['notes'] = 'Pertahankan catatan ini';
         $this->post('/keranjang', ['variant_id' => $this->variant->id, 'quantity' => 1]);
         $this->get('/checkout');
         $key = session('checkout_key');
@@ -451,6 +471,7 @@ class CommerceTest extends TestCase
         $this->post('/checkout', ['checkout_key' => $key])
             ->assertRedirect(route('checkout'))
             ->assertSessionHasErrors('checkout')
+            ->assertSessionHasInput('notes', 'Pertahankan catatan ini')
             ->assertSessionMissing('checkout_quote');
 
         $this->assertDatabaseCount('orders', 0);

@@ -2,6 +2,7 @@
 @section('title','Checkout — Dthree')
 @section('body_class','checkout-body')
 @php
+    $preferredAddress = auth()->user()?->addresses->first();
     $shippingRegions = $rates->map(fn ($rate) => [
         'id' => (int) $rate->id,
         'province' => $rate->province,
@@ -11,10 +12,11 @@
         'price_label' => 'Rp '.number_format($rate->checkout_cost, 0, ',', '.'),
         'estimate' => $rate->estimate,
     ])->values();
-    $addressProvince = old('province', session('checkout_data.province', ''));
-    $addressCity = old('city', session('checkout_data.city', ''));
+    $addressProvince = old('province', session('checkout_data.province', $preferredAddress?->province ?? ''));
+    $addressCity = old('city', session('checkout_data.city', $preferredAddress?->city ?? ''));
     $selectedShippingRate = old('shipping_rate_id', session('checkout_data.shipping_rate_id', ''));
     $shippingSearchValue = $addressCity && $addressProvince ? $addressCity.', '.$addressProvince : '';
+    $checkoutSubtotal = array_sum(array_column($lines, 'total'));
 @endphp
 @section('content')
 <section class="container-xxl section checkout-page">
@@ -31,18 +33,15 @@
                             <select id="saved-address" class="form-select mb-4">
                                 <option value="">Isi alamat baru</option>
                                 @foreach(auth()->user()->addresses as $address)
-                                    <option value="{{ $address->id }}" data-address="{{ json_encode($address->only('name','phone','province','city','district','postal_code','detail')) }}">{{ $address->name }} — {{ $address->city }}, {{ $address->detail }}</option>
+                                    <option value="{{ $address->id }}" data-address="{{ json_encode($address->only('name','phone','province','city','district','postal_code','detail')) }}" @selected(!session()->has('checkout_data') && !old() && $address->is_default)>{{ $address->is_default?'Utama · ':'' }}{{ $address->name }} — {{ $address->city }}, {{ $address->detail }}</option>
                                 @endforeach
                             </select>
                         @endif
                     @endauth
                     <div class="form-grid">
-                        @foreach(['name'=>'Nama penerima','phone'=>'Nomor WhatsApp / telepon','email'=>'Email (opsional)'] as $name=>$label)
-                            <div>
-                                <label for="{{ $name }}">{{ $label }}</label>
-                                <input id="{{ $name }}" class="form-control" name="{{ $name }}" value="{{ old($name, session('checkout_data.'.$name, auth()->user()?->$name ?? '')) }}" {{ $name!=='email'?'required':'' }} {{ $name==='email'?'type=email':'' }} maxlength="150">
-                            </div>
-                        @endforeach
+                        <div><label for="name">Nama penerima</label><input id="name" class="form-control" name="name" value="{{ old('name',session('checkout_data.name',$preferredAddress?->name ?? auth()->user()?->name ?? '')) }}" autocomplete="name" required maxlength="100">@error('name')<small class="field-error">{{ $message }}</small>@enderror</div>
+                        <div><label for="phone">Nomor WhatsApp / telepon</label><input id="phone" class="form-control" type="tel" inputmode="tel" name="phone" value="{{ old('phone',session('checkout_data.phone',$preferredAddress?->phone ?? '')) }}" autocomplete="tel" placeholder="Contoh: 0812 3456 7890" required maxlength="20">@error('phone')<small class="field-error">{{ $message }}</small>@enderror</div>
+                        <div><label for="email">Email (opsional)</label><input id="email" class="form-control" type="email" inputmode="email" name="email" value="{{ old('email',session('checkout_data.email',auth()->user()?->email ?? '')) }}" autocomplete="email" maxlength="150">@error('email')<small class="field-error">{{ $message }}</small>@enderror</div>
                         <div class="span-2 shipping-region-picker" data-shipping-region-picker>
                             <label for="shipping-region-search">Kota / kabupaten atau provinsi</label>
                             <div class="shipping-region-control">
@@ -54,14 +53,12 @@
                             <input id="shipping-rate" type="hidden" name="shipping_rate_id" value="{{ $selectedShippingRate }}">
                             <div id="shipping-region-options" class="shipping-region-options" role="listbox" hidden></div>
                             <small class="field-help">Ketik beberapa huruf, lalu pilih wilayah dari saran untuk melihat ongkir dan estimasi.</small>
+                            @if($errors->has('shipping_rate_id') || $errors->has('province') || $errors->has('city'))<small class="field-error">{{ $errors->first('shipping_rate_id') ?: ($errors->first('city') ?: $errors->first('province')) }}</small>@endif
                             <div id="shipping-rate-summary" class="shipping-rate-summary" aria-live="polite" hidden></div>
                         </div>
-                        @foreach(['district'=>'Kecamatan','postal_code'=>'Kode pos','detail'=>'Alamat lengkap & patokan'] as $name=>$label)
-                            <div class="{{ $name==='detail'?'span-2':'' }}">
-                                <label for="{{ $name }}">{{ $label }}</label>
-                                <input id="{{ $name }}" class="form-control" name="{{ $name }}" value="{{ old($name, session('checkout_data.'.$name, '')) }}" required maxlength="{{ $name==='detail'?1000:150 }}">
-                            </div>
-                        @endforeach
+                        <div><label for="district">Kecamatan</label><input id="district" class="form-control" name="district" value="{{ old('district',session('checkout_data.district',$preferredAddress?->district ?? '')) }}" autocomplete="address-level3" required maxlength="100">@error('district')<small class="field-error">{{ $message }}</small>@enderror</div>
+                        <div><label for="postal_code">Kode pos</label><input id="postal_code" class="form-control" name="postal_code" value="{{ old('postal_code',session('checkout_data.postal_code',$preferredAddress?->postal_code ?? '')) }}" inputmode="numeric" pattern="[0-9]{5}" autocomplete="postal-code" placeholder="5 digit" required maxlength="5">@error('postal_code')<small class="field-error">{{ $message }}</small>@enderror</div>
+                        <div class="span-2"><label for="detail">Alamat lengkap & patokan</label><textarea id="detail" class="form-control" name="detail" rows="3" autocomplete="street-address" required maxlength="1000">{{ old('detail',session('checkout_data.detail',$preferredAddress?->detail ?? '')) }}</textarea>@error('detail')<small class="field-error">{{ $message }}</small>@enderror</div>
                     </div>
                 </div>
                 @if($businessAccount?->status==='approved' && (!$businessAccount->expires_at || $businessAccount->expires_at->isFuture()) && $businessAccount->business_type==='dropshipper')
@@ -74,11 +71,12 @@
                     <fieldset class="payment-methods"><legend>Metode pembayaran</legend><label><input type="radio" name="payment_method" value="transfer" @checked(old('payment_method','transfer')==='transfer')><span><b>Transfer bank manual</b><small>Konfirmasi pembayaran setelah pesanan dibuat</small></span><i>›</i></label>@if($businessAccount?->status==='approved' && $businessAccount->credit_terms_days>0 && $businessAccount->credit_limit>0)<label><input type="radio" name="payment_method" value="credit" @checked(old('payment_method')==='credit')><span><b>Termin {{ $businessAccount->credit_terms_days }} hari</b><small>Limit tersedia @rupiah($businessAccount->credit_limit)</small></span><i>›</i></label>@endif @if($shop['cod_enabled'] ?? false)<label><input type="radio" name="payment_method" value="cod" @checked(old('payment_method')==='cod')><span><b>COD — bayar di tempat</b><small>Ketersediaan diperiksa sesuai wilayah dan pesanan</small></span><i>›</i></label>@endif</fieldset>
                     <div class="form-grid"><div><label for="coupon">Kode voucher (pisahkan dengan koma jika dapat digabung)</label><input id="coupon" class="form-control" name="coupon" value="{{ old('coupon') }}"></div>@auth @if(\App\Models\Setting::get('loyalty_enabled',false))<div><label for="loyalty_points">Gunakan poin (saldo {{ app(\App\Services\LoyaltyService::class)->balance(auth()->user()) }})</label><input id="loyalty_points" class="form-control" type="number" min="0" name="loyalty_points" value="{{ old('loyalty_points',0) }}"></div>@endif @endauth<div><label for="notes">Catatan pesanan</label><input id="notes" class="form-control" name="notes" value="{{ old('notes') }}" maxlength="1000"></div></div>
                     <label class="mt-4"><input type="checkbox" name="terms" value="1" required @checked(old('terms'))> Saya menyetujui <a class="text-decoration-underline" href="{{ route('page','syarat-ketentuan') }}" target="_blank">syarat dan ketentuan</a> serta <a class="text-decoration-underline" href="{{ route('page','privasi') }}" target="_blank">kebijakan privasi</a>.</label>
-                    <button class="btn btn-dark w-100 mt-3">Tinjau pesanan & total akhir ↗</button>
+                    <button class="btn btn-dark w-100 mt-3 checkout-primary-submit" data-submitting-text="Menghitung total…">Tinjau pesanan & total akhir ↗</button>
                 </div>
+                <div class="mobile-checkout-action"><span><small>Subtotal sementara</small><strong>@rupiah($checkoutSubtotal)</strong></span><button class="btn btn-dark" data-submitting-text="Memproses…">Tinjau pesanan</button></div>
             </form>
         </div>
-        <div class="col-lg-5"><div class="panel checkout-summary"><h2>RINGKASAN PESANAN</h2>@foreach($lines as $line)<div class="checkout-product"><img src="{{ $line['variant']->series->image_url }}" alt="{{ $line['variant']->series->name }}" width="140" height="176" loading="lazy" decoding="async"><span>{{ $line['variant']->series->name }}<br><small>{{ $line['variant']->label }} × {{ $line['quantity'] }}</small></span><strong>@rupiah($line['total'])</strong></div>@endforeach<div class="summary-row total"><span>Subtotal</span><span>@rupiah(array_sum(array_column($lines,'total')))</span></div><p class="small">Belum termasuk ongkir dan biaya pembayaran. Rincian akhir tampil sebelum konfirmasi.</p><div class="secure-checkout">⌾ TRANSAKSI AMAN & DATA TERLINDUNGI</div></div></div>
+        <div class="col-lg-5 checkout-summary-column"><details class="checkout-summary-details" open><summary><span>Ringkasan pesanan <small>{{ array_sum(array_column($lines,'quantity')) }} item</small></span><strong>@rupiah($checkoutSubtotal)</strong></summary><div class="panel checkout-summary"><h2>RINGKASAN PESANAN</h2>@foreach($lines as $line)<div class="checkout-product"><img src="{{ $line['variant']->series->image_url }}" alt="{{ $line['variant']->series->name }}" width="140" height="176" loading="lazy" decoding="async"><span>{{ $line['variant']->series->name }}<br><small>{{ $line['variant']->label }} × {{ $line['quantity'] }}</small></span><strong>@rupiah($line['total'])</strong></div>@endforeach<div class="summary-row total"><span>Subtotal</span><span>@rupiah($checkoutSubtotal)</span></div><p class="small">Belum termasuk ongkir dan biaya pembayaran. Rincian akhir tampil sebelum konfirmasi.</p><div class="secure-checkout">⌾ TRANSAKSI AMAN & DATA TERLINDUNGI</div></div></details></div>
     </div>
 </section>
 @endsection
@@ -139,7 +137,10 @@
         return regions.map(region => ({region, score: score(region, query)})).filter(item => item.score >= 0).sort((a, b) => b.score - a.score || a.region.label.localeCompare(b.region.label, 'id')).slice(0, 8).map(item => item.region);
     };
     const close = () => { list.hidden = true; search.setAttribute('aria-expanded', 'false'); activeIndex = -1; };
-    const updateActive = () => list.querySelectorAll('button').forEach((button, index) => button.classList.toggle('is-active', index === activeIndex));
+    const updateActive = () => list.querySelectorAll('button').forEach((button, index) => {
+        button.classList.toggle('is-active', index === activeIndex);
+        if (index === activeIndex) button.scrollIntoView({block: 'nearest'});
+    });
     const selectRegion = region => {
         selectedRegion = region;
         search.value = region.label;
@@ -244,6 +245,25 @@
 
     const initial = regions.find(region => String(region.id) === String(rate.value)) || regions.find(region => normalize(region.city) === normalize(city.value) && normalize(region.province) === normalize(province.value));
     if (initial) selectRegion(initial);
+
+    const summaryDetails = document.querySelector('.checkout-summary-details');
+    const mobileSummary = matchMedia('(max-width: 767px)');
+    const syncSummary = () => {
+        if (!summaryDetails) return;
+        if (mobileSummary.matches) summaryDetails.removeAttribute('open');
+        else summaryDetails.setAttribute('open', '');
+    };
+    syncSummary();
+    mobileSummary.addEventListener?.('change', syncSummary);
+
+    const mobileAction = document.querySelector('.mobile-checkout-action');
+    if (mobileAction && 'IntersectionObserver' in window) {
+        new IntersectionObserver(([entry]) => mobileAction.classList.toggle('is-outside-form', !entry.isIntersecting), {threshold: 0.01}).observe(form);
+    }
+    form.addEventListener('focusin', event => {
+        if (event.target.matches('input:not([type="checkbox"]):not([type="radio"]),textarea,select')) mobileAction?.classList.add('is-typing');
+    });
+    form.addEventListener('focusout', () => setTimeout(() => mobileAction?.classList.remove('is-typing'), 120));
 })();
 </script>
 @endpush
