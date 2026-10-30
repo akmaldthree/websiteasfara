@@ -176,11 +176,11 @@ class ProductWorkspaceTest extends TestCase
         $this->post(route('admin.products.media.manage', $product), [
             'main_media_id' => $photos[1]->id,
             'media' => [
-                ['id' => $photos[0]->id, 'alt_text' => 'Tampak depan', 'color' => 'Sage Muda', 'variant_id' => '', 'sort_order' => 2, 'active' => '1'],
-                ['id' => $photos[1]->id, 'alt_text' => 'Tampak belakang', 'color' => 'Sage', 'variant_id' => $variant->id, 'sort_order' => 1, 'active' => '1'],
+                ['id' => $photos[0]->id, 'alt_text' => 'Tampak depan', 'color' => 'Sage Muda', 'variant_id' => '', 'focal_x' => 42, 'focal_y' => 24, 'sort_order' => 2, 'active' => '1'],
+                ['id' => $photos[1]->id, 'alt_text' => 'Tampak belakang', 'color' => 'Sage', 'variant_id' => $variant->id, 'focal_x' => 50, 'focal_y' => 18, 'sort_order' => 1, 'active' => '1'],
             ],
         ])->assertRedirect()->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('product_media', ['id' => $photos[0]->id, 'alt_text' => 'Tampak depan', 'color' => 'Sage Muda', 'variant_id' => null, 'sort_order' => 2]);
+        $this->assertDatabaseHas('product_media', ['id' => $photos[0]->id, 'alt_text' => 'Tampak depan', 'color' => 'Sage Muda', 'variant_id' => null, 'focal_x' => 42, 'focal_y' => 24, 'sort_order' => 2]);
         $this->assertSame($photos[1]->image, $product->fresh()->image);
         $this->get(route('admin.products.edit', ['series' => $product, 'section' => 'media']))
             ->assertOk()->assertSee('Unggah semua foto')->assertSee('Atur galeri')->assertSee('Tampak depan');
@@ -196,8 +196,8 @@ class ProductWorkspaceTest extends TestCase
         $this->post(route('admin.products.media.manage', $product), [
             'main_media_id' => $photos[1]->id,
             'media' => [
-                ['id' => $photos[0]->id, 'alt_text' => 'Tampak depan', 'sort_order' => 2, 'active' => '1', 'delete' => '1'],
-                ['id' => $photos[1]->id, 'alt_text' => 'Tampak belakang', 'sort_order' => 1, 'active' => '1'],
+                ['id' => $photos[0]->id, 'alt_text' => 'Tampak depan', 'focal_x' => 42, 'focal_y' => 24, 'sort_order' => 2, 'active' => '1', 'delete' => '1'],
+                ['id' => $photos[1]->id, 'alt_text' => 'Tampak belakang', 'focal_x' => 50, 'focal_y' => 18, 'sort_order' => 1, 'active' => '1'],
             ],
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertDatabaseMissing('product_media', ['id' => $photos[0]->id]);

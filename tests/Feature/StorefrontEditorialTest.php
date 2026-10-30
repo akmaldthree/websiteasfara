@@ -72,7 +72,8 @@ class StorefrontEditorialTest extends TestCase
         ContentEntry::create(['type' => 'lookbook', 'title' => 'Eid Lookbook', 'slug' => 'eid-lookbook', 'summary' => 'Inspirasi tampilan.', 'active' => true]);
 
         $this->get(route('content.index', 'lookbook'))->assertOk()->assertSee('Eid Lookbook');
-        $this->get(route('catalog', ['sort' => 'title_asc']))->assertOk()->assertSee('WARNA')->assertSee('Black')->assertSee('UKURAN')->assertSee('ZAYNA SERIES');
+        $this->get(route('catalog', ['sort' => 'title_asc', 'color' => 'Black']))->assertOk()->assertSee('WARNA')->assertSee('Black')->assertSee('UKURAN')->assertSee('ZAYNA SERIES')
+            ->assertSee('FILTER AKTIF')->assertSee('Warna: Black')->assertSee('queueCatalogFilters', false);
     }
 
     public function test_store_locations_and_language_switch_are_rendered_from_cms(): void

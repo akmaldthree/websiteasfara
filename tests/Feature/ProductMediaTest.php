@@ -25,13 +25,15 @@ class ProductMediaTest extends TestCase
             'seo_title' => 'Naira Premium Dthree', 'seo_description' => 'Meta Naira dari dashboard.', 'active' => true,
         ]);
         $variant = Variant::create(['series_id' => $series->id, 'sku' => 'NAIRA-BLACK-M', 'color' => 'Black', 'size' => 'M', 'price' => 350000, 'stock' => 5, 'weight' => 500]);
-        ProductMedia::create(['series_id' => $series->id, 'variant_id' => $variant->id, 'color' => 'Black', 'image' => 'product-gallery/naira.jpg', 'alt_text' => 'Naira warna hitam tampak depan', 'active' => true]);
+        ProductMedia::create(['series_id' => $series->id, 'variant_id' => $variant->id, 'color' => 'Black', 'image' => 'product-gallery/naira.jpg', 'alt_text' => 'Naira warna hitam tampak depan', 'focal_x' => 41, 'focal_y' => 22, 'active' => true]);
 
         $this->get(route('product', $series->slug))
             ->assertOk()
             ->assertSee('Naira Premium Dthree')
             ->assertSee('Meta Naira dari dashboard.')
             ->assertSee('Naira warna hitam tampak depan')
+            ->assertSee('object-position:41% 22%', false)
+            ->assertSee('data-focal-x="41" data-focal-y="22"', false)
             ->assertSee('application/ld+json', false)
             ->assertSee('https://schema.org/InStock', false);
     }

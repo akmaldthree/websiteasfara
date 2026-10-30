@@ -432,6 +432,8 @@ class AdminController extends Controller
         }
         if ($resource === 'product-media') {
             $series = Series::findOrFail($data['series_id']);
+            $data['focal_x'] = (int) ($data['focal_x'] ?? 50);
+            $data['focal_y'] = (int) ($data['focal_y'] ?? 30);
             if (! $record->exists && ! $r->hasFile('image')) {
                 throw ValidationException::withMessages(['image' => 'Gambar wajib diunggah untuk foto galeri baru.']);
             }

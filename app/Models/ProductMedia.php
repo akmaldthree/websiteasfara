@@ -12,7 +12,7 @@ class ProductMedia extends Model
 
     protected function casts(): array
     {
-        return ['sort_order' => 'integer', 'active' => 'boolean'];
+        return ['focal_x' => 'integer', 'focal_y' => 'integer', 'sort_order' => 'integer', 'active' => 'boolean'];
     }
 
     public function series()

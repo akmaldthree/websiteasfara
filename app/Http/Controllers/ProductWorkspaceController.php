@@ -386,6 +386,8 @@ class ProductWorkspaceController extends Controller
             'media' => 'required|array|min:1|max:100',
             'media.*.id' => 'required|integer|distinct',
             'media.*.alt_text' => 'required|string|max:200',
+            'media.*.focal_x' => 'required|integer|between:0,100',
+            'media.*.focal_y' => 'required|integer|between:0,100',
             'media.*.color' => 'nullable|string|max:80',
             'media.*.variant_id' => 'nullable|integer',
             'media.*.sort_order' => 'required|integer|min:0|max:10000',
@@ -425,6 +427,8 @@ class ProductWorkspaceController extends Controller
                 }
                 $media->update([
                     'alt_text' => trim($row['alt_text']),
+                    'focal_x' => (int) $row['focal_x'],
+                    'focal_y' => (int) $row['focal_y'],
                     'color' => filled($row['color'] ?? null) ? trim($row['color']) : null,
                     'variant_id' => ! empty($row['variant_id']) ? (int) $row['variant_id'] : null,
                     'sort_order' => (int) $row['sort_order'],
