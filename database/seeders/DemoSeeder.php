@@ -205,11 +205,16 @@ class DemoSeeder extends Seeder
             ['Dina Azzahra', 'dina.demo@dthree.co.id', '6281210010005'],
             ['Rani Permata', 'rani.demo@dthree.co.id', '6281210010006'],
             ['Kania Putri', 'kania.demo@dthree.co.id', '6281210010007'],
+            ['Nabila Hasanah', 'nabila.demo@dthree.co.id', '6281210010008'],
+            ['Farah Aulia', 'farah.demo@dthree.co.id', '6281210010009'],
+            ['Intan Maharani', 'intan.demo@dthree.co.id', '6281210010010'],
+            ['Salma Nurfadila', 'salma.demo@dthree.co.id', '6281210010011'],
+            ['Wulan Safitri', 'wulan.demo@dthree.co.id', '6281210010012'],
         ])->map(fn ($row) => User::updateOrCreate(['email' => $row[1]], [
             'name' => $row[0], 'phone' => $row[2], 'password' => Str::random(64),
             'marketing_email' => true, 'marketing_whatsapp' => true, 'consent_updated_at' => now()->subDays(30),
         ]))->values();
-        $variants = Variant::where('sku', 'like', 'DEMO-%')->where('fulfillment', 'ready_stock')->with('series')->orderBy('id')->take(7)->get();
+        $variants = Variant::where('sku', 'like', 'DEMO-%')->where('fulfillment', 'ready_stock')->with('series')->orderBy('id')->take(12)->get();
         $states = [
             ['waiting', 'unpaid', 'unprocessed', 'reserved'],
             ['waiting', 'review', 'unprocessed', 'reserved'],
@@ -218,6 +223,11 @@ class DemoSeeder extends Seeder
             ['confirmed', 'paid', 'shipped', 'committed'],
             ['completed', 'paid', 'received', 'committed'],
             ['cancelled', 'unpaid', 'unprocessed', 'released'],
+            ['waiting', 'unpaid', 'unprocessed', 'reserved'],
+            ['confirmed', 'paid', 'processing', 'committed'],
+            ['confirmed', 'paid', 'packed', 'committed'],
+            ['confirmed', 'paid', 'shipped', 'committed'],
+            ['completed', 'paid', 'received', 'committed'],
         ];
         $orders = collect();
         foreach ($states as $index => [$status, $paymentStatus, $fulfillmentStatus, $inventoryState]) {
@@ -230,7 +240,7 @@ class DemoSeeder extends Seeder
             $order = Order::updateOrCreate(['number' => 'DTH-DEMO-'.str_pad((string) ($index + 1), 4, '0', STR_PAD_LEFT)], [
                 'checkout_key' => hash('sha256', 'dthree-demo-order-'.($index + 1)), 'user_id' => $customer->id,
                 'name' => $customer->name, 'phone' => $customer->phone, 'email' => $customer->email,
-                'address' => ['address' => 'Jl. Contoh No. '.($index + 10), 'district' => 'Kecamatan Demo', 'city' => ['Bandung', 'Jakarta Selatan', 'Tasikmalaya', 'Semarang', 'Surabaya', 'Yogyakarta', 'Medan'][$index], 'province' => ['Jawa Barat', 'DKI Jakarta', 'Jawa Barat', 'Jawa Tengah', 'Jawa Timur', 'DI Yogyakarta', 'Sumatera Utara'][$index], 'postal_code' => '401'.str_pad((string) $index, 2, '0', STR_PAD_LEFT)],
+                'address' => ['address' => 'Jl. Contoh No. '.($index + 10), 'district' => 'Kecamatan Demo', 'city' => ['Bandung', 'Jakarta Selatan', 'Tasikmalaya', 'Semarang', 'Surabaya', 'Yogyakarta', 'Medan', 'Makassar', 'Denpasar', 'Palembang', 'Balikpapan', 'Pekanbaru'][$index], 'province' => ['Jawa Barat', 'DKI Jakarta', 'Jawa Barat', 'Jawa Tengah', 'Jawa Timur', 'DI Yogyakarta', 'Sumatera Utara', 'Sulawesi Selatan', 'Bali', 'Sumatera Selatan', 'Kalimantan Timur', 'Riau'][$index], 'postal_code' => '401'.str_pad((string) $index, 2, '0', STR_PAD_LEFT)],
                 'payment_method' => $index === 4 ? 'cod' : 'transfer', 'status' => $status, 'payment_status' => $paymentStatus,
                 'fulfillment_status' => $fulfillmentStatus, 'subtotal' => $subtotal, 'shipping_cost' => $shippingCost,
                 'discount' => $discount, 'shipping_discount' => 0, 'cod_fee' => $index === 4 ? 5000 : 0,
@@ -294,6 +304,9 @@ class DemoSeeder extends Seeder
             ['newsletter1.demo@dthree.co.id', 'Aulia', 'footer'], ['newsletter2.demo@dthree.co.id', 'Nisa', 'popup'],
             ['newsletter3.demo@dthree.co.id', 'Rika', 'checkout'], ['newsletter4.demo@dthree.co.id', 'Mira', 'footer'],
             ['newsletter5.demo@dthree.co.id', 'Anisa', 'campaign'], ['newsletter6.demo@dthree.co.id', 'Putri', 'footer'],
+            ['newsletter7.demo@dthree.co.id', 'Hana', 'popup'], ['newsletter8.demo@dthree.co.id', 'Dewi', 'campaign'],
+            ['newsletter9.demo@dthree.co.id', 'Laila', 'footer'], ['newsletter10.demo@dthree.co.id', 'Zahra', 'checkout'],
+            ['newsletter11.demo@dthree.co.id', 'Nadia', 'popup'], ['newsletter12.demo@dthree.co.id', 'Rania', 'footer'],
         ] as $index => [$email, $name, $source]) {
             NewsletterSubscriber::updateOrCreate(['email' => $email], ['name' => $name, 'source' => $source, 'active' => true, 'subscribed_at' => now()->subDays(5 + ($index * 6))]);
         }
@@ -303,6 +316,12 @@ class DemoSeeder extends Seeder
             ['naura-pleated', 'Apakah bagian lipit mudah berubah setelah dicuci?', 'Gunakan pencucian lembut dan hindari memeras kuat agar bentuk lipit lebih terjaga.'],
             ['arcelia-family', 'Apakah anggota keluarga bisa membeli ukuran berbeda?', 'Bisa. Pilih jenis produk dan ukuran masing-masing pada varian yang tersedia.'],
             ['hana-flow-khimar', 'Apakah khimar ini nyaman untuk penggunaan berkacamata?', 'Ya, bahan ringan dan bukaan wajah dirancang cukup fleksibel untuk penggunaan kacamata.'],
+            ['zayna-essential', 'Apakah ada saku pada model ini?', 'Ada dua saku tersembunyi di sisi kanan dan kiri untuk menyimpan barang kecil.'],
+            ['kamila-embroidery', 'Apakah bordirnya mudah tersangkut?', 'Bordir dibuat rapat dan tonal. Kami menyarankan mencuci menggunakan laundry net agar detail tetap terjaga.'],
+            ['amara-family', 'Bisakah membeli gamis ibu saja?', 'Bisa. Setiap jenis anggota keluarga dapat dipilih dan dibeli terpisah sesuai ukuran yang tersedia.'],
+            ['aira-kids', 'Apakah pita pada gamis anak bisa dilepas?', 'Bisa. Pita menggunakan pengait tersembunyi sehingga dapat dilepas saat dicuci atau saat ingin tampilan lebih sederhana.'],
+            ['inara-long-outer', 'Apakah outer ini cocok untuk cuaca panas?', 'Ya. Linen blend yang digunakan ringan dan memiliki sirkulasi udara yang baik.'],
+            ['safa-daily-khimar', 'Apakah bahannya mudah bergeser?', 'Tidak. Jersey premium memiliki daya lekat yang nyaman dan tetap ringan saat digunakan seharian.'],
         ];
         foreach ($questions as [$slug, $question, $answer]) {
             $series = Series::where('slug', $slug)->firstOrFail();
@@ -396,6 +415,16 @@ class DemoSeeder extends Seeder
             ['name' => 'Zahara Kids', 'slug' => 'zahara-kids', 'code' => 'ZAH', 'category' => 'busana-anak', 'description' => 'Gamis anak ringan dengan detail manis dan ruang gerak yang nyaman.', 'material' => 'Katun rayon lembut dan menyerap keringat.', 'price' => 229000, 'image' => 'product-rose-4x5.webp', 'gallery' => ['product-rose-4x5.webp', 'product-family-sage-4x5.webp', 'product-olive-4x5.webp'], 'colors' => ['Plum', 'Sage', 'Dusty Rose'], 'sizes' => ['4', '6', '8', '10', '12'], 'types' => ['']],
             ['name' => 'Livia Layer Outer', 'slug' => 'livia-layer-outer', 'code' => 'LIV', 'category' => 'outer-khimar', 'description' => 'Outer panjang berpotongan ringan yang memberi lapisan elegan tanpa terasa berat.', 'material' => 'Woolpeach premium yang ringan dan tidak mudah kusut.', 'price' => 319000, 'image' => 'product-olive-4x5.webp', 'gallery' => ['product-olive-4x5.webp', 'product-black-4x5.webp', 'product-rose-4x5.webp'], 'colors' => ['Olive', 'Black', 'Beige'], 'sizes' => ['S', 'M', 'L', 'XL'], 'types' => ['']],
             ['name' => 'Hana Flow Khimar', 'slug' => 'hana-flow-khimar', 'code' => 'HAN', 'category' => 'outer-khimar', 'description' => 'Khimar instan berpotongan flowy dengan coverage nyaman dan tampilan rapi.', 'material' => 'Diamond crepe ringan, tidak licin, dan mudah dibentuk.', 'price' => 169000, 'image' => 'product-rose-4x5.webp', 'gallery' => ['product-rose-4x5.webp', 'product-black-4x5.webp', 'product-olive-4x5.webp'], 'colors' => ['Mauve', 'Black', 'Olive', 'Ivory'], 'sizes' => ['M', 'L', 'XL'], 'types' => ['']],
+            ['name' => 'Zayna Essential', 'slug' => 'zayna-essential', 'code' => 'ZAY', 'category' => 'abaya-dewasa', 'description' => 'Abaya esensial dengan garis potong lurus dan detail manset yang cocok untuk rutinitas harian.', 'material' => 'Nidha matte yang lembut, jatuh, dan mudah dirawat.', 'price' => 379000, 'image' => 'product-black-4x5.webp', 'gallery' => ['product-black-4x5.webp', 'product-rose-4x5.webp', 'product-olive-4x5.webp'], 'colors' => ['Espresso', 'Stone', 'Black'], 'sizes' => ['S', 'M', 'L', 'XL'], 'types' => ['']],
+            ['name' => 'Kamila Embroidery', 'slug' => 'kamila-embroidery', 'code' => 'KAM', 'category' => 'abaya-dewasa', 'description' => 'Abaya beraksen bordir lembut pada lengan untuk tampilan formal yang tetap ringan.', 'material' => 'Woolpeach premium dengan bordir tonal.', 'price' => 489000, 'image' => 'product-rose-4x5.webp', 'gallery' => ['product-rose-4x5.webp', 'product-black-4x5.webp', 'product-olive-4x5.webp'], 'colors' => ['Rosewood', 'Deep Olive', 'Charcoal'], 'sizes' => ['S', 'M', 'L', 'XL'], 'types' => ['']],
+            ['name' => 'Samira Flare', 'slug' => 'samira-flare', 'code' => 'SAM', 'category' => 'abaya-dewasa', 'description' => 'Siluet flare yang lapang dengan gerak kain anggun untuk agenda istimewa.', 'material' => 'Ceruty premium berfuring penuh yang ringan dan tidak menerawang.', 'price' => 459000, 'image' => 'product-olive-4x5.webp', 'gallery' => ['product-olive-4x5.webp', 'product-rose-4x5.webp', 'product-black-4x5.webp'], 'colors' => ['Moss', 'Almond', 'Midnight'], 'sizes' => ['S', 'M', 'L', 'XL'], 'types' => ['']],
+            ['name' => 'Nayla Travel', 'slug' => 'nayla-travel', 'code' => 'NAY', 'category' => 'abaya-dewasa', 'description' => 'Abaya praktis dengan bukaan depan dan saku tersembunyi untuk perjalanan yang nyaman.', 'material' => 'Airflow crepe yang ringan dan tidak mudah kusut.', 'price' => 409000, 'image' => 'product-family-sage-4x5.webp', 'gallery' => ['product-family-sage-4x5.webp', 'product-olive-4x5.webp', 'product-black-4x5.webp'], 'colors' => ['Sage', 'Oat', 'Onyx'], 'sizes' => ['S', 'M', 'L', 'XL'], 'types' => ['']],
+            ['name' => 'Amara Family', 'slug' => 'amara-family', 'code' => 'AMA', 'category' => 'sarimbit-keluarga', 'description' => 'Sarimbit bernuansa terracotta dan beige untuk perayaan keluarga yang hangat.', 'material' => 'Katun jacquard halus dengan kombinasi polos senada.', 'price' => 289000, 'image' => 'product-family-sage-4x5.webp', 'gallery' => ['product-family-sage-4x5.webp', 'product-rose-4x5.webp', 'product-olive-4x5.webp'], 'colors' => ['Terracotta', 'Sand Beige'], 'sizes' => ['M', 'L', 'XL'], 'types' => ['Gamis Ibu', 'Koko Ayah', 'Koko Anak', 'Gamis Anak']],
+            ['name' => 'Nadhira Family', 'slug' => 'nadhira-family', 'code' => 'NAD', 'category' => 'sarimbit-keluarga', 'description' => 'Koleksi keluarga bernuansa biru dan abu lembut dengan detail modern yang bersih.', 'material' => 'Katun dobby breathable dengan tekstur lembut.', 'price' => 309000, 'image' => 'product-olive-4x5.webp', 'gallery' => ['product-olive-4x5.webp', 'product-black-4x5.webp', 'product-family-sage-4x5.webp'], 'colors' => ['Dusty Blue', 'Ash Grey'], 'sizes' => ['M', 'L', 'XL'], 'types' => ['Gamis Ibu', 'Koko Ayah', 'Koko Anak', 'Gamis Anak']],
+            ['name' => 'Aira Kids', 'slug' => 'aira-kids', 'code' => 'AIR', 'category' => 'busana-anak', 'description' => 'Gamis anak dengan rok mengembang ringan dan detail pita yang mudah dilepas.', 'material' => 'Katun rayon premium yang adem dan lembut di kulit.', 'price' => 219000, 'image' => 'product-rose-4x5.webp', 'gallery' => ['product-rose-4x5.webp', 'product-family-sage-4x5.webp', 'product-olive-4x5.webp'], 'colors' => ['Blush', 'Sage', 'Lilac'], 'sizes' => ['4', '6', '8', '10', '12'], 'types' => ['']],
+            ['name' => 'Maryam Kids', 'slug' => 'maryam-kids', 'code' => 'MAR', 'category' => 'busana-anak', 'description' => 'Busana anak berpotongan sederhana dengan kerah rapi untuk sekolah dan acara keluarga.', 'material' => 'Katun poplin lembut yang menyerap keringat.', 'price' => 239000, 'image' => 'product-family-sage-4x5.webp', 'gallery' => ['product-family-sage-4x5.webp', 'product-rose-4x5.webp', 'product-black-4x5.webp'], 'colors' => ['Cream', 'Olive', 'Berry'], 'sizes' => ['4', '6', '8', '10', '12'], 'types' => ['']],
+            ['name' => 'Inara Long Outer', 'slug' => 'inara-long-outer', 'code' => 'INA', 'category' => 'outer-khimar', 'description' => 'Outer panjang tanpa kancing dengan jatuh kain ringan untuk gaya berlapis yang bersih.', 'material' => 'Linen blend ringan dengan tekstur halus.', 'price' => 329000, 'image' => 'product-olive-4x5.webp', 'gallery' => ['product-olive-4x5.webp', 'product-black-4x5.webp', 'product-rose-4x5.webp'], 'colors' => ['Olive', 'Latte', 'Black'], 'sizes' => ['S', 'M', 'L', 'XL'], 'types' => ['']],
+            ['name' => 'Safa Daily Khimar', 'slug' => 'safa-daily-khimar', 'code' => 'SAF', 'category' => 'outer-khimar', 'description' => 'Khimar harian dengan pet lentur, bukaan wajah nyaman, dan bagian depan yang menutup dada.', 'material' => 'Jersey premium yang sejuk, lentur, dan tidak mudah bergeser.', 'price' => 149000, 'image' => 'product-black-4x5.webp', 'gallery' => ['product-black-4x5.webp', 'product-rose-4x5.webp', 'product-olive-4x5.webp'], 'colors' => ['Black', 'Mushroom', 'Rose Taupe', 'Forest'], 'sizes' => ['M', 'L', 'XL'], 'types' => ['']],
         ];
     }
 
@@ -466,6 +495,15 @@ class DemoSeeder extends Seeder
             ['JNE', 'REG', 'Jawa Barat', 'Tasikmalaya', 15000, 9000, '1–2 hari', true],
             ['POS', 'Kilat Khusus', 'Jawa Tengah', 'Semarang', 22000, 12000, '3–5 hari', true],
             ['POS', 'Kilat Khusus', 'Jawa Timur', 'Surabaya', 25000, 14000, '3–5 hari', true],
+            ['JNE', 'REG', 'DI Yogyakarta', 'Yogyakarta', 21000, 12000, '2–4 hari', true],
+            ['JNE', 'REG', 'Sumatera Utara', 'Medan', 35000, 21000, '4–6 hari', false],
+            ['JNE', 'REG', 'Sulawesi Selatan', 'Makassar', 38000, 23000, '4–6 hari', false],
+            ['POS', 'Kilat Khusus', 'Bali', 'Denpasar', 32000, 19000, '3–5 hari', true],
+            ['POS', 'Kilat Khusus', 'Sumatera Selatan', 'Palembang', 33000, 20000, '4–6 hari', true],
+            ['JNE', 'REG', 'Kalimantan Timur', 'Balikpapan', 41000, 25000, '4–7 hari', false],
+            ['JNE', 'REG', 'Riau', 'Pekanbaru', 36000, 22000, '4–6 hari', false],
+            ['POS', 'Kilat Khusus', 'Banten', 'Tangerang', 17000, 10000, '2–3 hari', true],
+            ['JNE', 'REG', 'Jawa Barat', 'Bekasi', 17000, 10000, '2–3 hari', true],
         ] as [$courier, $service, $province, $city, $firstKg, $extraKg, $estimate, $cod]) {
             ShippingRate::updateOrCreate(
                 compact('courier', 'service', 'province', 'city'),
@@ -480,6 +518,9 @@ class DemoSeeder extends Seeder
             ['Dthree Tasikmalaya', 'Jl. HZ Mustofa No. 88', 'Tasikmalaya', 'Setiap hari · 09.00–20.00', 1],
             ['Dthree Bandung', 'Jl. Buah Batu No. 121', 'Bandung', 'Senin–Sabtu · 09.00–19.00', 2],
             ['Dthree Jakarta', 'Jl. Kemang Raya No. 24', 'Jakarta Selatan', 'Setiap hari · 10.00–21.00', 3],
+            ['Dthree Surabaya', 'Jl. Raya Darmo No. 62', 'Surabaya', 'Setiap hari · 10.00–21.00', 4],
+            ['Dthree Yogyakarta', 'Jl. Kaliurang KM 5 No. 18', 'Yogyakarta', 'Senin–Sabtu · 09.00–20.00', 5],
+            ['Dthree Makassar', 'Jl. Pengayoman No. 15', 'Makassar', 'Setiap hari · 10.00–21.00', 6],
         ] as [$name, $address, $city, $hours, $sortOrder]) {
             StoreLocation::updateOrCreate(['name' => $name], [
                 'address' => $address,
@@ -499,8 +540,11 @@ class DemoSeeder extends Seeder
             ['fit', 'Office Wear', '/koleksi?category=abaya-dewasa', null, null, 2],
             ['fit', 'Special Occasion', '/koleksi?category=sarimbit-keluarga', null, null, 3],
             ['fit', 'Earth Tone Collection', '/koleksi?color=Olive', null, null, 4],
+            ['fit', 'Travel Friendly', '/koleksi/nayla-travel', null, null, 5],
+            ['fit', 'Mom & Kids', '/koleksi?category=sarimbit-keluarga', null, null, 6],
             ['promo', 'New Arrival', '/koleksi?sort=newest', 'NEW ARRIVAL', 'demo/promo-taupe-3x4.webp', 1],
             ['promo', 'Best Seller', '/koleksi?sort=best_selling', 'BEST SELLER', 'demo/promo-taupe-3x4.webp', 2],
+            ['promo', 'Family Edit', '/koleksi?category=sarimbit-keluarga', 'FAMILY EDIT', 'demo/product-family-sage-4x5.webp', 3],
         ] as [$section, $title, $url, $eyebrow, $image, $sortOrder]) {
             CuratedLink::updateOrCreate(['section' => $section, 'title' => $title], compact('url', 'eyebrow', 'image') + ['sort_order' => $sortOrder, 'active' => true]);
         }
@@ -521,13 +565,23 @@ class DemoSeeder extends Seeder
             ['faq', 'Bagaimana memilih ukuran yang tepat?', 'pertanyaan-umum', 'Gunakan panduan ukuran pada halaman produk. Ukur lingkar dada pada bagian terlebar dan pilih ukuran dengan ruang longgar 4–8 cm sesuai preferensi.', null, null, null, 1],
             ['faq', 'Apakah warna produk sama dengan foto?', 'akurasi-warna', 'Kami berusaha menampilkan warna seakurat mungkin. Sedikit perbedaan dapat terjadi karena pencahayaan foto dan pengaturan layar.', null, null, null, 2],
             ['faq', 'Berapa lama pesanan diproses?', 'waktu-proses', 'Produk ready stock diproses 1–2 hari kerja setelah pembayaran terverifikasi. Estimasi pengiriman mengikuti layanan kurir.', null, null, null, 3],
+            ['faq', 'Bisakah membeli bagian sarimbit secara terpisah?', 'sarimbit-terpisah', 'Bisa. Pilih jenis anggota keluarga, warna, dan ukuran yang dibutuhkan pada halaman produk. Setiap varian dapat dimasukkan ke keranjang secara terpisah.', null, null, null, 4],
+            ['faq', 'Bagaimana cara mengajukan retur?', 'cara-retur', 'Masuk ke akun, buka detail pesanan yang sudah diterima, lalu pilih pengajuan retur. Lengkapi alasan dan foto pendukung sesuai ketentuan.', null, null, null, 5],
+            ['faq', 'Apakah tersedia ukuran custom?', 'ukuran-custom', 'Ukuran custom tersedia pada produk tertentu. Pilih opsi Custom, isi formulir pengukuran, lalu tunggu konfirmasi penawaran dari admin.', null, null, null, 6],
             ['journal', 'Cara merawat busana agar tetap nyaman', 'merawat-busana', 'Pisahkan warna gelap dan terang, gunakan deterjen lembut, hindari pemutih, dan keringkan di tempat teduh agar serat serta warna lebih terjaga.', 'editorial-fabrics-3x2.webp', null, null, 1],
             ['journal', 'Panduan memilih sarimbit keluarga', 'memilih-sarimbit', 'Mulai dari palet warna yang disukai, tentukan kebutuhan tiap anggota keluarga, lalu cocokkan ukuran melalui panduan pada setiap produk.', 'editorial-fabrics-3x2.webp', null, null, 2],
             ['journal', 'Tiga cara memadukan abaya', 'memadukan-abaya', 'Gunakan aksesori bertekstur lembut, pilih alas kaki bernuansa netral, dan tambahkan outer ringan untuk menciptakan tampilan berbeda.', 'editorial-fabrics-3x2.webp', null, null, 3],
+            ['journal', 'Memilih bahan nyaman untuk perjalanan', 'bahan-untuk-perjalanan', 'Cari material ringan, tidak mudah kusut, dan memiliki sirkulasi udara yang baik agar tetap nyaman selama perjalanan.', 'editorial-fabrics-3x2.webp', '/koleksi/nayla-travel', 'Lihat Nayla Travel', 4],
+            ['journal', 'Palet warna keluarga yang mudah dipadukan', 'palet-warna-keluarga', 'Mulai dari satu warna utama, tambahkan dua warna netral, lalu gunakan tekstur berbeda agar tampilan keluarga terasa selaras tanpa terlihat seragam berlebihan.', 'editorial-fabrics-3x2.webp', '/koleksi?category=sarimbit-keluarga', 'Lihat sarimbit', 5],
+            ['journal', 'Panduan mencuci busana anak', 'mencuci-busana-anak', 'Balik pakaian sebelum dicuci, gunakan laundry net untuk detail kecil, dan keringkan di tempat teduh agar warna serta serat kain tetap terjaga.', 'editorial-fabrics-3x2.webp', '/koleksi?category=busana-anak', 'Lihat koleksi anak', 6],
             ['lookbook', 'The Warm Gathering', 'warm-gathering', 'Inspirasi busana keluarga dalam palet plum, sage, dan warna netral untuk momen kebersamaan.', 'look-olive-beige-4x5.webp', '/koleksi?category=sarimbit-keluarga', 'Lihat koleksi', 1],
             ['lookbook', 'Everyday Modest Edit', 'everyday-modest-edit', 'Siluet ringan dan warna mudah dipadukan untuk rutinitas dari pagi hingga malam.', 'look-olive-beige-4x5.webp', '/koleksi?category=abaya-dewasa', 'Lihat koleksi', 2],
+            ['lookbook', 'Soft Earth Journey', 'soft-earth-journey', 'Pilihan abaya dan outer dalam warna bumi untuk perjalanan yang nyaman dan tetap rapi.', 'look-olive-beige-4x5.webp', '/koleksi/nayla-travel', 'Lihat tampilan', 3],
+            ['lookbook', 'Little Celebration', 'little-celebration', 'Inspirasi busana anak dalam warna lembut untuk ulang tahun, silaturahmi, dan acara keluarga.', 'look-olive-beige-4x5.webp', '/koleksi?category=busana-anak', 'Lihat koleksi anak', 4],
             ['campaign', 'Hadiah pelanggan baru', 'promo-demo', 'Gunakan kode DEMO10 untuk potongan 10% pada transaksi demonstrasi pertama Anda.', 'promo-taupe-3x4.webp', '/koleksi', 'Mulai belanja', 1],
             ['campaign', 'Lengkapi gaya keluarga', 'promo-family', 'Gunakan FAMILY15 untuk potongan 15% pada pembelian koleksi sarimbit dengan minimum transaksi yang berlaku.', 'promo-taupe-3x4.webp', '/koleksi?category=sarimbit-keluarga', 'Lihat koleksi', 2],
+            ['campaign', 'Pilihan nyaman untuk si kecil', 'promo-kids', 'Gunakan KIDS10 untuk potongan 10% pada koleksi busana anak dengan minimum transaksi yang berlaku.', 'promo-taupe-3x4.webp', '/koleksi?category=busana-anak', 'Belanja koleksi anak', 3],
+            ['campaign', 'Edit perjalanan', 'promo-travel', 'Temukan abaya dan outer ringan yang mudah dirawat untuk menemani perjalanan Anda.', 'promo-taupe-3x4.webp', '/koleksi/nayla-travel', 'Lihat travel edit', 4],
         ];
 
         foreach ($entries as [$type, $title, $slug, $summary, $image, $url, $label, $sort]) {
@@ -571,10 +625,13 @@ class DemoSeeder extends Seeder
     private function seedCoupons(): void
     {
         foreach ([
-            ['DEMO10', 'percent', 10, 200000, 50000, 'all', 'all'],
-            ['FAMILY15', 'percent', 15, 750000, 150000, 'all', 'category'],
-            ['HEMAT50', 'fixed', 50000, 500000, 50000, 'all', 'all'],
-        ] as [$code, $type, $value, $minimum, $maximum, $segment, $targetType]) {
+            ['DEMO10', 'percent', 10, 200000, 50000, 'all', 'all', null],
+            ['FAMILY15', 'percent', 15, 750000, 150000, 'all', 'category', 'sarimbit-keluarga'],
+            ['HEMAT50', 'fixed', 50000, 500000, 50000, 'all', 'all', null],
+            ['KIDS10', 'percent', 10, 300000, 75000, 'all', 'category', 'busana-anak'],
+            ['WELCOME20', 'percent', 20, 400000, 100000, 'customer', 'all', null],
+            ['RAYA100', 'fixed', 100000, 1000000, 100000, 'all', 'category', 'sarimbit-keluarga'],
+        ] as [$code, $type, $value, $minimum, $maximum, $segment, $targetType, $targetSlug]) {
             Coupon::updateOrCreate(['code' => $code], [
                 'type' => $type,
                 'value' => $value,
@@ -586,6 +643,7 @@ class DemoSeeder extends Seeder
                 'active' => true,
                 'segment' => $segment,
                 'target_type' => $targetType,
+                'target_id' => $targetSlug ? Category::where('slug', $targetSlug)->value('id') : null,
                 'per_user_limit' => 3,
             ]);
         }
@@ -635,10 +693,10 @@ class DemoSeeder extends Seeder
             'home_editorial_sections_enabled' => true,
             'home_story_enabled' => true,
             'home_featured_slug' => 'raffah-signature',
-            'home_category_slugs' => "raffah-signature\narcelia-family\nzahara-kids",
-            'home_new_slugs' => 'naura-pleated, alesha-everyday, hana-flow-khimar, zahara-kids',
-            'home_best_slugs' => 'raffah-signature, mahira-luxe, arcelia-family, sakina-family',
-            'home_sale_slugs' => 'raffah-signature, naura-pleated, harmoni-raya, livia-layer-outer',
+            'home_category_slugs' => "raffah-signature\narcelia-family\nzahara-kids\ninara-long-outer",
+            'home_new_slugs' => 'zayna-essential, kamila-embroidery, nayla-travel, amara-family, aira-kids, safa-daily-khimar',
+            'home_best_slugs' => 'raffah-signature, mahira-luxe, arcelia-family, sakina-family, samira-flare, nadhira-family',
+            'home_sale_slugs' => 'raffah-signature, naura-pleated, harmoni-raya, livia-layer-outer, maryam-kids, inara-long-outer',
             'store_location' => 'Tasikmalaya · Indonesia',
             'contact_phone' => '0812-0000-0000',
             'contact_email' => 'hello@dthree.co.id',
