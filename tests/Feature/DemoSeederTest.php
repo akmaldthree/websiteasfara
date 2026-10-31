@@ -43,7 +43,7 @@ class DemoSeederTest extends TestCase
         $this->assertSame(319, Variant::where('sku', 'like', 'DEMO-%')->count());
         $this->assertSame(60, ProductMedia::count());
         $this->assertSame(20, Review::where('status', 'approved')->count());
-        $this->assertSame(23, ContentEntry::whereIn('slug', ['demo-banner', 'demo-cerita', 'demo-harmoni', 'demo-menu-faq', 'demo-menu-journal', 'pertanyaan-umum', 'akurasi-warna', 'waktu-proses', 'sarimbit-terpisah', 'cara-retur', 'ukuran-custom', 'merawat-busana', 'memilih-sarimbit', 'memadukan-abaya', 'bahan-untuk-perjalanan', 'palet-warna-keluarga', 'mencuci-busana-anak', 'warm-gathering', 'everyday-modest-edit', 'soft-earth-journey', 'little-celebration', 'promo-demo', 'promo-family'])->count());
+        $this->assertSame(25, ContentEntry::whereIn('slug', ['demo-banner', 'demo-banner-kids', 'demo-banner-travel', 'demo-cerita', 'demo-harmoni', 'demo-menu-faq', 'demo-menu-journal', 'pertanyaan-umum', 'akurasi-warna', 'waktu-proses', 'sarimbit-terpisah', 'cara-retur', 'ukuran-custom', 'merawat-busana', 'memilih-sarimbit', 'memadukan-abaya', 'bahan-untuk-perjalanan', 'palet-warna-keluarga', 'mencuci-busana-anak', 'warm-gathering', 'everyday-modest-edit', 'soft-earth-journey', 'little-celebration', 'promo-demo', 'promo-family'])->count());
         $this->assertSame(1, Coupon::where('code', 'DEMO10')->count());
         $this->assertSame(6, Coupon::whereIn('code', ['DEMO10', 'FAMILY15', 'HEMAT50', 'KIDS10', 'WELCOME20', 'RAYA100'])->count());
         $this->assertSame(2, MeasurementTemplate::count());
@@ -54,7 +54,7 @@ class DemoSeederTest extends TestCase
         $this->assertSame(1, CustomQuote::where('number', 'DTH-CUSTOM-DEMO-001')->count());
         $this->assertSame(12, NewsletterSubscriber::where('email', 'like', 'newsletter%.demo@dthree.co.id')->count());
         $this->assertSame(10, ProductQuestion::where('status', 'answered')->count());
-        $this->assertSame(16, MediaAsset::where('path', 'like', 'demo/%')->count());
+        $this->assertSame(20, MediaAsset::where('path', 'like', 'demo/%')->count());
         $this->assertSame(13, Order::where(fn ($query) => $query->where('number', 'like', 'DTH-DEMO-%')->orWhere('number', 'DEMO-REVIEW-001'))->count());
         $this->assertSame(12, NotificationDelivery::count());
         $this->assertSame(15, ShippingRate::count());
@@ -68,7 +68,15 @@ class DemoSeederTest extends TestCase
         $this->assertSame('demo/hero-family-2x1.webp', Setting::get('hero_image'));
         Storage::disk('public')->assertExists('demo/hero-family-2x1.webp');
         Storage::disk('public')->assertExists('demo/product-olive-4x5.webp');
+        Storage::disk('public')->assertExists('demo/hero-abaya-rose-2x1.webp');
+        Storage::disk('public')->assertExists('demo/hero-family-sage-2x1.webp');
+        Storage::disk('public')->assertExists('demo/hero-kids-2x1.webp');
+        Storage::disk('public')->assertExists('demo/hero-travel-2x1.webp');
         $this->assertImageRatio('hero-family-2x1.webp', 2.0);
+        $this->assertImageRatio('hero-abaya-rose-2x1.webp', 2.0);
+        $this->assertImageRatio('hero-family-sage-2x1.webp', 2.0);
+        $this->assertImageRatio('hero-kids-2x1.webp', 2.0);
+        $this->assertImageRatio('hero-travel-2x1.webp', 2.0);
         $this->assertImageRatio('product-olive-4x5.webp', 0.8);
         $this->assertImageRatio('promo-taupe-3x4.webp', 0.75);
         $this->assertImageRatio('editorial-fabrics-3x2.webp', 1.5);

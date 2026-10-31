@@ -554,8 +554,10 @@ class DemoSeeder extends Seeder
     {
         $entries = [
             ['banner', 'Kebersamaan dalam satu warna', 'demo-banner', 'Temukan koleksi sarimbit keluarga dengan bahan nyaman dan warna yang dirancang untuk saling melengkapi.', 'hero-family-2x1.webp', '/koleksi?category=sarimbit-keluarga', 'Lihat sarimbit', 1],
-            ['banner', 'Siluet yang bergerak bersama Anda', 'demo-banner-abaya', 'Koleksi abaya ringan dengan detail bersih untuk rutinitas dari pagi hingga malam.', 'hero-family-2x1.webp', '/koleksi?category=abaya-dewasa', 'Lihat abaya', 2],
-            ['banner', 'Warna lembut untuk hari istimewa', 'demo-banner-new', 'Temukan pilihan terbaru dalam palet hangat yang mudah dipadukan.', 'hero-family-2x1.webp', '/koleksi?sort=newest', 'Lihat koleksi baru', 3],
+            ['banner', 'Siluet yang bergerak bersama Anda', 'demo-banner-abaya', 'Koleksi abaya ringan dengan detail bersih untuk rutinitas dari pagi hingga malam.', 'hero-abaya-rose-2x1.webp', '/koleksi?category=abaya-dewasa', 'Lihat abaya', 2],
+            ['banner', 'Warna lembut untuk hari istimewa', 'demo-banner-new', 'Temukan pilihan terbaru dalam palet hangat yang mudah dipadukan.', 'hero-family-sage-2x1.webp', '/koleksi?sort=newest', 'Lihat koleksi baru', 3],
+            ['banner', 'Cerita kecil dalam warna lembut', 'demo-banner-kids', 'Busana anak yang ringan, nyaman bergerak, dan tetap rapi untuk setiap momen keluarga.', 'hero-kids-2x1.webp', '/koleksi?category=busana-anak', 'Lihat koleksi anak', 4],
+            ['banner', 'Melangkah ringan ke mana saja', 'demo-banner-travel', 'Abaya dan outer praktis dalam palet bumi untuk perjalanan yang nyaman dan berkesan.', 'hero-travel-2x1.webp', '/koleksi/nayla-travel', 'Lihat travel edit', 5],
             ['home_section', 'Dirancang untuk bergerak bersama Anda', 'demo-cerita', 'Material pilihan, potongan nyaman, dan detail yang tetap rapi dari pagi hingga malam.', 'editorial-fabrics-3x2.webp', '/koleksi?category=abaya-dewasa', 'Jelajahi abaya', 2],
             ['home_section', 'Warna hangat untuk momen istimewa', 'demo-harmoni', 'Padukan koleksi dewasa dan anak untuk menciptakan tampilan keluarga yang selaras.', 'look-olive-beige-4x5.webp', '/koleksi?category=sarimbit-keluarga', 'Pilih koleksi', 3],
             ['home_section', 'Siluet ringan dalam warna natural', 'demo-look-natural', 'Temukan abaya dan pelengkap dalam palet natural untuk gaya yang mudah dipadukan.', 'look-olive-beige-4x5.webp', '/koleksi?category=abaya-dewasa', 'Lihat tampilan', 4],
@@ -615,11 +617,13 @@ class DemoSeeder extends Seeder
             'type' => 'hero_options',
             'align' => 'left',
             'tone' => 'light',
-            'duration' => 6500,
+            'duration' => 5000,
             'mobile_url' => '',
         ]]]);
-        ContentEntry::where('slug', 'demo-banner-abaya')->update(['blocks' => [['type' => 'hero_options', 'align' => 'right', 'tone' => 'light', 'duration' => 6000, 'mobile_url' => '']]]);
-        ContentEntry::where('slug', 'demo-banner-new')->update(['blocks' => [['type' => 'hero_options', 'align' => 'center', 'tone' => 'light', 'duration' => 6000, 'mobile_url' => '']]]);
+        ContentEntry::where('slug', 'demo-banner-abaya')->update(['blocks' => [['type' => 'hero_options', 'align' => 'left', 'tone' => 'dark', 'duration' => 5000, 'mobile_url' => '']]]);
+        ContentEntry::where('slug', 'demo-banner-new')->update(['blocks' => [['type' => 'hero_options', 'align' => 'left', 'tone' => 'dark', 'duration' => 5000, 'mobile_url' => '']]]);
+        ContentEntry::where('slug', 'demo-banner-kids')->update(['blocks' => [['type' => 'hero_options', 'align' => 'left', 'tone' => 'dark', 'duration' => 5000, 'mobile_url' => '']]]);
+        ContentEntry::where('slug', 'demo-banner-travel')->update(['blocks' => [['type' => 'hero_options', 'align' => 'left', 'tone' => 'dark', 'duration' => 5000, 'mobile_url' => '']]]);
     }
 
     private function seedCoupons(): void
