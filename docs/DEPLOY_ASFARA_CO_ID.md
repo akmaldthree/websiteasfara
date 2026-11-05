@@ -57,7 +57,7 @@ Jangan memaksa HTTPS sebelum sertifikat berhasil diterbitkan.
 
 Dari panel hosting:
 
-1. Buat database MySQL baru, misalnya `USERNAME_asfara`.
+1. Buat database MySQL baru, misalnya `dthreeco_asfara`.
 2. Buat user database dengan password acak yang kuat.
 3. Berikan hak akses user tersebut ke database.
 4. Catat nama database, username, password, host, dan port.
@@ -67,17 +67,32 @@ Gunakan database kosong. Jangan menjalankan `migrate:fresh`, `db:wipe`, atau
 
 ## 4. Clone langsung ke folder domain tanpa membuat folder baru
 
-Gunakan folder domain yang **sudah dibuat oleh panel hosting**. Contoh panduan
-ini memakai `/home/USERNAME/asfara.co.id`; sesuaikan dengan path yang tampil di
-panel. Folder tersebut harus kosong atau hanya berisi file bawaan hosting yang
-sudah dibackup dan dipindahkan. Jangan menghapus file yang belum dibackup.
+Mulai dari terminal yang sudah berada di folder domain:
+
+```text
+[dthreeco@inspire asfara.co.id]$
+```
+
+Jangan menjalankan `mkdir` dan jangan membuat folder `apps` atau
+`websiteasfara`. Periksa lokasi serta isinya terlebih dahulu:
+
+```bash
+pwd
+ls -la
+```
+
+Catat hasil `pwd`. Contoh selanjutnya mengasumsikan hasilnya
+`/home/dthreeco/asfara.co.id`. Jika server menampilkan path berbeda, gunakan
+path dari hasil `pwd` untuk document root dan cron.
+
+Folder harus kosong sebelum clone. Jika `ls -la` menampilkan file selain `.`
+dan `..`, jangan hapus apa pun sebelum file tersebut diperiksa dan dibackup.
 
 Masuk ke folder domain lalu clone dengan tujuan titik (`.`). Cara ini menaruh
 isi repository langsung di folder aktif dan tidak membuat folder
 `websiteasfara` atau `apps` lagi:
 
 ```bash
-cd /home/USERNAME/asfara.co.id
 git clone https://github.com/akmaldthree/websiteasfara.git .
 git branch --show-current
 git remote -v
@@ -87,8 +102,8 @@ Branch harus `main` dan remote harus menunjuk ke
 `akmaldthree/websiteasfara.git`. Struktur akhirnya:
 
 ```text
-/home/USERNAME/asfara.co.id/        # isi repository Laravel
-/home/USERNAME/asfara.co.id/public  # document root asfara.co.id
+/home/dthreeco/asfara.co.id/        # isi repository Laravel
+/home/dthreeco/asfara.co.id/public  # document root asfara.co.id
 ```
 
 Tidak ada perintah `mkdir` pada proses ini. Folder seperti `app`, `public`,
@@ -102,7 +117,6 @@ token GitHub di URL remote, `.env`, atau shell history.
 ## 5. Instal dependency dan siapkan `.env`
 
 ```bash
-cd /home/USERNAME/asfara.co.id
 composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 cp .env.example .env
 nano .env
@@ -166,7 +180,6 @@ Catatan penting:
 Jalankan dari root aplikasi:
 
 ```bash
-cd /home/USERNAME/asfara.co.id
 php artisan key:generate
 php artisan migrate --force
 php artisan db:seed --force
@@ -182,13 +195,12 @@ permission `777`.
 Atur document root `asfara.co.id` di panel hosting menjadi:
 
 ```text
-/home/USERNAME/asfara.co.id/public
+/home/dthreeco/asfara.co.id/public
 ```
 
 Kemudian jalankan:
 
 ```bash
-cd /home/USERNAME/asfara.co.id
 php artisan storage:link
 ```
 
@@ -202,7 +214,6 @@ sebagai web root tidak aman dan tidak direkomendasikan.
 ## 8. Buat akun administrator
 
 ```bash
-cd /home/USERNAME/asfara.co.id
 php artisan dthree:admin admin@asfara.co.id --name="Administrator Asfara"
 ```
 
@@ -215,18 +226,20 @@ terminal. Setelah domain aktif:
 
 ## 9. Pasang scheduler dan queue
 
-Ganti `USERNAME` dan `/usr/bin/php` sesuai hasil pemeriksaan server.
+Path berikut mengasumsikan `pwd` menghasilkan `/home/dthreeco/asfara.co.id`.
+Gunakan path sebenarnya jika hasilnya berbeda. Ganti `/usr/bin/php` jika
+`which php` menampilkan lokasi lain.
 
 Scheduler setiap menit:
 
 ```cron
-* * * * * cd /home/USERNAME/asfara.co.id && /usr/bin/php artisan schedule:run >> /home/USERNAME/asfara.co.id/storage/logs/scheduler.log 2>&1
+* * * * * cd /home/dthreeco/asfara.co.id && /usr/bin/php artisan schedule:run >> /home/dthreeco/asfara.co.id/storage/logs/scheduler.log 2>&1
 ```
 
 Untuk shared hosting tanpa Supervisor, tambahkan queue worker setiap menit:
 
 ```cron
-* * * * * cd /home/USERNAME/asfara.co.id && /usr/bin/php artisan queue:work --stop-when-empty --max-time=50 --tries=3 >> /home/USERNAME/asfara.co.id/storage/logs/queue.log 2>&1
+* * * * * cd /home/dthreeco/asfara.co.id && /usr/bin/php artisan queue:work --stop-when-empty --max-time=50 --tries=3 >> /home/dthreeco/asfara.co.id/storage/logs/queue.log 2>&1
 ```
 
 Untuk VPS, gunakan Supervisor atau systemd agar `php artisan queue:work`
@@ -236,7 +249,6 @@ deployment.
 Verifikasi:
 
 ```bash
-cd /home/USERNAME/asfara.co.id
 php artisan schedule:list
 php artisan schedule:run
 php artisan system:heartbeat
@@ -245,7 +257,6 @@ php artisan system:heartbeat
 ## 10. Verifikasi sebelum dibuka ke publik
 
 ```bash
-cd /home/USERNAME/asfara.co.id
 php artisan about
 php artisan migrate:status
 php artisan schedule:list
@@ -285,7 +296,7 @@ Jangan membuka checkout sebelum transaksi uji dari awal hingga selesai berhasil.
 Setelah perubahan masuk ke branch `main` di GitHub, jalankan dari server:
 
 ```bash
-cd /home/USERNAME/asfara.co.id
+cd /home/dthreeco/asfara.co.id
 bash scripts/deploy.sh
 ```
 
