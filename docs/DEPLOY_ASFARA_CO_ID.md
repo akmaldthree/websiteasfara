@@ -1,8 +1,8 @@
-# Panduan deploy `websiteasfara` ke `hurim.co.id`
+# Panduan deploy `websiteasfara` ke `asfara.co.id`
 
 Panduan ini digunakan untuk instalasi pertama dari repository
 `https://github.com/akmaldthree/websiteasfara` ke domain utama
-`https://hurim.co.id`. Aplikasi menggunakan Laravel 13, PHP 8.4+, MySQL,
+`https://asfara.co.id`. Aplikasi menggunakan Laravel 13, PHP 8.4+, MySQL,
 Composer, queue database, dan scheduler Laravel. Aset frontend sudah tersedia
 di repository sehingga server tidak memerlukan Node.js atau npm.
 
@@ -39,17 +39,17 @@ Isi DNS menggunakan alamat resmi yang diberikan penyedia hosting:
 | Tipe | Nama | Nilai |
 | --- | --- | --- |
 | A | `@` | `<IP_HOSTING>` |
-| CNAME | `www` | `hurim.co.id` |
+| CNAME | `www` | `asfara.co.id` |
 
 Jangan memasukkan teks `<IP_HOSTING>` secara literal. Jika penyedia hosting
 memberikan CNAME atau nameserver khusus, ikuti nilai dari penyedia tersebut.
 
 Setelah DNS aktif:
 
-1. Tambahkan `hurim.co.id` dan `www.hurim.co.id` pada panel hosting.
+1. Tambahkan `asfara.co.id` dan `www.asfara.co.id` pada panel hosting.
 2. Aktifkan AutoSSL atau Let's Encrypt untuk keduanya.
-3. Jadikan `https://hurim.co.id` sebagai alamat utama.
-4. Redirect permanen `www.hurim.co.id` ke `https://hurim.co.id`.
+3. Jadikan `https://asfara.co.id` sebagai alamat utama.
+4. Redirect permanen `www.asfara.co.id` ke `https://asfara.co.id`.
 
 Jangan memaksa HTTPS sebelum sertifikat berhasil diterbitkan.
 
@@ -57,7 +57,7 @@ Jangan memaksa HTTPS sebelum sertifikat berhasil diterbitkan.
 
 Dari panel hosting:
 
-1. Buat database MySQL baru, misalnya `USERNAME_hurim`.
+1. Buat database MySQL baru, misalnya `USERNAME_asfara`.
 2. Buat user database dengan password acak yang kuat.
 3. Berikan hak akses user tersebut ke database.
 4. Catat nama database, username, password, host, dan port.
@@ -84,7 +84,7 @@ Branch harus `main` dan remote harus menunjuk ke
 
 ```text
 /home/USERNAME/apps/websiteasfara/        # root aplikasi Laravel
-/home/USERNAME/apps/websiteasfara/public  # document root hurim.co.id
+/home/USERNAME/apps/websiteasfara/public  # document root asfara.co.id
 ```
 
 Repository saat ini public sehingga clone HTTPS tidak memerlukan token. Jika
@@ -103,11 +103,11 @@ nano .env
 Isi konfigurasi produksi berikut dan ganti seluruh placeholder `<...>`:
 
 ```dotenv
-APP_NAME=Hurim
+APP_NAME=Asfara
 APP_ENV=production
 APP_KEY=
 APP_DEBUG=false
-APP_URL=https://hurim.co.id
+APP_URL=https://asfara.co.id
 APP_LOCALE=id
 
 LOG_CHANNEL=stack
@@ -124,8 +124,8 @@ SESSION_DRIVER=database
 SESSION_LIFETIME=120
 SESSION_ENCRYPT=true
 SESSION_SECURE_COOKIE=true
-SESSION_COOKIE=hurim_session
-SESSION_DOMAIN=.hurim.co.id
+SESSION_COOKIE=asfara_session
+SESSION_DOMAIN=.asfara.co.id
 
 CACHE_STORE=database
 QUEUE_CONNECTION=database
@@ -137,8 +137,8 @@ MAIL_HOST=<HOST_SMTP>
 MAIL_PORT=587
 MAIL_USERNAME=<USER_SMTP>
 MAIL_PASSWORD="<PASSWORD_SMTP>"
-MAIL_FROM_ADDRESS=noreply@hurim.co.id
-MAIL_FROM_NAME=Hurim
+MAIL_FROM_ADDRESS=noreply@asfara.co.id
+MAIL_FROM_NAME=Asfara
 
 TRANSACTION_EMAIL_ENABLED=false
 ALLOW_DEMO_SEEDING=false
@@ -173,7 +173,7 @@ permission `777`.
 
 ### Pilihan A — document root dapat diubah (direkomendasikan)
 
-Atur document root `hurim.co.id` di panel hosting menjadi:
+Atur document root `asfara.co.id` di panel hosting menjadi:
 
 ```text
 /home/USERNAME/apps/websiteasfara/public
@@ -239,15 +239,15 @@ rsync -a --exclude=index.php --exclude=storage ~/apps/websiteasfara/public/ ~/pu
 
 ```bash
 cd ~/apps/websiteasfara
-php artisan dthree:admin admin@hurim.co.id --name="Administrator Hurim"
+php artisan dthree:admin admin@asfara.co.id --name="Administrator Asfara"
 ```
 
 Masukkan password kuat saat diminta. Password tidak akan ditampilkan di
 terminal. Setelah domain aktif:
 
-- Login: `https://hurim.co.id/masuk`
-- Dashboard: `https://hurim.co.id/admin`
-- Monitoring: `https://hurim.co.id/admin/monitoring`
+- Login: `https://asfara.co.id/masuk`
+- Dashboard: `https://asfara.co.id/admin`
+- Monitoring: `https://asfara.co.id/admin/monitoring`
 
 ## 9. Pasang scheduler dan queue
 
@@ -287,8 +287,8 @@ php artisan migrate:status
 php artisan schedule:list
 php artisan system:production-check
 git status --short
-curl -I https://hurim.co.id/up
-curl -I https://www.hurim.co.id/up
+curl -I https://asfara.co.id/up
+curl -I https://www.asfara.co.id/up
 ```
 
 Pastikan:
