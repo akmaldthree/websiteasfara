@@ -34,6 +34,10 @@ Website e-commerce Dthree dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. 
 
 ## Instalasi hosting
 
+Untuk domain `hurim.co.id`, gunakan [panduan deploy websiteasfara](docs/DEPLOY_HURIM_CO_ID.md).
+Panduan tersebut memakai repository `https://github.com/akmaldthree/websiteasfara`
+dan mencakup instalasi pertama serta pembaruan berikutnya dari branch `main`.
+
 Ikuti [panduan deploy store.dthree.co.id](docs/DEPLOY_STORE_SUBDOMAIN.md). Panduan [domain utama](docs/HOSTING.md) dan [public_html](docs/DEPLOY_PUBLIC_HTML.md) tetap tersedia sebagai referensi. Aset Bootstrap disimpan dalam `public/vendor/bootstrap`, sehingga hosting tidak membutuhkan Node.js atau npm build. Dependensi PHP dikunci dalam `composer.lock`.
 
 ```bash
