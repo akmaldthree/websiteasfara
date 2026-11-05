@@ -15,8 +15,8 @@ Pastikan paket hosting menyediakan:
 - Ekstensi PHP `ctype`, `curl`, `dom`, `fileinfo`, `filter`, `hash`,
   `mbstring`, `openssl`, `pcre`, `pdo`, `pdo_mysql`, `session`, `tokenizer`,
   dan `xml`.
-- Document root domain yang dapat diarahkan ke folder `public` Laravel. Jika
-  tidak tersedia, gunakan alternatif `public_html` pada bagian 7.
+- Document root domain yang dapat diarahkan ke folder `public` Laravel. Ini
+  wajib untuk metode deploy langsung tanpa folder pembungkus tambahan.
 
 Periksa dari terminal hosting:
 
@@ -65,27 +65,35 @@ Dari panel hosting:
 Gunakan database kosong. Jangan menjalankan `migrate:fresh`, `db:wipe`, atau
 `migrate:rollback` pada produksi.
 
-## 4. Clone repository di luar web root
+## 4. Clone langsung ke folder domain tanpa membuat folder baru
 
-Repository sebaiknya disimpan di luar `public_html`:
+Gunakan folder domain yang **sudah dibuat oleh panel hosting**. Contoh panduan
+ini memakai `/home/USERNAME/asfara.co.id`; sesuaikan dengan path yang tampil di
+panel. Folder tersebut harus kosong atau hanya berisi file bawaan hosting yang
+sudah dibackup dan dipindahkan. Jangan menghapus file yang belum dibackup.
+
+Masuk ke folder domain lalu clone dengan tujuan titik (`.`). Cara ini menaruh
+isi repository langsung di folder aktif dan tidak membuat folder
+`websiteasfara` atau `apps` lagi:
 
 ```bash
-cd ~
-mkdir -p apps
-cd apps
-git clone https://github.com/akmaldthree/websiteasfara.git
-cd websiteasfara
+cd /home/USERNAME/asfara.co.id
+git clone https://github.com/akmaldthree/websiteasfara.git .
 git branch --show-current
 git remote -v
 ```
 
 Branch harus `main` dan remote harus menunjuk ke
-`akmaldthree/websiteasfara.git`. Struktur yang disarankan:
+`akmaldthree/websiteasfara.git`. Struktur akhirnya:
 
 ```text
-/home/USERNAME/apps/websiteasfara/        # root aplikasi Laravel
-/home/USERNAME/apps/websiteasfara/public  # document root asfara.co.id
+/home/USERNAME/asfara.co.id/        # isi repository Laravel
+/home/USERNAME/asfara.co.id/public  # document root asfara.co.id
 ```
+
+Tidak ada perintah `mkdir` pada proses ini. Folder seperti `app`, `public`,
+`storage`, dan `vendor` adalah bagian aplikasi Laravel atau hasil instalasi
+Composer, bukan folder pembungkus tambahan.
 
 Repository saat ini public sehingga clone HTTPS tidak memerlukan token. Jika
 nanti diubah menjadi private, gunakan SSH deploy key read-only; jangan menaruh
@@ -94,7 +102,7 @@ token GitHub di URL remote, `.env`, atau shell history.
 ## 5. Instal dependency dan siapkan `.env`
 
 ```bash
-cd ~/apps/websiteasfara
+cd /home/USERNAME/asfara.co.id
 composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 cp .env.example .env
 nano .env
@@ -158,7 +166,7 @@ Catatan penting:
 Jalankan dari root aplikasi:
 
 ```bash
-cd ~/apps/websiteasfara
+cd /home/USERNAME/asfara.co.id
 php artisan key:generate
 php artisan migrate --force
 php artisan db:seed --force
@@ -171,74 +179,30 @@ permission `777`.
 
 ## 7. Hubungkan domain ke folder `public`
 
-### Pilihan A — document root dapat diubah (direkomendasikan)
-
 Atur document root `asfara.co.id` di panel hosting menjadi:
 
 ```text
-/home/USERNAME/apps/websiteasfara/public
+/home/USERNAME/asfara.co.id/public
 ```
 
 Kemudian jalankan:
 
 ```bash
-cd ~/apps/websiteasfara
+cd /home/USERNAME/asfara.co.id
 php artisan storage:link
 ```
 
 Jangan arahkan domain ke root repository. Jika dilakukan, `.env`, source code,
 dan dokumen privat berisiko terekspos.
 
-### Pilihan B — hosting mewajibkan `public_html`
-
-Gunakan pilihan ini hanya jika panel tidak dapat mengubah document root. Backup
-isi `public_html` terlebih dahulu, lalu salin file publik Laravel:
-
-```bash
-cp -a ~/apps/websiteasfara/public/. ~/public_html/
-nano ~/public_html/index.php
-```
-
-Ubah path bootstrap di `public_html/index.php` agar menunjuk ke aplikasi:
-
-```php
-if (file_exists($maintenance = __DIR__.'/../apps/websiteasfara/storage/framework/maintenance.php')) {
-    require $maintenance;
-}
-
-require __DIR__.'/../apps/websiteasfara/vendor/autoload.php';
-$app = require_once __DIR__.'/../apps/websiteasfara/bootstrap/app.php';
-```
-
-Pastikan blok maintenance lama yang menunjuk ke `../storage` sudah diganti,
-bukan diduplikasi. Lalu buat link media publik:
-
-```bash
-ln -s ~/apps/websiteasfara/storage/app/public ~/public_html/storage
-```
-
-Jika hosting melarang symlink, tambahkan ini ke `.env`:
-
-```dotenv
-PUBLIC_FILESYSTEM_ROOT=/home/USERNAME/public_html/storage
-```
-
-Lalu buat foldernya:
-
-```bash
-mkdir -p ~/public_html/storage
-```
-
-Pada pilihan B, setiap update aset publik harus diikuti:
-
-```bash
-rsync -a --exclude=index.php --exclude=storage ~/apps/websiteasfara/public/ ~/public_html/
-```
+Jika panel tidak mengizinkan document root berakhir dengan `/public`, hentikan
+deployment dan minta penyedia hosting mengubahnya. Menjadikan root repository
+sebagai web root tidak aman dan tidak direkomendasikan.
 
 ## 8. Buat akun administrator
 
 ```bash
-cd ~/apps/websiteasfara
+cd /home/USERNAME/asfara.co.id
 php artisan dthree:admin admin@asfara.co.id --name="Administrator Asfara"
 ```
 
@@ -256,13 +220,13 @@ Ganti `USERNAME` dan `/usr/bin/php` sesuai hasil pemeriksaan server.
 Scheduler setiap menit:
 
 ```cron
-* * * * * cd /home/USERNAME/apps/websiteasfara && /usr/bin/php artisan schedule:run >> /home/USERNAME/apps/websiteasfara/storage/logs/scheduler.log 2>&1
+* * * * * cd /home/USERNAME/asfara.co.id && /usr/bin/php artisan schedule:run >> /home/USERNAME/asfara.co.id/storage/logs/scheduler.log 2>&1
 ```
 
 Untuk shared hosting tanpa Supervisor, tambahkan queue worker setiap menit:
 
 ```cron
-* * * * * cd /home/USERNAME/apps/websiteasfara && /usr/bin/php artisan queue:work --stop-when-empty --max-time=50 --tries=3 >> /home/USERNAME/apps/websiteasfara/storage/logs/queue.log 2>&1
+* * * * * cd /home/USERNAME/asfara.co.id && /usr/bin/php artisan queue:work --stop-when-empty --max-time=50 --tries=3 >> /home/USERNAME/asfara.co.id/storage/logs/queue.log 2>&1
 ```
 
 Untuk VPS, gunakan Supervisor atau systemd agar `php artisan queue:work`
@@ -272,7 +236,7 @@ deployment.
 Verifikasi:
 
 ```bash
-cd ~/apps/websiteasfara
+cd /home/USERNAME/asfara.co.id
 php artisan schedule:list
 php artisan schedule:run
 php artisan system:heartbeat
@@ -281,7 +245,7 @@ php artisan system:heartbeat
 ## 10. Verifikasi sebelum dibuka ke publik
 
 ```bash
-cd ~/apps/websiteasfara
+cd /home/USERNAME/asfara.co.id
 php artisan about
 php artisan migrate:status
 php artisan schedule:list
@@ -321,7 +285,7 @@ Jangan membuka checkout sebelum transaksi uji dari awal hingga selesai berhasil.
 Setelah perubahan masuk ke branch `main` di GitHub, jalankan dari server:
 
 ```bash
-cd ~/apps/websiteasfara
+cd /home/USERNAME/asfara.co.id
 bash scripts/deploy.sh
 ```
 
@@ -334,12 +298,6 @@ Jika binary hosting berbeda:
 
 ```bash
 PHP_BIN=/path/php84 COMPOSER_BIN=/path/composer bash scripts/deploy.sh
-```
-
-Jika memakai Pilihan B (`public_html`), sinkronkan aset publik setelah deploy:
-
-```bash
-rsync -a --exclude=index.php --exclude=storage ~/apps/websiteasfara/public/ ~/public_html/
 ```
 
 Jangan mengedit kode langsung di hosting. Perubahan kode dilakukan di
