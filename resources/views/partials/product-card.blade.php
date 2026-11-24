@@ -7,10 +7,11 @@
     @php($saving=max(0,(int)$collection->compare_at_price-$sellingPrice))
     @php($quickVariants=$collection->variants->where('active',true)->where('fulfillment','!=','custom_made')->map(fn($variant)=>['id'=>$variant->id,'type'=>$variant->product_type,'color'=>$variant->color,'size'=>$variant->size,'label'=>$variant->label,'price'=>(int)$variant->price,'available'=>$variant->available])->values())
     @php($availableStock=$collection->variants->sum(fn($variant)=>max(0,(int)$variant->stock-(int)$variant->reserved)))
+    @php($isSignature=str_contains(mb_strtolower($collection->name),'signature'))
     <a @class(['product-image', 'has-secondary-image' => $secondaryImage]) href="{{ route('product',$collection->slug) }}">
         <img class="product-image-primary" src="{{ $primaryImage }}" style="object-position:{{ $primaryMedia?->focal_x ?? 50 }}% {{ $primaryMedia?->focal_y ?? 50 }}%" alt="{{ $collection->name }}{{ $collection->image ? '' : ' — ilustrasi koleksi' }}" width="800" height="1000" loading="lazy" decoding="async">
         @if($secondaryImage)<img class="product-image-secondary" src="{{ $secondaryImage }}" style="object-position:{{ $secondaryMedia->focal_x }}% {{ $secondaryMedia->focal_y }}%" alt="{{ $collection->name }} — tampilan berikutnya" width="800" height="1000" loading="lazy" decoding="async">@endif
-        @if($availableStock<=0)<span class="product-tag product-tag-sold">SOLD OUT</span>@elseif($saving>0)<span class="product-tag product-tag-sale">SAVE IDR {{ number_format($saving,0,',','.') }},00</span>@elseif($collection->featured)<span class="product-tag">FEATURED</span>@endif
+        @if($availableStock<=0)<span class="product-tag product-tag-sold">SOLD OUT</span>@elseif($saving>0)<span class="product-tag product-tag-sale">SAVE IDR {{ number_format($saving,0,',','.') }},00</span>@elseif($isSignature)<span class="product-tag product-tag-signature">SIGNATURE</span>@elseif($collection->featured)<span class="product-tag product-tag-new">NEW IN</span>@endif
     </a>
     @if($quickVariants->isNotEmpty())
         <button type="button" class="product-quick" data-quick-open="quick-product-{{ $collection->id }}">PILIH OPSI</button>

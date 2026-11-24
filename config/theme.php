@@ -2,10 +2,10 @@
 
 return [
     'palette' => [
-        'theme_palette_base' => ['label' => 'Ivory — warna dasar', 'color' => '#F9F8F6', 'share' => 55, 'usage' => 'Latar utama yang memberi ruang putih dan kesan bersih.'],
-        'theme_palette_surface' => ['label' => 'Warm white — permukaan', 'color' => '#EFE9E3', 'share' => 25, 'usage' => 'Header, kartu, panel, form, dan section utama.'],
-        'theme_palette_structure' => ['label' => 'Soft taupe — struktur', 'color' => '#D9CFC7', 'share' => 12, 'usage' => 'Garis, filter, navigasi sekunder, dan status netral.'],
-        'theme_palette_accent' => ['label' => 'Elegant beige — aksen', 'color' => '#C9B59C', 'share' => 8, 'usage' => 'Tombol utama, harga, tautan aktif, dan fokus.'],
+        'theme_palette_base' => ['label' => 'Soft white — warna dasar', 'color' => '#F4F4F2', 'share' => 55, 'usage' => 'Latar utama yang memberi ruang putih dan kesan editorial.'],
+        'theme_palette_surface' => ['label' => 'Pure white — permukaan', 'color' => '#FFFFFF', 'share' => 25, 'usage' => 'Header, kartu, panel, form, dan section utama.'],
+        'theme_palette_structure' => ['label' => 'Soft grey — struktur', 'color' => '#DEDED9', 'share' => 12, 'usage' => 'Garis, filter, navigasi sekunder, dan status netral.'],
+        'theme_palette_accent' => ['label' => 'Editorial black — aksen', 'color' => '#171717', 'share' => 8, 'usage' => 'Tombol utama, header promosi, tautan aktif, dan fokus.'],
     ],
-    'text_color' => '#302D2A',
+    'text_color' => '#171717',
 ];

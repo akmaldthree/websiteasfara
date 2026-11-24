@@ -84,7 +84,8 @@ class DemoSeederTest extends TestCase
         $this->assertImageRatio('payment-proof-demo-3x4.webp', 0.75);
         $this->get('/')->assertOk()->assertSee('Tumbuh bersama dalam setiap cerita')->assertSee('Kebersamaan dalam satu warna')->assertSee('SAVE IDR')->assertSee('4.');
         $this->get('/koleksi')->assertOk()->assertSee('Raffah Signature')->assertSee('Hana Flow Khimar');
-        $this->get('/koleksi')->assertSee('Zayna Essential')->assertSee('Safa Daily Khimar');
+        $this->get('/koleksi?q=Zayna')->assertOk()->assertSee('Zayna Essential');
+        $this->get('/koleksi?q=Safa')->assertOk()->assertSee('Safa Daily Khimar');
         $this->get('/koleksi/raffah-signature')->assertOk()->assertSee('Raffah Signature')->assertSee('Olive');
     }
 

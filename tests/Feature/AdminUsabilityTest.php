@@ -93,7 +93,7 @@ class AdminUsabilityTest extends TestCase
             ->assertDontSee('Galeri produk')
             ->assertSee('css/asfara.css?v=', false)
             ->assertSee('class="admin-sidebar-backdrop" data-sidebar-close hidden', false);
-        $this->get(route('admin.settings'))->assertOk()->assertSee('Lompat ke:')->assertSee('Banner & konten website')->assertSee('Ivory — warna dasar')->assertSee('#F9F8F6');
+        $this->get(route('admin.settings'))->assertOk()->assertSee('Lompat ke:')->assertSee('Banner & konten website')->assertSee('Soft white — warna dasar')->assertSee('#F4F4F2');
         $this->get(route('admin.media'))->assertOk()->assertSee('Cara menggunakan gambar');
         $this->get(route('admin.import'))->assertOk()->assertSee('Unduh dan isi template');
     }

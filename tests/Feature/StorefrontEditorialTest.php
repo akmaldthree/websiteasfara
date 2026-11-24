@@ -103,7 +103,7 @@ class StorefrontEditorialTest extends TestCase
 
         $html = $this->get(route('home'))->assertOk()->getContent();
         $this->assertSame(1, substr_count($html, 'Mobile Only'));
-        $this->assertSame(2, substr_count($html, 'DESKTOP ONLY'));
+        $this->assertSame(1, substr_count($html, 'Desktop Only'));
     }
 
     public function test_reference_language_picker_and_product_activity_popup_can_be_managed(): void
@@ -114,8 +114,12 @@ class StorefrontEditorialTest extends TestCase
 
         $this->get(route('home'))->assertOk()
             ->assertSee('language-picker', false)
+            ->assertSee('NEW IN')
+            ->assertSee('SPECIAL OFFER')
             ->assertSee('aria-controls="catalog-mega-menu"', false)
             ->assertSee('id="catalog-mega-menu"', false)
+            ->assertSee('class="mobile-nav-links"', false)
+            ->assertSee('id="mobile-open-search"', false)
             ->assertSee('is-catalog-open', false)
             ->assertSee('id="social-proof"', false)
             ->assertSee('Zayna Series')
