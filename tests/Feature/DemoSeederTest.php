@@ -51,11 +51,11 @@ class DemoSeederTest extends TestCase
         $this->assertSame(72, VariantPrice::count());
         $this->assertSame(3, BusinessOrderRule::count());
         $this->assertSame(1, BusinessAccount::where('business_name', 'Butik Sahabat Demo')->count());
-        $this->assertSame(1, CustomQuote::where('number', 'DTH-CUSTOM-DEMO-001')->count());
+        $this->assertSame(1, CustomQuote::where('number', 'ASF-CUSTOM-DEMO-001')->count());
         $this->assertSame(12, NewsletterSubscriber::where('email', 'like', 'newsletter%.demo@asfara.co.id')->count());
         $this->assertSame(10, ProductQuestion::where('status', 'answered')->count());
         $this->assertSame(20, MediaAsset::where('path', 'like', 'demo/%')->count());
-        $this->assertSame(13, Order::where(fn ($query) => $query->where('number', 'like', 'DTH-DEMO-%')->orWhere('number', 'DEMO-REVIEW-001'))->count());
+        $this->assertSame(13, Order::where(fn ($query) => $query->where('number', 'like', 'ASF-DEMO-%')->orWhere('number', 'DEMO-REVIEW-001'))->count());
         $this->assertSame(12, NotificationDelivery::count());
         $this->assertSame(15, ShippingRate::count());
         $this->assertSame(6, StoreLocation::count());

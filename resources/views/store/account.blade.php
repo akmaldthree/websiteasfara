@@ -1,21 +1,23 @@
 @extends('layouts.store')
 @section('title','Akun saya — Asfara')
+@section('body_class','account-body')
 @section('content')
-<section class="container-xxl section">
+<section class="container-xxl section account-page">
     <div class="section-top">
-        <div><span class="eyebrow">AKUN SAYA</span><h1 class="mt-3">Halo, {{ auth()->user()->name }}.</h1></div>
+        <div><span class="eyebrow">AKUN SAYA</span><h1 class="mt-3">Halo, {{ auth()->user()->name }}.</h1><p>Kelola pesanan, alamat, wishlist, dan benefit Asfara Anda.</p></div>
         <form method="post" action="{{ route('logout') }}">@csrf<button class="btn btn-outline-dark">Keluar</button></form>
     </div>
+    <nav class="account-navigation" aria-label="Bagian akun"><a href="#orders">Pesanan</a><a href="#addresses">Alamat</a><a href="#loyalty">Loyalty</a><a href="#wishlist">Wishlist</a><a href="#preferences">Preferensi</a></nav>
     <div class="row g-4">
-        <div class="col-lg-7"><div class="panel"><h2>Riwayat pesanan</h2>
+        <div class="col-lg-7"><div class="panel account-panel" id="orders"><span class="eyebrow">PESANAN</span><h2>Riwayat pesanan</h2>
             @forelse($orders as $order)
                 <div class="summary-row"><span><a href="{{ $order->customerUrl() }}">{{ $order->number }}</a><br><small>{{ $order->created_at->format('d M Y') }} · {{ __('status.'.$order->status) }}</small></span><span class="text-end">@rupiah($order->total)<form method="post" action="{{ route('orders.reorder',$order) }}">@csrf<button class="btn btn-link btn-sm">Pesan ulang</button></form></span></div>
             @empty
-                <p>Belum ada pesanan. <a href="{{ route('catalog') }}">Temukan koleksi Anda ↗</a></p>
+                <div class="account-empty"><p>Belum ada pesanan.</p><a href="{{ route('catalog') }}">Temukan koleksi Anda</a></div>
             @endforelse
             {{ $orders->links() }}
         </div></div>
-        <div class="col-lg-5"><div class="panel"><h2>Buku alamat</h2>
+        <div class="col-lg-5"><div class="panel account-panel" id="addresses"><span class="eyebrow">PENGIRIMAN</span><h2>Buku alamat</h2>
             @foreach($addresses as $address)
                 <div class="border-bottom py-3">
                     <p><strong>{{ $address->name }}</strong> @if($address->is_default)<span class="badge">Utama</span>@endif<br>{{ $address->phone }}<br>{{ $address->detail }}, {{ $address->city }} {{ $address->postal_code }}</p>
@@ -36,8 +38,8 @@
             </details>
         </div></div>
     </div>
-    <div class="panel mt-4"><h2>Preferensi komunikasi</h2><p class="small">Persetujuan ini dapat diubah kapan saja dan terpisah dari email transaksi pesanan.</p><form method="post" action="{{ route('account.communication') }}">@csrf<label class="d-block mb-2"><input type="checkbox" name="marketing_email" value="1" @checked(auth()->user()->marketing_email)> Promo melalui email</label><label class="d-block mb-3"><input type="checkbox" name="marketing_whatsapp" value="1" @checked(auth()->user()->marketing_whatsapp)> Promo melalui WhatsApp</label><button class="btn btn-outline-dark btn-sm">Simpan preferensi</button></form></div>
-    <div class="panel mt-4"><span class="eyebrow">ASFARA LOYALTY · {{ strtoupper($loyaltyTier['name']) }}</span><h2 class="mt-3">{{ number_format($loyaltyBalance,0,',','.') }} poin tersedia</h2><p>{{ number_format($loyaltyTier['lifetime_points'],0,',','.') }} poin terkumpul sepanjang masa.@if($loyaltyTier['benefit']) Benefit level: {{ $loyaltyTier['benefit'] }}.@endif @if($loyaltyTier['next']) Kumpulkan {{ number_format($loyaltyTier['next']['minimum']-$loyaltyTier['lifetime_points'],0,',','.') }} poin lagi untuk mencapai {{ $loyaltyTier['next']['name'] }}.@endif Poin tersedia dapat digunakan saat checkout setelah program diaktifkan oleh admin.</p>@if($loyaltyTransactions->isNotEmpty())<div class="table-responsive"><table class="table"><thead><tr><th>Tanggal</th><th>Aktivitas</th><th>Poin</th></tr></thead><tbody>@foreach($loyaltyTransactions as $transaction)<tr><td>{{ $transaction->created_at->format('d M Y') }}</td><td>{{ str_replace('_',' ',$transaction->type) }}@if(($transaction->metadata['multiplier'] ?? 1)>1) · {{ $transaction->metadata['campaign'] }} ×{{ $transaction->metadata['multiplier'] }}@endif</td><td>{{ $transaction->points>0?'+':'' }}{{ $transaction->points }}</td></tr>@endforeach</tbody></table></div>@endif</div>
+    <div class="panel account-panel mt-4" id="preferences"><span class="eyebrow">PRIVASI</span><h2>Preferensi komunikasi</h2><p class="small">Persetujuan ini dapat diubah kapan saja dan terpisah dari email transaksi pesanan.</p><form method="post" action="{{ route('account.communication') }}">@csrf<label class="d-block mb-2"><input type="checkbox" name="marketing_email" value="1" @checked(auth()->user()->marketing_email)> Promo melalui email</label><label class="d-block mb-3"><input type="checkbox" name="marketing_whatsapp" value="1" @checked(auth()->user()->marketing_whatsapp)> Promo melalui WhatsApp</label><button class="btn btn-outline-dark btn-sm">Simpan preferensi</button></form></div>
+    <div class="panel account-panel account-loyalty mt-4" id="loyalty"><span class="eyebrow">ASFARA LOYALTY · {{ strtoupper($loyaltyTier['name']) }}</span><h2 class="mt-3">{{ number_format($loyaltyBalance,0,',','.') }} poin tersedia</h2><p>{{ number_format($loyaltyTier['lifetime_points'],0,',','.') }} poin terkumpul sepanjang masa.@if($loyaltyTier['benefit']) Benefit level: {{ $loyaltyTier['benefit'] }}.@endif @if($loyaltyTier['next']) Kumpulkan {{ number_format($loyaltyTier['next']['minimum']-$loyaltyTier['lifetime_points'],0,',','.') }} poin lagi untuk mencapai {{ $loyaltyTier['next']['name'] }}.@endif Poin tersedia dapat digunakan saat checkout setelah program diaktifkan oleh admin.</p>@if($loyaltyTransactions->isNotEmpty())<div class="table-responsive"><table class="table"><thead><tr><th>Tanggal</th><th>Aktivitas</th><th>Poin</th></tr></thead><tbody>@foreach($loyaltyTransactions as $transaction)<tr><td>{{ $transaction->created_at->format('d M Y') }}</td><td>{{ str_replace('_',' ',$transaction->type) }}@if(($transaction->metadata['multiplier'] ?? 1)>1) · {{ $transaction->metadata['campaign'] }} ×{{ $transaction->metadata['multiplier'] }}@endif</td><td>{{ $transaction->points>0?'+':'' }}{{ $transaction->points }}</td></tr>@endforeach</tbody></table></div>@endif</div>
     @if($customQuotes->isNotEmpty())
     <div class="panel mt-4"><span class="eyebrow">UKURAN CUSTOM</span><h2 class="mt-3">Penawaran saya</h2>
         @foreach($customQuotes as $quote)<div class="border-bottom py-3"><div class="summary-row"><span><strong>{{ $quote->number }}</strong><br>{{ $quote->variant->series->name }} · {{ $quote->variant->sku }}<br><small>Status {{ strtoupper($quote->status) }} @if($quote->expires_at)· berlaku sampai {{ $quote->expires_at->format('d M Y H:i') }}@endif</small></span><span>@if($quote->surcharge!==null)@rupiah($quote->surcharge)@endif</span></div>
@@ -46,7 +48,7 @@
         </div>@endforeach
     </div>
     @endif
-    <div class="row g-4 mt-1"><div class="col-lg-6"><div class="panel"><h2>Wishlist</h2>@forelse($wishlist as $wish)<div class="summary-row"><span><a href="{{ route('product', $wish->series->slug) }}">{{ $wish->series->name }}</a><br><small>{{ $wish->series->category?->name ?? 'Koleksi Asfara' }}</small></span><form method="post" action="{{ route('wishlist.toggle', $wish->series) }}">@csrf<button class="btn btn-link btn-sm">Hapus</button></form></div>@empty<p>Wishlist masih kosong.</p>@endforelse</div></div>
+    <div class="row g-4 mt-1"><div class="col-lg-6"><div class="panel account-panel" id="wishlist"><span class="eyebrow">KOLEKSI TERSIMPAN</span><h2>Wishlist</h2>@forelse($wishlist as $wish)<div class="summary-row"><span><a href="{{ route('product', $wish->series->slug) }}">{{ $wish->series->name }}</a><br><small>{{ $wish->series->category?->name ?? 'Koleksi Asfara' }}</small></span><form method="post" action="{{ route('wishlist.toggle', $wish->series) }}">@csrf<button class="btn btn-link btn-sm">Hapus</button></form></div>@empty<p>Wishlist masih kosong.</p>@endforelse</div></div>
     <div class="col-lg-6"><div class="panel"><h2>Ulasan pembelian</h2>@forelse($reviewableItems as $item)<details class="mb-3"><summary>{{ $item->name }} · {{ $item->sku }}</summary><form method="post" enctype="multipart/form-data" action="{{ route('review.store',$item) }}" class="mt-3">@csrf<label>Rating</label><select name="rating" class="form-select mb-2" required>@foreach(range(5,1) as $rating)<option value="{{ $rating }}">{{ $rating }} bintang</option>@endforeach</select><label>Ulasan</label><textarea name="body" class="form-control mb-2" minlength="10" maxlength="3000" required></textarea><label>Foto (maks. 3)</label><input type="file" name="photos[]" class="form-control mb-2" accept="image/png,image/jpeg,image/webp" multiple><button class="btn btn-dark btn-sm">Kirim ulasan</button></form></details>@empty<p>Tidak ada item yang menunggu ulasan.</p>@endforelse @foreach($myReviews as $review)<p class="small border-top pt-2">{{ $review->variant->series->name }} · {{ $review->rating }}/5 · {{ strtoupper($review->status) }}</p>@endforeach</div></div></div>
     <div class="panel mt-4">
         <span class="eyebrow">PROGRAM MITRA ASFARA</span>

@@ -4,3 +4,4 @@ Disallow: /akun
 Disallow: /checkout
 Disallow: /keranjang
 Disallow: /pesanan
+Sitemap: https://asfara.co.id/sitemap.xml

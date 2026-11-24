@@ -157,7 +157,12 @@ class CommerceTest extends TestCase
         $first = $this->post(route('checkout.place'), ['checkout_key' => $key]);
         $order = Order::sole();
         $first->assertRedirect($order->customerUrl());
+        $this->assertStringStartsWith('ASF-', $order->number);
         $this->assertSame('081234567890', $order->phone);
+
+        $legacyNumber = 'D3-'.substr($order->number, 4);
+        $this->post(route('track.find'), ['number' => $legacyNumber, 'phone' => $order->phone])
+            ->assertRedirect($order->customerUrl());
 
         $this->post(route('checkout.place'), ['checkout_key' => $key])
             ->assertRedirect($order->customerUrl());

@@ -1,13 +1,32 @@
 @php($themeFonts=['poppins'=>["'Poppins',Arial,sans-serif","'Poppins',Arial,sans-serif"],'classic'=>['Arial,Helvetica,sans-serif',"Georgia,'Times New Roman',serif"],'modern'=>['Helvetica,Arial,sans-serif','Helvetica,Arial,sans-serif'],'system'=>['system-ui,-apple-system,sans-serif','system-ui,-apple-system,sans-serif']])
 @php($themeFont=$themeFonts[$shop['theme_font'] ?? 'poppins'] ?? $themeFonts['poppins'])
+@php($seoTitle=trim($__env->yieldContent('title',$shop['default_seo_title'] ?? 'Asfara — Dalam setiap cerita')))
+@php($seoDescription=trim($__env->yieldContent('description',$shop['default_seo_description'] ?? 'Asfara — koleksi busana muslim dan muslimah.')))
+@php($seoCanonical=trim($__env->yieldContent('canonical',url()->current())))
+@php($seoImage=trim($__env->yieldContent('image',!empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg'))))
+@php($seoRobots=request()->routeIs('cart','checkout','login','register','password.*','account','orders.*','track','two-factor.*')?'noindex,nofollow':'index,follow')
+@php($websiteSchema=['@context'=>'https://schema.org','@graph'=>[['@type'=>'Organization','@id'=>url('/').'#organization','name'=>$shop['brand_name'] ?? 'Asfara','url'=>url('/'),'logo'=>!empty($shop['logo'])?asset('storage/'.$shop['logo']):null,'email'=>$shop['contact_email'] ?? null,'sameAs'=>collect([$shop['instagram_url'] ?? null,$shop['tiktok_url'] ?? null,$shop['facebook_url'] ?? null])->filter()->values()->all()],['@type'=>'WebSite','@id'=>url('/').'#website','url'=>url('/'),'name'=>$shop['brand_name'] ?? 'Asfara','publisher'=>['@id'=>url('/').'#organization'],'inLanguage'=>app()->getLocale(),'potentialAction'=>['@type'=>'SearchAction','target'=>route('catalog').'?q={search_term_string}','query-input'=>'required name=search_term_string']]]])
 <!doctype html>
 <html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="description" content="@yield('description',$shop['default_seo_description'] ?? 'Asfara — koleksi busana muslim dan muslimah.')">
-    <title>@yield('title',$shop['default_seo_title'] ?? 'Asfara — Dalam setiap cerita')</title>
-    <link rel="canonical" href="@yield('canonical',url()->current())">
+    <meta name="description" content="{{ $seoDescription }}">
+    <meta name="robots" content="{{ $seoRobots }}">
+    <meta name="theme-color" content="{{ $shop['theme_palette_surface'] ?? '#ffffff' }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ $shop['brand_name'] ?? 'Asfara' }}">
+    <meta property="og:locale" content="{{ app()->getLocale()==='id'?'id_ID':'en_US' }}">
+    <meta property="og:title" content="{{ $seoTitle }}">
+    <meta property="og:description" content="{{ $seoDescription }}">
+    <meta property="og:url" content="{{ $seoCanonical }}">
+    <meta property="og:image" content="{{ $seoImage }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $seoTitle }}">
+    <meta name="twitter:description" content="{{ $seoDescription }}">
+    <meta name="twitter:image" content="{{ $seoImage }}">
+    <title>{{ $seoTitle }}</title>
+    <link rel="canonical" href="{{ $seoCanonical }}">
     @if(!empty($shop['favicon']))<link rel="icon" href="{{ asset('storage/'.$shop['favicon']) }}">@endif
     @if(($shop['theme_font'] ?? 'poppins') === 'poppins')
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,6 +38,7 @@
     <link rel="stylesheet" href="{{ asset('css/storefront.css') }}?v={{ filemtime(public_path('css/storefront.css')) }}">
     <style>:root{--palette-sage:{{ $shop['theme_palette_base'] ?? config('theme.palette.theme_palette_base.color') }};--palette-sand:{{ $shop['theme_palette_surface'] ?? config('theme.palette.theme_palette_surface.color') }};--palette-taupe:{{ $shop['theme_palette_structure'] ?? config('theme.palette.theme_palette_structure.color') }};--palette-gold:{{ $shop['theme_palette_accent'] ?? config('theme.palette.theme_palette_accent.color') }};--palette-cream:{{ $shop['theme_palette_base'] ?? config('theme.palette.theme_palette_base.color') }};--ink:{{ $shop['theme_text_color'] ?? config('theme.text_color') }};--gold:var(--palette-gold);--cream:var(--palette-cream);--paper:var(--palette-sage);--surface:var(--palette-sand);--text:{{ $shop['theme_text_color'] ?? config('theme.text_color') }};--line:var(--palette-taupe);--theme-radius:{{ (int)($shop['theme_radius'] ?? 8) }}px;--theme-container:{{ (int)($shop['theme_container_width'] ?? 1440) }}px;--hero-height:{{ (int)($shop['hero_height_desktop'] ?? 633) }}px;--store-motion:{{ (int)($shop['storefront_animation_speed'] ?? 550) }}ms;--store-grid-columns:{{ (int)($shop['product_grid_columns'] ?? 4) }};--body-font:{!! $themeFont[0] !!};--heading-font:{!! $themeFont[1] !!}}body{color:var(--text);font-family:var(--body-font)}h1,h2,h3,.wordmark{font-family:var(--heading-font)}.container-xxl{max-width:var(--theme-container)}.panel,.btn,.form-control,.form-select,.alert,.product-image{border-radius:var(--theme-radius)}.panel,.form-control,.form-select{background-color:var(--surface)}.wordmark img{display:block;max-width:160px;max-height:58px;object-fit:contain}</style>
     @stack('head')
+    <script type="application/ld+json">{!! json_encode($websiteSchema, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
 </head>
 <body class="store-body theme-header-{{ $shop['theme_header_style'] ?? 'standard' }} @yield('body_class')">
 <a href="#main" class="visually-hidden-focusable skip-link">Langsung ke konten</a>

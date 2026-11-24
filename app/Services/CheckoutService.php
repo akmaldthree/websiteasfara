@@ -246,7 +246,7 @@ class CheckoutService
             $q = $this->quote($cart, $input, true, $customer, $customizations);
             $this->check($expectedQuote === null || hash_equals($expectedQuote, $this->fingerprint($q)), 'Harga atau pengiriman berubah. Kembali ke checkout untuk meninjau total terbaru sebelum memesan.');
             $order = Order::create([
-                'number' => 'D3-'.now()->format('ymd').'-'.strtoupper(Str::random(8)), 'checkout_key' => $key, 'user_id' => $userId,
+                'number' => 'ASF-'.now()->format('ymd').'-'.strtoupper(Str::random(8)), 'checkout_key' => $key, 'user_id' => $userId,
                 'price_group_id' => $q['price_group']?->id,
                 'business_snapshot' => $q['price_group'] ? ['name' => $q['price_group']->name, 'slug' => $q['price_group']->slug, 'business_type' => $q['price_group']->business_type, 'minimum_order_quantity' => $q['price_group']->minimum_order_quantity, 'minimum_order_amount' => $q['price_group']->minimum_order_amount, 'discount_percent' => $q['price_group']->discount_percent, 'business_account_id' => $q['business_account']->id, 'credit_terms_days' => $q['business_account']->credit_terms_days, 'credit_limit' => $q['business_account']->credit_limit, 'sales_user_id' => $q['business_account']->sales_user_id, 'sales_user_name' => $q['business_account']->salesUser?->name, 'commission_percent' => $q['business_account']->commission_percent] : null,
                 'dropship_snapshot' => $q['price_group']?->business_type === 'dropshipper' && ! empty($input['sender_name']) ? ['name' => $input['sender_name'], 'phone' => $input['sender_phone'] ?? null] : null,

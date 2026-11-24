@@ -187,7 +187,7 @@ class DemoSeeder extends Seeder
             'submitted_at' => now()->subMonths(2), 'reviewed_at' => now()->subMonths(2)->addDay(), 'expires_at' => now()->addYear(),
         ]);
         CustomQuote::updateOrCreate(['request_key' => '00000000-0000-4000-8000-000000000001'], [
-            'number' => 'DTH-CUSTOM-DEMO-001', 'user_id' => $businessUser->id, 'variant_id' => $customVariant->id,
+            'number' => 'ASF-CUSTOM-DEMO-001', 'user_id' => $businessUser->id, 'variant_id' => $customVariant->id,
             'measurement_template_id' => $gamisTemplate->id, 'template_snapshot' => $gamisTemplate->toArray(),
             'measurements' => ['chest' => 104, 'waist' => 96, 'length' => 143, 'sleeve' => 59], 'status' => 'quoted',
             'surcharge' => 75000, 'lead_time' => '10–14 hari kerja', 'admin_notes' => 'Contoh penawaran ukuran custom yang siap ditinjau.',
@@ -237,7 +237,7 @@ class DemoSeeder extends Seeder
             $subtotal = $variant->price * $quantity;
             $shippingCost = $status === 'cancelled' ? 0 : 18000;
             $discount = $index === 4 ? 50000 : 0;
-            $order = Order::updateOrCreate(['number' => 'DTH-DEMO-'.str_pad((string) ($index + 1), 4, '0', STR_PAD_LEFT)], [
+            $order = Order::updateOrCreate(['number' => 'ASF-DEMO-'.str_pad((string) ($index + 1), 4, '0', STR_PAD_LEFT)], [
                 'checkout_key' => hash('sha256', 'asfara-demo-order-'.($index + 1)), 'user_id' => $customer->id,
                 'name' => $customer->name, 'phone' => $customer->phone, 'email' => $customer->email,
                 'address' => ['address' => 'Jl. Contoh No. '.($index + 10), 'district' => 'Kecamatan Demo', 'city' => ['Bandung', 'Jakarta Selatan', 'Tasikmalaya', 'Semarang', 'Surabaya', 'Yogyakarta', 'Medan', 'Makassar', 'Denpasar', 'Palembang', 'Balikpapan', 'Pekanbaru'][$index], 'province' => ['Jawa Barat', 'DKI Jakarta', 'Jawa Barat', 'Jawa Tengah', 'Jawa Timur', 'DI Yogyakarta', 'Sumatera Utara', 'Sulawesi Selatan', 'Bali', 'Sumatera Selatan', 'Kalimantan Timur', 'Riau'][$index], 'postal_code' => '401'.str_pad((string) $index, 2, '0', STR_PAD_LEFT)],

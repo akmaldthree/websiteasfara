@@ -49,7 +49,7 @@ class CustomerAccountContinuityTest extends TestCase
     {
         $user = User::factory()->create(['phone' => '081234567892']);
         $order = Order::create([
-            'number' => 'D3-GUEST-1', 'checkout_key' => hash('sha256', 'guest-order'), 'name' => 'Guest', 'phone' => $user->phone, 'email' => 'guest@example.com',
+            'number' => 'ASF-GUEST-1', 'checkout_key' => hash('sha256', 'guest-order'), 'name' => 'Guest', 'phone' => $user->phone, 'email' => 'guest@example.com',
             'address' => ['province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'district' => 'Cihideung', 'postal_code' => '46111', 'detail' => 'Alamat'],
             'payment_method' => 'transfer', 'subtotal' => 100000, 'shipping_cost' => 15000, 'total' => 115000,
             'shipping' => ['courier' => 'JNE', 'service' => 'REG', 'estimate' => '2 hari'], 'expires_at' => now()->addDay(),

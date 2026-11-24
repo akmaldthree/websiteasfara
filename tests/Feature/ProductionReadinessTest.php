@@ -66,4 +66,48 @@ class ProductionReadinessTest extends TestCase
             ->assertSee('href="#main-content"', false)
             ->assertSee('aria-current="page"', false);
     }
+
+    public function test_storefront_exposes_complete_seo_discovery_metadata(): void
+    {
+        $this->seed();
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('property="og:title"', false)
+            ->assertSee('name="twitter:card" content="summary_large_image"', false)
+            ->assertSee('application/ld+json', false)
+            ->assertSee('SearchAction')
+            ->assertSee('name="robots" content="index,follow"', false);
+
+        $this->get(route('cart'))
+            ->assertOk()
+            ->assertSee('name="robots" content="noindex,nofollow"', false);
+
+        $this->get(route('sitemap'))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/xml; charset=UTF-8')
+            ->assertSee(route('home'))
+            ->assertSee(route('catalog'));
+    }
+
+    public function test_support_and_empty_search_surfaces_use_asfara_identity(): void
+    {
+        $this->seed();
+
+        $this->get(route('track'))
+            ->assertOk()
+            ->assertSee('support-page-grid', false)
+            ->assertSee('ASF-261124-XXXXXXXX')
+            ->assertDontSee('D3-');
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('auth-shell', false)
+            ->assertSee('ASFARA MEMBERSHIP');
+
+        $this->get(route('catalog', ['q' => 'produk-yang-tidak-ada']))
+            ->assertOk()
+            ->assertSee('catalog-empty-state', false)
+            ->assertSee('Lihat produk terlaris');
+    }
 }

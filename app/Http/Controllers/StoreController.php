@@ -31,6 +31,27 @@ use Illuminate\Validation\ValidationException;
 
 class StoreController extends Controller
 {
+    public function sitemap()
+    {
+        $urls = collect([
+            ['url' => route('home'), 'lastmod' => null, 'priority' => '1.0'],
+            ['url' => route('catalog'), 'lastmod' => null, 'priority' => '0.9'],
+            ['url' => route('content.index', 'journal'), 'lastmod' => null, 'priority' => '0.5'],
+            ['url' => route('content.index', 'lookbook'), 'lastmod' => null, 'priority' => '0.5'],
+            ['url' => route('content.index', 'campaign'), 'lastmod' => null, 'priority' => '0.5'],
+        ])->concat(Category::where('active', true)->get()->map(fn (Category $category) => [
+            'url' => route('catalog', ['category' => $category->slug]), 'lastmod' => $category->updated_at, 'priority' => '0.8',
+        ]))->concat(Series::published()->get()->map(fn (Series $series) => [
+            'url' => route('product', $series->slug), 'lastmod' => $series->updated_at, 'priority' => '0.8',
+        ]))->concat(Page::published()->get()->map(fn (Page $page) => [
+            'url' => route('page', $page->slug), 'lastmod' => $page->updated_at, 'priority' => '0.6',
+        ]))->concat(ContentEntry::published()->whereIn('type', ['journal', 'lookbook', 'campaign'])->get()->map(fn (ContentEntry $entry) => [
+            'url' => route('content.show', [$entry->type, $entry->slug]), 'lastmod' => $entry->updated_at, 'priority' => '0.6',
+        ]));
+
+        return response()->view('sitemap', compact('urls'))->header('Content-Type', 'application/xml; charset=UTF-8');
+    }
+
     public function home(Request $request, Analytics $analytics)
     {
         $analytics->record($request, 'view_home');
@@ -501,7 +522,15 @@ class StoreController extends Controller
     public function track(Request $r)
     {
         $d = $r->validate(['number' => 'required|string|max:50', 'phone' => 'required|string|max:30']);
-        $o = Order::where('number', strtoupper(trim($d['number'])))->where('phone', trim($d['phone']))->first();
+        $number = strtoupper(trim($d['number']));
+        $aliases = collect([$number]);
+        if (str_starts_with($number, 'D3-')) {
+            $aliases->push('ASF-'.substr($number, 3));
+        }
+        if (str_starts_with($number, 'DTH-')) {
+            $aliases->push('ASF-'.substr($number, 4));
+        }
+        $o = Order::whereIn('number', $aliases->unique())->where('phone', trim($d['phone']))->first();
         if (! $o) {
             throw ValidationException::withMessages(['number' => 'Nomor pesanan atau nomor telepon tidak cocok.']);
         }

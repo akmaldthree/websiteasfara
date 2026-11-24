@@ -9,6 +9,7 @@ use App\Http\Controllers\StoreController as Store;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [Store::class, 'home'])->name('home');
+Route::get('/sitemap.xml', [Store::class, 'sitemap'])->name('sitemap');
 Route::get('/bahasa/{locale}', function (string $locale) {
     abort_unless(in_array($locale, ['id', 'en'], true), 404);
     session(['locale' => $locale]);

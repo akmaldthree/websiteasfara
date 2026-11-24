@@ -5,6 +5,7 @@
 @php($gallery=$series->media->sortByDesc(fn($media)=>$series->image===$media->image)->values())
 @php($mainMedia=$gallery->first())
 @php($mainImage=$mainMedia?->image_url ?? $series->image_url)
+@section('image',$mainImage)
 @php($minimumPrice=(int)$series->variants->min('price'))
 @php($saving=max(0,(int)$series->compare_at_price-$minimumPrice))
 @php($savingPercent=$saving>0 && $series->compare_at_price>0 ? (int)round($saving/$series->compare_at_price*100) : 0)
