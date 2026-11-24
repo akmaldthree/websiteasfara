@@ -10,6 +10,22 @@
     $newCollections = $curated('home_new_slugs', $collections);
     $bestCollections = $curated('home_best_slugs', $collections->sortByDesc(fn($item)=>(int)$item->sold_quantity));
     $saleCollections = $curated('home_sale_slugs', $collections->filter(fn($item)=>(int)$item->compare_at_price>(int)$item->variants->min('price')));
+    $merchandiseGroups = $collections
+        ->groupBy('category_id')
+        ->map(fn ($items) => [
+            'category' => $items->first()->category,
+            'items' => $items->values(),
+            'image' => $items->first()->image_url,
+        ])
+        ->filter(fn ($group) => $group['category'] && $group['items']->count() >= 2)
+        ->values();
+    $signatureCollections = $collections
+        ->filter(fn ($item) => str_contains(mb_strtolower($item->name), 'signature'))
+        ->concat($collections->where('featured', true))
+        ->concat($collections->sortByDesc(fn ($item) => (int) $item->variants->min('price')))
+        ->unique('id')
+        ->take(8)
+        ->values();
     $featuredCollection = $collections->firstWhere('slug', $shop['home_featured_slug'] ?? '') ?: $collections->first();
     $categorySlugs = collect(preg_split('/[,\r\n]+/', $shop['home_category_slugs'] ?? ''))->map(fn($slug)=>trim($slug))->filter();
     $categoryCollections = $categorySlugs->isEmpty() ? $collections->unique('category_id')->take(3) : $categorySlugs->map(fn($slug)=>$collections->firstWhere('slug',$slug))->filter()->unique('category_id')->take(3);
@@ -73,12 +89,41 @@
     @foreach($categoryCollections as $categoryProduct)<a href="{{ route('catalog',['category'=>$categoryProduct->category->slug]) }}"><img src="{{ $categoryProduct->image_url }}" alt="{{ $categoryProduct->category->name }}" width="800" height="1000" loading="lazy" decoding="async"><span>{{ strtoupper($categoryProduct->category->name) }}</span></a>@endforeach
 </section>@endif
 
-@if($shop['home_collections_enabled'] ?? true)<section class="commerce-section container-xxl reveal" style="order:{{ $homePosition('collections') }}">
-    <div class="commerce-heading"><h2>{{ $storeCopy['featured_collection'] }}</h2><a href="{{ route('catalog') }}">{{ $storeCopy['view_all'] }}</a></div>
-    <div class="collection-tabs" role="tablist"><button class="is-active" type="button" data-collection-tab="new">{{ $storeCopy['new_arrival'] }}</button><button type="button" data-collection-tab="best">{{ $storeCopy['best_seller'] }}</button></div>
-    <div class="collection-pane is-active" data-collection-pane="new"><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@forelse($newCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@empty<div class="empty-state"><h3>Koleksi sedang disiapkan.</h3></div>@endforelse</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></div>
-    <div class="collection-pane" data-collection-pane="best"><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($bestCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></div>
-</section>@endif
+@if($shop['home_collections_enabled'] ?? true)
+<section class="commerce-section home-new-in container-xxl reveal" id="featured" style="order:{{ $homePosition('collections') }}">
+    <div class="commerce-heading"><h2>NEW IN</h2><a href="{{ route('catalog',['sort'=>'newest']) }}">{{ $storeCopy['view_all'] }}</a></div>
+    <div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@forelse($newCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@empty<div class="empty-state"><h3>Koleksi sedang disiapkan.</h3></div>@endforelse</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div>
+</section>
+
+@if($merchandiseGroups->isNotEmpty())
+<section class="commerce-section latest-collection container-xxl reveal" style="order:{{ $homePosition('collections') }}">
+    <div class="commerce-heading"><h2>LATEST COLLECTION</h2><a href="{{ route('catalog') }}">{{ $storeCopy['view_all'] }}</a></div>
+    <div class="collection-tabs" role="tablist" aria-label="Kategori koleksi terbaru">
+        @foreach($merchandiseGroups as $group)<button class="{{ $loop->first?'is-active':'' }}" type="button" data-collection-tab="category-{{ $group['category']->id }}">{{ strtoupper($group['category']->name) }}</button>@endforeach
+    </div>
+    @foreach($merchandiseGroups as $group)
+        <div class="collection-pane {{ $loop->first?'is-active':'' }}" data-collection-pane="category-{{ $group['category']->id }}"><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($group['items'] as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></div>
+    @endforeach
+</section>
+@endif
+
+@if($signatureCollections->isNotEmpty())
+<section class="home-signature-edit reveal" style="order:{{ $homePosition('collections') }}">
+    <a class="home-signature-banner" href="{{ route('product',$signatureCollections->first()->slug) }}">
+        <img src="{{ $signatureCollections->first()->image_url }}" alt="Asfara Signature Edit" width="1600" height="900" loading="lazy" decoding="async">
+        <span><small>ASFARA SIGNATURE</small><strong>THE SIGNATURE EDIT</strong><em>DISCOVER THE COLLECTION →</em></span>
+    </a>
+    <div class="commerce-section container-xxl"><div class="commerce-heading"><h2>ASFARA SIGNATURE</h2><a href="{{ route('catalog',['sort'=>'featured']) }}">{{ $storeCopy['view_all'] }}</a></div><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($signatureCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></div>
+</section>
+@endif
+
+@foreach($merchandiseGroups->take(3) as $group)
+<section class="commerce-section home-merchandise-group container-xxl reveal" style="order:{{ $homePosition('collections') }}">
+    <div class="home-merchandise-heading"><div><small>EXPLORE ASFARA</small><h2>{{ strtoupper($group['category']->name) }}</h2></div><a href="{{ route('catalog',['category'=>$group['category']->slug]) }}">{{ $storeCopy['view_all'] }} →</a></div>
+    <div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($group['items'] as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div>
+</section>
+@endforeach
+@endif
 
 @php($looks=$contentEntries->where('type','home_section')->filter(fn($entry)=>collect($entry->blocks)->contains('type','product_hotspot'))->values())
 @if(($shop['home_look_enabled'] ?? true) && $looks->isNotEmpty())
