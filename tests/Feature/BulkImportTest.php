@@ -44,7 +44,7 @@ class BulkImportTest extends TestCase
     public function test_category_import_supports_preview_create_and_upsert(): void
     {
         $columns = app(BulkImportService::class)->definitions()['categories']['columns'];
-        $create = implode(',', $columns)."\nAbaya,abaya,Koleksi abaya,Abaya Dthree,Koleksi abaya,1\n";
+        $create = implode(',', $columns)."\nAbaya,abaya,Koleksi abaya,Abaya Asfara,Koleksi abaya,1\n";
 
         $this->actingAs($this->admin)->post(route('admin.import.preview'), ['type' => 'categories', 'mode' => 'create', 'file' => UploadedFile::fake()->createWithContent('categories.csv', $create)])->assertOk()->assertSee('Valid');
         $this->post(route('admin.import.commit'))->assertRedirect();
@@ -80,24 +80,24 @@ class BulkImportTest extends TestCase
     public function test_store_locations_can_be_created_and_updated_from_excel_workflow(): void
     {
         $columns = app(BulkImportService::class)->definitions()['store-locations']['columns'];
-        $create = implode(',', $columns)."\nDthree Bandung,Jl. Asia Afrika 10,Bandung,https://maps.example.com,09.00-21.00,1,1\n";
+        $create = implode(',', $columns)."\nAsfara Bandung,Jl. Asia Afrika 10,Bandung,https://maps.example.com,09.00-21.00,1,1\n";
 
         $this->actingAs($this->admin)->post(route('admin.import.preview'), ['type' => 'store-locations', 'mode' => 'create', 'file' => UploadedFile::fake()->createWithContent('locations.csv', $create)])->assertOk();
         $this->post(route('admin.import.commit'))->assertRedirect();
-        $this->assertDatabaseHas('store_locations', ['name' => 'Dthree Bandung', 'city' => 'Bandung', 'active' => 1]);
+        $this->assertDatabaseHas('store_locations', ['name' => 'Asfara Bandung', 'city' => 'Bandung', 'active' => 1]);
 
-        $update = implode(',', $columns)."\nDthree Bandung,Jl. Asia Afrika 20,Bandung,https://maps.example.com,10.00-22.00,2,0\n";
+        $update = implode(',', $columns)."\nAsfara Bandung,Jl. Asia Afrika 20,Bandung,https://maps.example.com,10.00-22.00,2,0\n";
         $this->post(route('admin.import.preview'), ['type' => 'store-locations', 'mode' => 'upsert', 'file' => UploadedFile::fake()->createWithContent('locations.csv', $update)])->assertOk();
         $this->post(route('admin.import.commit'))->assertRedirect();
 
-        $location = StoreLocation::where('name', 'Dthree Bandung')->firstOrFail();
+        $location = StoreLocation::where('name', 'Asfara Bandung')->firstOrFail();
         $this->assertSame('Jl. Asia Afrika 20', $location->address);
         $this->assertFalse($location->active);
     }
 
     public function test_generated_xlsx_can_be_read_back_without_losing_values(): void
     {
-        $path = tempnam(sys_get_temp_dir(), 'dthree-xlsx-test-');
+        $path = tempnam(sys_get_temp_dir(), 'asfara-xlsx-test-');
         $columns = ['name', 'slug', 'active'];
         app(SimpleXlsx::class)->create($path, 'Kategori', $columns, [['Abaya', 'abaya', 1]]);
 

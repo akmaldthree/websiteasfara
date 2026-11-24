@@ -1,6 +1,6 @@
-# Panduan deploy Dthree ke `dthree.co.id`
+# Panduan deploy Asfara ke `asfara.co.id`
 
-Panduan ini digunakan untuk instalasi pertama dan pembaruan website dari `https://github.com/akmaldthree/websitedthree`. Target server: PHP 8.4+, Composer 2, MySQL 8/InnoDB, Git, HTTPS, terminal/SSH, dan cron. Jangan memakai database atau folder upload milik aplikasi lain.
+Panduan ini digunakan untuk instalasi pertama dan pembaruan website dari `https://github.com/akmaldthree/websiteasfara`. Target server: PHP 8.4+, Composer 2, MySQL 8/InnoDB, Git, HTTPS, terminal/SSH, dan cron. Jangan memakai database atau folder upload milik aplikasi lain.
 
 ## 1. Persyaratan hosting
 
@@ -24,25 +24,25 @@ Jika terminal memakai binary berbeda, ambil path PHP 8.4 dari panel hosting. Con
 
 ## 2. DNS, domain, dan SSL
 
-Di pengelola DNS `dthree.co.id`, gunakan nilai resmi dari penyedia hosting:
+Di pengelola DNS `asfara.co.id`, gunakan nilai resmi dari penyedia hosting:
 
 | Tipe | Nama | Nilai |
 | --- | --- | --- |
 | A | `@` | `<IP_HOSTING>` |
-| CNAME | `www` | `dthree.co.id` |
+| CNAME | `www` | `asfara.co.id` |
 
 Jangan mengisi `<IP_HOSTING>` secara literal. Jika hosting memberikan CNAME, ikuti instruksi hosting. Setelah DNS aktif:
 
-1. Pasang Let’s Encrypt/AutoSSL untuk `dthree.co.id` dan `www.dthree.co.id`.
-2. Gunakan `https://dthree.co.id` sebagai URL utama.
-3. Redirect permanen `www.dthree.co.id` ke `https://dthree.co.id` melalui panel/web server.
+1. Pasang Let’s Encrypt/AutoSSL untuk `asfara.co.id` dan `www.asfara.co.id`.
+2. Gunakan `https://asfara.co.id` sebagai URL utama.
+3. Redirect permanen `www.asfara.co.id` ke `https://asfara.co.id` melalui panel/web server.
 4. Jangan memaksa HTTPS sebelum sertifikat terbit.
 
 Verifikasi:
 
 ```bash
-curl -I https://dthree.co.id/up
-curl -I https://www.dthree.co.id/up
+curl -I https://asfara.co.id/up
+curl -I https://www.asfara.co.id/up
 ```
 
 `/up` harus sukses dan URL `www` harus mengarah ke domain utama.
@@ -52,14 +52,14 @@ curl -I https://www.dthree.co.id/up
 Simpan repository di luar web root umum:
 
 ```text
-/home/USERNAME/apps/websitedthree/       # repository Laravel
-/home/USERNAME/apps/websitedthree/public # document root dthree.co.id
+/home/USERNAME/apps/websiteasfara/       # repository Laravel
+/home/USERNAME/apps/websiteasfara/public # document root asfara.co.id
 ```
 
-Atur document root `dthree.co.id` ke:
+Atur document root `asfara.co.id` ke:
 
 ```text
-/home/USERNAME/apps/websitedthree/public
+/home/USERNAME/apps/websiteasfara/public
 ```
 
 Jangan arahkan domain ke root repository karena `.env`, source, dan file privat dapat terekspos. Jika shared hosting tidak mengizinkan document root tersebut, minta hosting mengubahnya atau gunakan addon domain dengan document root yang dapat dipilih. Jangan menyalin `.env` ke `public_html`.
@@ -68,7 +68,7 @@ Jangan arahkan domain ke root repository karena `.env`, source, dan file privat 
 
 Dari panel hosting:
 
-1. Buat database khusus, misalnya `USERNAME_dthree`.
+1. Buat database khusus, misalnya `USERNAME_asfara`.
 2. Buat user database dengan password acak yang kuat.
 3. Hubungkan user tersebut ke database.
 4. Catat host database resmi; sering berupa `localhost`, tetapi tidak selalu.
@@ -80,17 +80,17 @@ Gunakan database kosong saat instalasi pertama. Jangan pernah menjalankan `migra
 Untuk repository privat, buat SSH deploy key read-only:
 
 ```bash
-ssh-keygen -t ed25519 -C "deploy-dthree.co.id" -f ~/.ssh/dthree_deploy
-cat ~/.ssh/dthree_deploy.pub
+ssh-keygen -t ed25519 -C "deploy-asfara.co.id" -f ~/.ssh/asfara_deploy
+cat ~/.ssh/asfara_deploy.pub
 ```
 
 Tambahkan public key di GitHub repository **Settings → Deploy keys** tanpa write access. Tambahkan konfigurasi `~/.ssh/config`:
 
 ```sshconfig
-Host github-dthree
+Host github-asfara
     HostName github.com
     User git
-    IdentityFile ~/.ssh/dthree_deploy
+    IdentityFile ~/.ssh/asfara_deploy
     IdentitiesOnly yes
 ```
 
@@ -98,18 +98,18 @@ Batasi permission file SSH:
 
 ```bash
 chmod 700 ~/.ssh
-chmod 600 ~/.ssh/config ~/.ssh/dthree_deploy
-chmod 644 ~/.ssh/dthree_deploy.pub
+chmod 600 ~/.ssh/config ~/.ssh/asfara_deploy
+chmod 644 ~/.ssh/asfara_deploy.pub
 ```
 
 Clone aplikasi:
 
 ```bash
-ssh -T git@github-dthree
+ssh -T git@github-asfara
 mkdir -p ~/apps
 cd ~/apps
-git clone git@github-dthree:akmaldthree/websitedthree.git
-cd websitedthree
+git clone git@github-asfara:akmaldthree/websiteasfara.git
+cd websiteasfara
 git branch --show-current
 ```
 
@@ -125,11 +125,11 @@ cp .env.example .env
 Isi `.env` berikut dan ganti seluruh placeholder:
 
 ```dotenv
-APP_NAME=Dthree
+APP_NAME=Asfara
 APP_ENV=production
 APP_KEY=
 APP_DEBUG=false
-APP_URL=https://dthree.co.id
+APP_URL=https://asfara.co.id
 APP_LOCALE=id
 
 LOG_CHANNEL=stack
@@ -146,8 +146,8 @@ SESSION_DRIVER=database
 SESSION_LIFETIME=120
 SESSION_ENCRYPT=true
 SESSION_SECURE_COOKIE=true
-SESSION_COOKIE=dthree_session
-SESSION_DOMAIN=.dthree.co.id
+SESSION_COOKIE=asfara_session
+SESSION_DOMAIN=.asfara.co.id
 
 CACHE_STORE=database
 QUEUE_CONNECTION=database
@@ -159,8 +159,8 @@ MAIL_HOST=<HOST_SMTP>
 MAIL_PORT=587
 MAIL_USERNAME=<USER_SMTP>
 MAIL_PASSWORD="<PASSWORD_SMTP>"
-MAIL_FROM_ADDRESS=noreply@dthree.co.id
-MAIL_FROM_NAME=Dthree
+MAIL_FROM_ADDRESS=noreply@asfara.co.id
+MAIL_FROM_NAME=Asfara
 
 TRANSACTION_EMAIL_ENABLED=false
 ```
@@ -179,7 +179,7 @@ php artisan key:generate
 php artisan migrate --force
 php artisan db:seed --force
 php artisan storage:link
-php artisan dthree:admin admin@dthree.co.id --name="Administrator Dthree"
+php artisan asfara:admin admin@asfara.co.id --name="Administrator Asfara"
 php artisan optimize
 ```
 
@@ -198,7 +198,7 @@ Gunakan ownership user hosting yang benar. Jangan gunakan permission `777`.
 Tambahkan cron setiap menit. Ganti path sesuai server:
 
 ```cron
-* * * * * cd /home/USERNAME/apps/websitedthree && /usr/bin/php artisan schedule:run >> /home/USERNAME/apps/websitedthree/storage/logs/scheduler.log 2>&1
+* * * * * cd /home/USERNAME/apps/websiteasfara && /usr/bin/php artisan schedule:run >> /home/USERNAME/apps/websiteasfara/storage/logs/scheduler.log 2>&1
 ```
 
 Scheduler melepaskan reservasi kedaluwarsa dan mengirim outbox email dengan retry terbatas. Uji:
@@ -232,10 +232,10 @@ php artisan migrate:status
 php artisan route:list
 php artisan schedule:list
 php artisan system:production-check
-curl -I https://dthree.co.id/up
+curl -I https://asfara.co.id/up
 ```
 
-Masuk di `https://dthree.co.id/masuk`, kemudian lengkapi:
+Masuk di `https://asfara.co.id/masuk`, kemudian lengkapi:
 
 - Logo, favicon, hero, kontak, dan sosial.
 - Kategori, series, SKU, foto, harga, berat, stok/kuota.
@@ -303,9 +303,9 @@ Status dan usia backup terakhir tampil pada **CMS → Monitoring sistem**. Salin
 
 Jadwalkan backup harian dan uji restore di staging. Untuk rollback kode, gunakan commit baik yang diketahui dan rencana migration yang ditinjau. Jangan menjalankan `migrate:rollback`, `reset --hard`, `migrate:fresh`, atau mengganti `APP_KEY` tanpa backup dan analisis data.
 
-## 12. Checklist penerimaan `dthree.co.id`
+## 12. Checklist penerimaan `asfara.co.id`
 
-- [ ] `https://dthree.co.id/up` sukses dan `www` redirect ke domain utama.
+- [ ] `https://asfara.co.id/up` sukses dan `www` redirect ke domain utama.
 - [ ] `.env`, `.git`, source, dan `storage/app` tidak dapat diakses melalui web.
 - [ ] PHP web, terminal, dan cron memakai PHP 8.4+.
 - [ ] Migration/seeder berhasil dan admin dapat login.

@@ -1,5 +1,5 @@
 @extends('layouts.store')
-@section('title','Tinjau pesanan — Dthree')
+@section('title','Tinjau pesanan — Asfara')
 @section('content')
 <section class="container-xxl section page-narrow checkout-review-page">
     <span class="eyebrow">02 TINJAU PESANAN</span><h1 class="my-4">Satu langkah lagi.</h1>

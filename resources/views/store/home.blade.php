@@ -25,7 +25,7 @@
         'align' => 'left', 'tone' => 'light', 'duration' => 6500, 'mobile_image' => null,
     ]])->concat($contentEntries->where('type', 'banner')->map(fn ($entry) => [
         'image' => $entry->image_url ?: (!empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg')),
-        'eyebrow' => 'DTHREE EDIT',
+        'eyebrow' => 'ASFARA EDIT',
         'title' => $entry->title,
         'text' => $entry->summary ?: $entry->body,
         'url' => $entry->link_url ?: route('catalog'),
@@ -104,7 +104,7 @@
 @endif
 
 @if(($shop['home_story_enabled'] ?? false) && (!empty($shop['story_title']) || !empty($shop['story_text'])))
-<section class="commerce-story" style="order:{{ $homePosition('story') }}"><div><span>{{ $shop['story_eyebrow'] ?? 'DTHREE' }}</span><h2>{{ $shop['story_title'] ?? '' }}</h2><p>{{ $shop['story_text'] ?? '' }}</p><a href="{{ route('catalog') }}">{{ $storeCopy['story_cta'] }}</a></div></section>
+<section class="commerce-story" style="order:{{ $homePosition('story') }}"><div><span>{{ $shop['story_eyebrow'] ?? 'ASFARA' }}</span><h2>{{ $shop['story_title'] ?? '' }}</h2><p>{{ $shop['story_text'] ?? '' }}</p><a href="{{ route('catalog') }}">{{ $storeCopy['story_cta'] }}</a></div></section>
 @endif
 <script>
 document.addEventListener('DOMContentLoaded',()=>{const look=document.querySelector('[data-look-carousel]');if(!look)return;let startX=0,timer;const restart=()=>{clearInterval(timer);if(!matchMedia('(prefers-reduced-motion: reduce)').matches)timer=setInterval(()=>document.querySelector('[data-look-next]')?.click(),7000)};look.addEventListener('pointerdown',event=>startX=event.clientX);look.addEventListener('pointerup',event=>{const delta=event.clientX-startX;if(Math.abs(delta)>55)document.querySelector(delta<0?'[data-look-next]':'[data-look-prev]')?.click();restart()});look.addEventListener('mouseenter',()=>clearInterval(timer));look.addEventListener('mouseleave',restart);restart()});

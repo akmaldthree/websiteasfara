@@ -38,7 +38,7 @@ class CustomProductTest extends TestCase
         $this->variant = Variant::create(['series_id' => $series->id, 'measurement_template_id' => $this->template->id, 'sku' => 'CUSTOM-DRESS', 'color' => 'Black', 'size' => 'Custom', 'price' => 300000, 'stock' => 5, 'weight' => 600, 'fulfillment' => 'custom_made']);
         $this->variant->refresh();
         $rate = ShippingRate::create(['courier' => 'JNE', 'service' => 'REG', 'province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'first_kg' => 15000, 'extra_kg' => 10000, 'estimate' => '2–3 hari']);
-        Setting::put('bank_accounts', [['bank' => 'Bank Uji', 'number' => '000', 'owner' => 'Dthree']]);
+        Setting::put('bank_accounts', [['bank' => 'Bank Uji', 'number' => '000', 'owner' => 'Asfara']]);
         Setting::put('checkout_enabled', true);
         $this->checkout = ['name' => 'Pelanggan', 'phone' => '081234567890', 'email' => 'test@example.com', 'province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'district' => 'Cihideung', 'postal_code' => '46111', 'detail' => 'Alamat uji', 'payment_method' => 'transfer', 'shipping_rate_id' => $rate->id, 'terms' => '1'];
     }

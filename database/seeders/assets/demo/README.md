@@ -1,4 +1,4 @@
-# Aset demonstrasi Dthree
+# Aset demonstrasi Asfara
 
 Aset ini hanya untuk pratinjau dan harus diganti dengan foto resmi sebelum toko menerima transaksi nyata.
 

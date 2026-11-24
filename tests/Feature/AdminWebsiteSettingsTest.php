@@ -58,18 +58,18 @@ class AdminWebsiteSettingsTest extends TestCase
             'footer_social_enabled' => '1',
             'floating_whatsapp_enabled' => '1',
             'social_proof_enabled' => '1',
-            'footer_copyright' => 'Hak cipta Dthree.',
+            'footer_copyright' => 'Hak cipta Asfara.',
             'home_featured_slug' => '',
             'home_category_slugs' => '',
             'home_section_order' => 'hero,collections,featured,categories,look,sale,editorial,story',
             'storefront_copy_id' => ['featured_collection' => 'KOLEKSI PILIHAN CMS', 'catalog_title' => 'BUSANA'],
             'storefront_copy_en' => ['featured_collection' => 'CMS CURATED COLLECTION', 'catalog_title' => 'APPAREL'],
         ];
-        $payload['brand_name'] = 'Dthree Baru';
+        $payload['brand_name'] = 'Asfara Baru';
         $payload['hero_title'] = 'Judul dari dashboard';
 
         $this->actingAs($admin)->post(route('admin.settings.save'), $payload)->assertRedirect()->assertSessionHasNoErrors();
-        $this->assertSame('Dthree Baru', Setting::get('brand_name'));
+        $this->assertSame('Asfara Baru', Setting::get('brand_name'));
         $this->assertSame(['08123456'], Setting::get('cod_blocked_phones'));
         $this->assertSame(['ABC-1'], Setting::get('cod_excluded_skus'));
         $this->assertSame(['abaya'], Setting::get('cod_excluded_categories'));
@@ -85,7 +85,7 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertSame(['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Nilai poin lebih tinggi', 'value_bonus_percent' => 5], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));
-        $this->get('/')->assertOk()->assertSee('Dthree Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('data-duration="5500"', false)->assertSee('data-announcement-interval="3500"', false)->assertDontSee('data-notice-prev', false)->assertDontSee('data-notice-next', false)->assertSee('--palette-sage:#F9F8F6', false)->assertSee('--palette-gold:#C9B59C', false)->assertSee('--text:#202020', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
+        $this->get('/')->assertOk()->assertSee('Asfara Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('data-duration="5500"', false)->assertSee('data-announcement-interval="3500"', false)->assertDontSee('data-notice-prev', false)->assertDontSee('data-notice-next', false)->assertSee('--palette-sage:#F9F8F6', false)->assertSee('--palette-gold:#C9B59C', false)->assertSee('--text:#202020', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
         $this->get('/koleksi')->assertOk()->assertSee('BUSANA');
         $this->withSession(['locale' => 'en'])->get('/')->assertOk()->assertSee('CMS CURATED COLLECTION');
     }

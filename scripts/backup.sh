@@ -18,7 +18,7 @@ mkdir -p "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR"
 BACKUP_DIR_ABS="$(cd "$BACKUP_DIR" && pwd -P)"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-PREFIX="$BACKUP_DIR_ABS/dthree-$STAMP"
+PREFIX="$BACKUP_DIR_ABS/asfara-$STAMP"
 MYSQL_OPTIONS="$(mktemp)"
 DATABASE_NAME_FILE="$(mktemp)"
 cleanup(){ rm -f "$MYSQL_OPTIONS" "$DATABASE_NAME_FILE"; }
@@ -56,5 +56,5 @@ if command -v sha256sum >/dev/null; then
 fi
 
 "$PHP_BIN" artisan system:backup-record "$(basename "$PREFIX")" --no-interaction
-find "$BACKUP_DIR_ABS" -maxdepth 1 -type f -name 'dthree-*' -mtime "+$BACKUP_RETENTION_DAYS" -delete
+find "$BACKUP_DIR_ABS" -maxdepth 1 -type f -name 'asfara-*' -mtime "+$BACKUP_RETENTION_DAYS" -delete
 echo "Backup selesai: $PREFIX"

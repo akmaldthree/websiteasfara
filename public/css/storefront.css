@@ -129,7 +129,7 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
     .look-navigation{max-width:1120px;margin:25px auto 0}
 }
 
-/* Dthree palette — shared with CMS and editable from website settings. */
+/* Asfara palette — shared with CMS and editable from website settings. */
 .store-body{background:var(--palette-sage);color:var(--text)}
 .store-body .announcement,.store-benefits,.catalog-hero{background:var(--palette-taupe);color:var(--text)}
 .store-body .site-header,.home-transparent-header .site-header.is-scrolled,.mobile-nav,.search-drawer,.language-picker>div,.catalog-mega-menu{background:color-mix(in srgb,var(--palette-sand) 96%,transparent);color:var(--text)}

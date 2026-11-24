@@ -38,7 +38,7 @@ class LoyaltyProgramTest extends TestCase
         $series = Series::create(['category_id' => $category->id, 'name' => 'Loyalty Dress', 'slug' => 'loyalty-dress', 'active' => true]);
         $this->variant = Variant::create(['series_id' => $series->id, 'sku' => 'LOYALTY-DRESS', 'color' => 'Black', 'size' => 'L', 'price' => 300000, 'stock' => 10, 'weight' => 500]);
         $rate = ShippingRate::create(['courier' => 'JNE', 'service' => 'REG', 'province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'first_kg' => 15000, 'extra_kg' => 10000, 'estimate' => '2–3 hari']);
-        Setting::put('bank_accounts', [['bank' => 'Bank Uji', 'number' => '000', 'owner' => 'Dthree']]);
+        Setting::put('bank_accounts', [['bank' => 'Bank Uji', 'number' => '000', 'owner' => 'Asfara']]);
         Setting::put('checkout_enabled', true);
         $this->user = User::factory()->create();
         LoyaltyTransaction::create(['user_id' => $this->user->id, 'type' => 'earn', 'points' => 1000, 'reference' => 'opening', 'expires_at' => now()->addYear()]);

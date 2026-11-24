@@ -241,7 +241,7 @@ class CheckoutService
             if ($existing = Order::where('checkout_key', $key)->first()) {
                 return $existing;
             }
-            $this->check(Setting::get('checkout_enabled', false), 'Checkout belum dibuka. Silakan hubungi Dthree.');
+            $this->check(Setting::get('checkout_enabled', false), 'Checkout belum dibuka. Silakan hubungi Asfara.');
             $customer = $userId ? User::whereKey($userId)->lockForUpdate()->first() : null;
             $q = $this->quote($cart, $input, true, $customer, $customizations);
             $this->check($expectedQuote === null || hash_equals($expectedQuote, $this->fingerprint($q)), 'Harga atau pengiriman berubah. Kembali ke checkout untuk meninjau total terbaru sebelum memesan.');

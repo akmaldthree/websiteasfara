@@ -1,6 +1,6 @@
-# Panduan Deploy Dthree dari Terminal public html
+# Panduan Deploy Asfara dari Terminal public html
 
-Panduan ini ditujukan untuk terminal hosting dengan prompt seperti `[dthreeco@inspire public_html]$`. Aplikasi Laravel disimpan di `/home/dthreeco/apps/websitedthree`. Folder `public_html` hanya boleh memuat isi folder `public` Laravel atau diarahkan langsung ke folder tersebut. Struktur ini mencegah `.env`, source code, bukti pembayaran, dokumen B2B, dan file privat dapat diakses melalui web.
+Panduan ini ditujukan untuk terminal hosting dengan prompt seperti `[dthreeco@inspire public_html]$`. Aplikasi Laravel disimpan di `/home/dthreeco/apps/websiteasfara`. Folder `public_html` hanya boleh memuat isi folder `public` Laravel atau diarahkan langsung ke folder tersebut. Struktur ini mencegah `.env`, source code, bukti pembayaran, dokumen B2B, dan file privat dapat diakses melalui web.
 
 ## 1. Periksa server
 
@@ -24,9 +24,9 @@ PHP web, terminal, dan cron harus menggunakan PHP 8.4 atau lebih baru. Simpan ha
 
 Dari panel hosting:
 
-1. Buat database MySQL khusus Dthree.
+1. Buat database MySQL khusus Asfara.
 2. Buat pengguna database dengan password acak yang kuat.
-3. Berikan seluruh hak yang diperlukan pengguna tersebut pada database Dthree.
+3. Berikan seluruh hak yang diperlukan pengguna tersebut pada database Asfara.
 4. Catat nama database, username, password, host, dan port.
 
 Gunakan database kosong. Jangan menjalankan `migrate:fresh`, `db:wipe`, atau `migrate:rollback` pada produksi.
@@ -39,15 +39,15 @@ Jangan menjalankan `git clone` langsung di dalam `public_html`. Dari home akun h
 cd ~
 mkdir -p apps
 cd apps
-git clone https://github.com/akmaldthree/websitedthree.git
-cd websitedthree
+git clone https://github.com/akmaldthree/websiteasfara.git
+cd websiteasfara
 git branch --show-current
 ```
 
 Branch yang tampil harus `main`. Lokasi aplikasi selanjutnya adalah:
 
 ```text
-/home/dthreeco/apps/websitedthree
+/home/dthreeco/apps/websiteasfara
 ```
 
 Jika repository GitHub berubah menjadi privat, gunakan SSH deploy key read-only sebagaimana dijelaskan dalam `docs/HOSTING.md`.
@@ -57,7 +57,7 @@ Jika repository GitHub berubah menjadi privat, gunakan SSH deploy key read-only 
 Dari root aplikasi:
 
 ```bash
-cd ~/apps/websitedthree
+cd ~/apps/websiteasfara
 composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 cp .env.example .env
 nano .env
@@ -66,11 +66,11 @@ nano .env
 Isi nilai produksi berikut. Ganti setiap nilai dalam tanda `<...>` dengan data panel hosting:
 
 ```dotenv
-APP_NAME=Dthree
+APP_NAME=Asfara
 APP_ENV=production
 APP_KEY=
 APP_DEBUG=false
-APP_URL=https://dthree.co.id
+APP_URL=https://asfara.co.id
 APP_LOCALE=id
 
 LOG_CHANNEL=stack
@@ -87,8 +87,8 @@ SESSION_DRIVER=database
 SESSION_LIFETIME=120
 SESSION_ENCRYPT=true
 SESSION_SECURE_COOKIE=true
-SESSION_COOKIE=dthree_session
-SESSION_DOMAIN=.dthree.co.id
+SESSION_COOKIE=asfara_session
+SESSION_DOMAIN=.asfara.co.id
 
 CACHE_STORE=database
 QUEUE_CONNECTION=database
@@ -100,8 +100,8 @@ MAIL_HOST=<HOST_SMTP>
 MAIL_PORT=587
 MAIL_USERNAME=<USER_SMTP>
 MAIL_PASSWORD="<PASSWORD_SMTP>"
-MAIL_FROM_ADDRESS=noreply@dthree.co.id
-MAIL_FROM_NAME=Dthree
+MAIL_FROM_ADDRESS=noreply@asfara.co.id
+MAIL_FROM_NAME=Asfara
 
 TRANSACTION_EMAIL_ENABLED=false
 ```
@@ -110,7 +110,7 @@ Simpan dengan `Ctrl+O`, tekan Enter, lalu keluar dengan `Ctrl+X`. Jangan mengiri
 
 ## 5. Inisialisasi Laravel
 
-Masih dari `~/apps/websitedthree`:
+Masih dari `~/apps/websiteasfara`:
 
 ```bash
 php artisan key:generate
@@ -128,16 +128,16 @@ Gunakan salah satu pilihan berikut. Pilihan A lebih sederhana dan lebih mudah di
 
 ### Pilihan A mengubah document root domain
 
-Dari panel hosting, ubah document root `dthree.co.id` menjadi:
+Dari panel hosting, ubah document root `asfara.co.id` menjadi:
 
 ```text
-/home/dthreeco/apps/websitedthree/public
+/home/dthreeco/apps/websiteasfara/public
 ```
 
 Kemudian jalankan:
 
 ```bash
-cd ~/apps/websitedthree
+cd ~/apps/websiteasfara
 php artisan storage:link
 ```
 
@@ -150,7 +150,7 @@ Gunakan pilihan ini hanya jika panel tidak mengizinkan perubahan document root. 
 Salin file publik Laravel:
 
 ```bash
-cp -a ~/apps/websitedthree/public/. ~/public_html/
+cp -a ~/apps/websiteasfara/public/. ~/public_html/
 ```
 
 Buka bootstrap publik:
@@ -162,20 +162,20 @@ nano ~/public_html/index.php
 Ubah tiga path aplikasi menjadi:
 
 ```php
-if (file_exists($maintenance = __DIR__.'/../apps/websitedthree/storage/framework/maintenance.php')) {
+if (file_exists($maintenance = __DIR__.'/../apps/websiteasfara/storage/framework/maintenance.php')) {
     require $maintenance;
 }
 
-require __DIR__.'/../apps/websitedthree/vendor/autoload.php';
-$app = require_once __DIR__.'/../apps/websitedthree/bootstrap/app.php';
+require __DIR__.'/../apps/websiteasfara/vendor/autoload.php';
+$app = require_once __DIR__.'/../apps/websiteasfara/bootstrap/app.php';
 ```
 
-Hapus blok maintenance lama yang masih menunjuk ke `__DIR__.'/../storage/framework/maintenance.php'`, sehingga hanya tersisa blok dengan path `apps/websitedthree` di atas.
+Hapus blok maintenance lama yang masih menunjuk ke `__DIR__.'/../storage/framework/maintenance.php'`, sehingga hanya tersisa blok dengan path `apps/websiteasfara` di atas.
 
 Simpan file. Lalu buat link upload publik:
 
 ```bash
-ln -s ~/apps/websitedthree/storage/app/public ~/public_html/storage
+ln -s ~/apps/websiteasfara/storage/app/public ~/public_html/storage
 ```
 
 Jika `public_html/storage` sudah ada, periksa dahulu dengan `ls -la ~/public_html/storage`. Jangan menimpa folder yang berisi file tanpa backup.
@@ -183,7 +183,7 @@ Jika `public_html/storage` sudah ada, periksa dahulu dengan `ls -la ~/public_htm
 Setiap update yang mengubah CSS, JavaScript, favicon, atau aset publik perlu disalin kembali tanpa menimpa `index.php` khusus dan link `storage`:
 
 ```bash
-rsync -a --exclude=index.php --exclude=storage ~/apps/websitedthree/public/ ~/public_html/
+rsync -a --exclude=index.php --exclude=storage ~/apps/websiteasfara/public/ ~/public_html/
 ```
 
 ## 7. Buat akun admin CMS
@@ -191,17 +191,17 @@ rsync -a --exclude=index.php --exclude=storage ~/apps/websitedthree/public/ ~/pu
 Dari root aplikasi:
 
 ```bash
-cd ~/apps/websitedthree
-php artisan dthree:admin admin@dthree.co.id --name="Admin Dthree"
+cd ~/apps/websiteasfara
+php artisan asfara:admin admin@asfara.co.id --name="Admin Asfara"
 ```
 
 Masukkan password ketika diminta. Password tidak tampil di terminal dan harus memiliki minimal 12 karakter, huruf, serta angka.
 
 Setelah domain aktif:
 
-- Login CMS: `https://dthree.co.id/masuk`
-- Dashboard CMS: `https://dthree.co.id/admin`
-- Monitoring: `https://dthree.co.id/admin/monitoring`
+- Login CMS: `https://asfara.co.id/masuk`
+- Dashboard CMS: `https://asfara.co.id/admin`
+- Monitoring: `https://asfara.co.id/admin/monitoring`
 
 ## 8. Pasang cron scheduler dan queue
 
@@ -210,19 +210,19 @@ Buka menu Cron Jobs pada panel hosting. Gunakan path PHP dari hasil `which php`.
 Scheduler setiap menit:
 
 ```cron
-* * * * * cd /home/dthreeco/apps/websitedthree && /usr/bin/php artisan schedule:run >> /home/dthreeco/apps/websitedthree/storage/logs/scheduler.log 2>&1
+* * * * * cd /home/dthreeco/apps/websiteasfara && /usr/bin/php artisan schedule:run >> /home/dthreeco/apps/websiteasfara/storage/logs/scheduler.log 2>&1
 ```
 
 Queue untuk shared hosting tanpa process manager:
 
 ```cron
-* * * * * cd /home/dthreeco/apps/websitedthree && /usr/bin/php artisan queue:work --stop-when-empty --max-time=50 --tries=3 >> /home/dthreeco/apps/websitedthree/storage/logs/queue.log 2>&1
+* * * * * cd /home/dthreeco/apps/websiteasfara && /usr/bin/php artisan queue:work --stop-when-empty --max-time=50 --tries=3 >> /home/dthreeco/apps/websiteasfara/storage/logs/queue.log 2>&1
 ```
 
 Verifikasi manual:
 
 ```bash
-cd ~/apps/websitedthree
+cd ~/apps/websiteasfara
 php artisan schedule:list
 php artisan schedule:run
 php artisan system:heartbeat
@@ -234,14 +234,14 @@ Setelah beberapa menit, buka menu **Admin → Monitoring sistem**. Database, Sch
 
 Aktifkan AutoSSL atau Let's Encrypt untuk:
 
-- `dthree.co.id`
-- `www.dthree.co.id`
+- `asfara.co.id`
+- `www.asfara.co.id`
 
-Arahkan `www` ke `https://dthree.co.id`. Setelah sertifikat aktif, uji:
+Arahkan `www` ke `https://asfara.co.id`. Setelah sertifikat aktif, uji:
 
 ```bash
-curl -I https://dthree.co.id/up
-curl -I https://dthree.co.id/masuk
+curl -I https://asfara.co.id/up
+curl -I https://asfara.co.id/masuk
 ```
 
 `/up` harus menghasilkan status 200. Uji lupa password dan 2FA admin. Setelah email benar-benar diterima, ubah `.env`:
@@ -253,7 +253,7 @@ TRANSACTION_EMAIL_ENABLED=true
 Lalu muat ulang konfigurasi:
 
 ```bash
-cd ~/apps/websitedthree
+cd ~/apps/websiteasfara
 php artisan optimize:clear
 php artisan optimize
 ```
@@ -278,14 +278,14 @@ Jangan menjalankan `DemoSeeder` pada database produksi. Aktifkan **Buka checkout
 Setelah perubahan dipush ke GitHub, backup database dan `storage/app`, kemudian:
 
 ```bash
-cd ~/apps/websitedthree
+cd ~/apps/websiteasfara
 bash scripts/deploy.sh
 ```
 
 Jika memakai Pilihan B, sinkronkan aset publik setelah deploy:
 
 ```bash
-rsync -a --exclude=index.php --exclude=storage ~/apps/websitedthree/public/ ~/public_html/
+rsync -a --exclude=index.php --exclude=storage ~/apps/websiteasfara/public/ ~/public_html/
 ```
 
 Jika binary hosting tidak bernama `php` atau `composer`:
@@ -297,13 +297,13 @@ PHP_BIN=<PATH_PHP_84> COMPOSER_BIN=<PATH_COMPOSER> bash scripts/deploy.sh
 ## 12. Pemeriksaan akhir
 
 ```bash
-cd ~/apps/websitedthree
+cd ~/apps/websiteasfara
 php artisan about
 php artisan migrate:status
 php artisan schedule:list
 git status --short
 git log -1 --oneline
-curl -I https://dthree.co.id/up
+curl -I https://asfara.co.id/up
 ```
 
 Pastikan:
@@ -319,6 +319,6 @@ Pastikan:
 Jika muncul error 500, lihat log tanpa membagikan rahasia:
 
 ```bash
-cd ~/apps/websitedthree
+cd ~/apps/websiteasfara
 tail -n 100 storage/logs/laravel.log
 ```

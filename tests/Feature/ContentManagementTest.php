@@ -37,27 +37,27 @@ class ContentManagementTest extends TestCase
             'title' => 'Panduan Bahan',
             'slug' => 'panduan-bahan-seo',
             'body' => 'Isi panduan.',
-            'seo_title' => 'Panduan Bahan — Dthree',
+            'seo_title' => 'Panduan Bahan — Asfara',
             'editorial_status' => 'approved',
             'active' => true,
         ]);
         $page = Page::create([
             'title' => 'Tentang Kami',
             'slug' => 'tentang-kami-seo',
-            'body' => 'Cerita Dthree.',
-            'seo_title' => 'Tentang Kami — Dthree',
+            'body' => 'Cerita Asfara.',
+            'seo_title' => 'Tentang Kami — Asfara',
             'editorial_status' => 'approved',
             'active' => true,
         ]);
 
         $this->get(route('content.show', [$entry->type, $entry->slug]))
             ->assertOk()
-            ->assertSee('<title>Panduan Bahan — Dthree</title>', false)
-            ->assertDontSee('Dthree — Dthree');
+            ->assertSee('<title>Panduan Bahan — Asfara</title>', false)
+            ->assertDontSee('Asfara — Asfara');
         $this->get(route('page', $page->slug))
             ->assertOk()
-            ->assertSee('<title>Tentang Kami — Dthree</title>', false)
-            ->assertDontSee('Dthree — Dthree');
+            ->assertSee('<title>Tentang Kami — Asfara</title>', false)
+            ->assertDontSee('Asfara — Asfara');
     }
 
     public function test_home_sections_and_menu_follow_publish_schedule(): void
@@ -109,7 +109,7 @@ class ContentManagementTest extends TestCase
         $admin->forceFill(['role' => 'admin'])->save();
         $page = Page::create(['title' => 'Cerita', 'slug' => 'cerita-block', 'body' => 'Teks cadangan.', 'active' => false]);
         $blocks = [
-            ['type' => 'heading', 'text' => 'Kisah Dthree'],
+            ['type' => 'heading', 'text' => 'Kisah Asfara'],
             ['type' => 'paragraph', 'text' => '<script>alert("x")</script> Tetap aman.'],
             ['type' => 'button', 'url' => '/koleksi', 'label' => 'Lihat koleksi'],
             ['type' => 'columns', 'items' => [
@@ -125,7 +125,7 @@ class ContentManagementTest extends TestCase
 
         $this->assertIsArray($page->fresh()->blocks);
         $this->get(route('page', $page->slug))->assertOk()
-            ->assertSee('Kisah Dthree')
+            ->assertSee('Kisah Asfara')
             ->assertSee('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; Tetap aman.', false)
             ->assertSee('href="/koleksi"', false)
             ->assertSee('Katun pilihan.')

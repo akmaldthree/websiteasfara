@@ -34,7 +34,7 @@ class DeliveryService
             }
             Mail::raw($delivery->payload['body'], function (Message $message) use ($delivery) {
                 $message->to($delivery->recipient)->subject($delivery->payload['subject']);
-                $message->getSymfonyMessage()->getHeaders()->addIdHeader('Message-ID', $delivery->dedupe_key.'@dthree.local');
+                $message->getSymfonyMessage()->getHeaders()->addIdHeader('Message-ID', $delivery->dedupe_key.'@asfara.local');
             });
             $delivery->update(['status' => 'sent', 'sent_at' => now(), 'claimed_at' => null]);
 

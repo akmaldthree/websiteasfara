@@ -55,10 +55,10 @@ class DemoSeeder extends Seeder
             ['name' => 'Abaya Dewasa', 'slug' => 'abaya-dewasa', 'description' => 'Abaya modern dengan siluet anggun untuk kegiatan harian dan acara istimewa.'],
             ['name' => 'Sarimbit Keluarga', 'slug' => 'sarimbit-keluarga', 'description' => 'Busana keluarga senada untuk momen hangat dan perayaan bersama.'],
             ['name' => 'Busana Anak', 'slug' => 'busana-anak', 'description' => 'Busana santun anak yang ringan, rapi, dan nyaman bergerak.'],
-            ['name' => 'Outer & Khimar', 'slug' => 'outer-khimar', 'description' => 'Pelengkap tampilan modest yang mudah dipadukan dengan koleksi Dthree.'],
+            ['name' => 'Outer & Khimar', 'slug' => 'outer-khimar', 'description' => 'Pelengkap tampilan modest yang mudah dipadukan dengan koleksi Asfara.'],
         ])->mapWithKeys(function (array $data) {
             $category = Category::updateOrCreate(['slug' => $data['slug']], $data + [
-                'seo_title' => $data['name'].' Dthree',
+                'seo_title' => $data['name'].' Asfara',
                 'seo_description' => $data['description'],
                 'active' => true,
             ]);
@@ -77,7 +77,7 @@ class DemoSeeder extends Seeder
                 'size_chart' => ['columns' => ['Ukuran', 'Lingkar dada', 'Panjang'], 'rows' => collect($product['sizes'])->map(fn ($size, $position) => [$size, (96 + $position * 6).' cm', (136 + $position * 2).' cm'])->all(), 'notes' => 'Ukuran dalam sentimeter. Pilih ukuran lebih besar jika berada di antara dua ukuran.'],
                 'image' => 'demo/'.$product['image'],
                 'compare_at_price' => (int) (ceil(($product['price'] * 1.2) / 1000) * 1000),
-                'seo_title' => $product['name'].' — Koleksi Dthree',
+                'seo_title' => $product['name'].' — Koleksi Asfara',
                 'seo_description' => $product['description'],
                 'active' => true,
                 'featured' => $index < 6,
@@ -177,8 +177,8 @@ class DemoSeeder extends Seeder
             );
         }
 
-        $businessUser = User::updateOrCreate(['email' => 'reseller.demo@dthree.co.id'], [
-            'name' => 'Reseller Demo Dthree', 'phone' => '6281211112222', 'password' => Str::random(64),
+        $businessUser = User::updateOrCreate(['email' => 'reseller.demo@asfara.co.id'], [
+            'name' => 'Reseller Demo Asfara', 'phone' => '6281211112222', 'password' => Str::random(64),
             'marketing_email' => true, 'marketing_whatsapp' => true, 'consent_updated_at' => now(),
         ]);
         BusinessAccount::updateOrCreate(['user_id' => $businessUser->id], [
@@ -198,18 +198,18 @@ class DemoSeeder extends Seeder
     private function seedOperationalExamples(): void
     {
         $customers = collect([
-            ['Alya Ramadhani', 'alya.demo@dthree.co.id', '6281210010001'],
-            ['Nadia Pratiwi', 'nadia.demo@dthree.co.id', '6281210010002'],
-            ['Siti Rahma', 'siti.demo@dthree.co.id', '6281210010003'],
-            ['Maya Kurnia', 'maya.demo@dthree.co.id', '6281210010004'],
-            ['Dina Azzahra', 'dina.demo@dthree.co.id', '6281210010005'],
-            ['Rani Permata', 'rani.demo@dthree.co.id', '6281210010006'],
-            ['Kania Putri', 'kania.demo@dthree.co.id', '6281210010007'],
-            ['Nabila Hasanah', 'nabila.demo@dthree.co.id', '6281210010008'],
-            ['Farah Aulia', 'farah.demo@dthree.co.id', '6281210010009'],
-            ['Intan Maharani', 'intan.demo@dthree.co.id', '6281210010010'],
-            ['Salma Nurfadila', 'salma.demo@dthree.co.id', '6281210010011'],
-            ['Wulan Safitri', 'wulan.demo@dthree.co.id', '6281210010012'],
+            ['Alya Ramadhani', 'alya.demo@asfara.co.id', '6281210010001'],
+            ['Nadia Pratiwi', 'nadia.demo@asfara.co.id', '6281210010002'],
+            ['Siti Rahma', 'siti.demo@asfara.co.id', '6281210010003'],
+            ['Maya Kurnia', 'maya.demo@asfara.co.id', '6281210010004'],
+            ['Dina Azzahra', 'dina.demo@asfara.co.id', '6281210010005'],
+            ['Rani Permata', 'rani.demo@asfara.co.id', '6281210010006'],
+            ['Kania Putri', 'kania.demo@asfara.co.id', '6281210010007'],
+            ['Nabila Hasanah', 'nabila.demo@asfara.co.id', '6281210010008'],
+            ['Farah Aulia', 'farah.demo@asfara.co.id', '6281210010009'],
+            ['Intan Maharani', 'intan.demo@asfara.co.id', '6281210010010'],
+            ['Salma Nurfadila', 'salma.demo@asfara.co.id', '6281210010011'],
+            ['Wulan Safitri', 'wulan.demo@asfara.co.id', '6281210010012'],
         ])->map(fn ($row) => User::updateOrCreate(['email' => $row[1]], [
             'name' => $row[0], 'phone' => $row[2], 'password' => Str::random(64),
             'marketing_email' => true, 'marketing_whatsapp' => true, 'consent_updated_at' => now()->subDays(30),
@@ -238,7 +238,7 @@ class DemoSeeder extends Seeder
             $shippingCost = $status === 'cancelled' ? 0 : 18000;
             $discount = $index === 4 ? 50000 : 0;
             $order = Order::updateOrCreate(['number' => 'DTH-DEMO-'.str_pad((string) ($index + 1), 4, '0', STR_PAD_LEFT)], [
-                'checkout_key' => hash('sha256', 'dthree-demo-order-'.($index + 1)), 'user_id' => $customer->id,
+                'checkout_key' => hash('sha256', 'asfara-demo-order-'.($index + 1)), 'user_id' => $customer->id,
                 'name' => $customer->name, 'phone' => $customer->phone, 'email' => $customer->email,
                 'address' => ['address' => 'Jl. Contoh No. '.($index + 10), 'district' => 'Kecamatan Demo', 'city' => ['Bandung', 'Jakarta Selatan', 'Tasikmalaya', 'Semarang', 'Surabaya', 'Yogyakarta', 'Medan', 'Makassar', 'Denpasar', 'Palembang', 'Balikpapan', 'Pekanbaru'][$index], 'province' => ['Jawa Barat', 'DKI Jakarta', 'Jawa Barat', 'Jawa Tengah', 'Jawa Timur', 'DI Yogyakarta', 'Sumatera Utara', 'Sulawesi Selatan', 'Bali', 'Sumatera Selatan', 'Kalimantan Timur', 'Riau'][$index], 'postal_code' => '401'.str_pad((string) $index, 2, '0', STR_PAD_LEFT)],
                 'payment_method' => $index === 4 ? 'cod' : 'transfer', 'status' => $status, 'payment_status' => $paymentStatus,
@@ -246,7 +246,7 @@ class DemoSeeder extends Seeder
                 'discount' => $discount, 'shipping_discount' => 0, 'cod_fee' => $index === 4 ? 5000 : 0,
                 'total' => $subtotal + $shippingCost + ($index === 4 ? 5000 : 0) - $discount,
                 'shipping' => ['courier' => 'JNE', 'service' => 'REG', 'cost' => $shippingCost, 'estimate' => '2–3 hari'],
-                'bank_accounts' => [['bank' => 'BANK DEMO', 'number' => '0000000000', 'owner' => 'DTHREE DEMO']],
+                'bank_accounts' => [['bank' => 'BANK DEMO', 'number' => '0000000000', 'owner' => 'ASFARA DEMO']],
                 'notes' => 'Pesanan contoh untuk latihan operasional CMS.', 'tracking_number' => in_array($fulfillmentStatus, ['shipped', 'received'], true) ? 'JNEDEMO'.str_pad((string) $index, 8, '0', STR_PAD_LEFT) : null,
                 'inventory_state' => $inventoryState, 'expires_at' => now()->addDay(),
                 'paid_at' => $paymentStatus === 'paid' ? now()->subDays(max(1, 6 - $index)) : null,
@@ -301,16 +301,16 @@ class DemoSeeder extends Seeder
     private function seedAudienceAndMedia(): void
     {
         foreach ([
-            ['newsletter1.demo@dthree.co.id', 'Aulia', 'footer'], ['newsletter2.demo@dthree.co.id', 'Nisa', 'popup'],
-            ['newsletter3.demo@dthree.co.id', 'Rika', 'checkout'], ['newsletter4.demo@dthree.co.id', 'Mira', 'footer'],
-            ['newsletter5.demo@dthree.co.id', 'Anisa', 'campaign'], ['newsletter6.demo@dthree.co.id', 'Putri', 'footer'],
-            ['newsletter7.demo@dthree.co.id', 'Hana', 'popup'], ['newsletter8.demo@dthree.co.id', 'Dewi', 'campaign'],
-            ['newsletter9.demo@dthree.co.id', 'Laila', 'footer'], ['newsletter10.demo@dthree.co.id', 'Zahra', 'checkout'],
-            ['newsletter11.demo@dthree.co.id', 'Nadia', 'popup'], ['newsletter12.demo@dthree.co.id', 'Rania', 'footer'],
+            ['newsletter1.demo@asfara.co.id', 'Aulia', 'footer'], ['newsletter2.demo@asfara.co.id', 'Nisa', 'popup'],
+            ['newsletter3.demo@asfara.co.id', 'Rika', 'checkout'], ['newsletter4.demo@asfara.co.id', 'Mira', 'footer'],
+            ['newsletter5.demo@asfara.co.id', 'Anisa', 'campaign'], ['newsletter6.demo@asfara.co.id', 'Putri', 'footer'],
+            ['newsletter7.demo@asfara.co.id', 'Hana', 'popup'], ['newsletter8.demo@asfara.co.id', 'Dewi', 'campaign'],
+            ['newsletter9.demo@asfara.co.id', 'Laila', 'footer'], ['newsletter10.demo@asfara.co.id', 'Zahra', 'checkout'],
+            ['newsletter11.demo@asfara.co.id', 'Nadia', 'popup'], ['newsletter12.demo@asfara.co.id', 'Rania', 'footer'],
         ] as $index => [$email, $name, $source]) {
             NewsletterSubscriber::updateOrCreate(['email' => $email], ['name' => $name, 'source' => $source, 'active' => true, 'subscribed_at' => now()->subDays(5 + ($index * 6))]);
         }
-        $questionUser = User::where('email', 'alya.demo@dthree.co.id')->first();
+        $questionUser = User::where('email', 'alya.demo@asfara.co.id')->first();
         $questions = [
             ['raffah-signature', 'Apakah bahan menerawang jika dipakai di luar ruangan?', 'Tidak. Raffah menggunakan material berketebalan cukup; untuk warna terang kami tetap menyarankan inner.'],
             ['naura-pleated', 'Apakah bagian lipit mudah berubah setelah dicuci?', 'Gunakan pencucian lembut dan hindari memeras kuat agar bentuk lipit lebih terjaga.'],
@@ -345,8 +345,8 @@ class DemoSeeder extends Seeder
 
     private function seedReviews(): void
     {
-        $customer = User::updateOrCreate(['email' => 'pelanggan.demo@dthree.co.id'], [
-            'name' => 'Pelanggan Dthree',
+        $customer = User::updateOrCreate(['email' => 'pelanggan.demo@asfara.co.id'], [
+            'name' => 'Pelanggan Asfara',
             'phone' => '6281234567890',
             'password' => Str::random(64),
         ]);
@@ -515,12 +515,12 @@ class DemoSeeder extends Seeder
     private function seedStoreLocations(): void
     {
         foreach ([
-            ['Dthree Tasikmalaya', 'Jl. HZ Mustofa No. 88', 'Tasikmalaya', 'Setiap hari · 09.00–20.00', 1],
-            ['Dthree Bandung', 'Jl. Buah Batu No. 121', 'Bandung', 'Senin–Sabtu · 09.00–19.00', 2],
-            ['Dthree Jakarta', 'Jl. Kemang Raya No. 24', 'Jakarta Selatan', 'Setiap hari · 10.00–21.00', 3],
-            ['Dthree Surabaya', 'Jl. Raya Darmo No. 62', 'Surabaya', 'Setiap hari · 10.00–21.00', 4],
-            ['Dthree Yogyakarta', 'Jl. Kaliurang KM 5 No. 18', 'Yogyakarta', 'Senin–Sabtu · 09.00–20.00', 5],
-            ['Dthree Makassar', 'Jl. Pengayoman No. 15', 'Makassar', 'Setiap hari · 10.00–21.00', 6],
+            ['Asfara Tasikmalaya', 'Jl. HZ Mustofa No. 88', 'Tasikmalaya', 'Setiap hari · 09.00–20.00', 1],
+            ['Asfara Bandung', 'Jl. Buah Batu No. 121', 'Bandung', 'Senin–Sabtu · 09.00–19.00', 2],
+            ['Asfara Jakarta', 'Jl. Kemang Raya No. 24', 'Jakarta Selatan', 'Setiap hari · 10.00–21.00', 3],
+            ['Asfara Surabaya', 'Jl. Raya Darmo No. 62', 'Surabaya', 'Setiap hari · 10.00–21.00', 4],
+            ['Asfara Yogyakarta', 'Jl. Kaliurang KM 5 No. 18', 'Yogyakarta', 'Senin–Sabtu · 09.00–20.00', 5],
+            ['Asfara Makassar', 'Jl. Pengayoman No. 15', 'Makassar', 'Setiap hari · 10.00–21.00', 6],
         ] as [$name, $address, $city, $hours, $sortOrder]) {
             StoreLocation::updateOrCreate(['name' => $name], [
                 'address' => $address,
@@ -595,7 +595,7 @@ class DemoSeeder extends Seeder
                 'image' => $image ? 'demo/'.$image : null,
                 'link_url' => $url,
                 'link_label' => $label,
-                'seo_title' => $title.' — Dthree',
+                'seo_title' => $title.' — Asfara',
                 'seo_description' => $summary,
                 'sort_order' => $sort,
                 'editorial_status' => 'approved',
@@ -661,7 +661,7 @@ class DemoSeeder extends Seeder
             'cod_enabled' => true,
             'loyalty_enabled' => true,
             'analytics_enabled' => true,
-            'brand_name' => 'Dthree',
+            'brand_name' => 'Asfara',
             'announcement_lines' => "GRATIS ONGKIR UNTUK PROMO TERPILIH\nDAPATKAN 10% DENGAN KODE DEMO10\nPENGIRIMAN KE SELURUH INDONESIA",
             'announcement_interval_seconds' => 5,
             'welcome_voucher_enabled' => true,
@@ -669,7 +669,7 @@ class DemoSeeder extends Seeder
             'welcome_voucher_text' => 'Nikmati potongan 10% untuk koleksi pilihan dengan minimum transaksi yang berlaku.',
             'welcome_voucher_code' => 'DEMO10',
             'free_shipping_threshold' => 500000,
-            'hero_eyebrow' => 'Koleksi terbaru Dthree',
+            'hero_eyebrow' => 'Koleksi terbaru Asfara',
             'hero_title' => 'Tumbuh bersama dalam setiap cerita',
             'hero_text' => 'Busana modest yang nyaman untuk perempuan dan keluarga Indonesia, dirancang dengan warna hangat serta detail yang berkesan.',
             'hero_button_label' => 'Belanja koleksi',
@@ -678,7 +678,7 @@ class DemoSeeder extends Seeder
             'benefit_1' => 'Bahan nyaman pilihan',
             'benefit_2' => 'Pengiriman ke seluruh Indonesia',
             'benefit_3' => 'Retur mudah sesuai ketentuan',
-            'story_eyebrow' => 'Tentang Dthree',
+            'story_eyebrow' => 'Tentang Asfara',
             'story_title' => 'Busana yang menyertai momen keluarga',
             'story_text' => 'Kami menghadirkan koleksi dengan siluet santun, warna mudah dipadukan, dan kenyamanan yang mendukung aktivitas Anda.',
             'hero_height_desktop' => 633,
@@ -703,8 +703,8 @@ class DemoSeeder extends Seeder
             'home_sale_slugs' => 'raffah-signature, naura-pleated, harmoni-raya, livia-layer-outer, maryam-kids, inara-long-outer',
             'store_location' => 'Tasikmalaya · Indonesia',
             'contact_phone' => '0812-0000-0000',
-            'contact_email' => 'hello@dthree.co.id',
-            'bank_accounts' => [['bank' => 'BANK DEMO', 'number' => '0000000000', 'owner' => 'DTHREE DEMO']],
+            'contact_email' => 'hello@asfara.co.id',
+            'bank_accounts' => [['bank' => 'BANK DEMO', 'number' => '0000000000', 'owner' => 'ASFARA DEMO']],
             'loyalty_tiers' => [
                 ['name' => 'Member', 'minimum' => 0, 'benefit' => 'Kumpulkan poin di setiap transaksi', 'value_bonus_percent' => 0],
                 ['name' => 'Sahabat', 'minimum' => 500, 'benefit' => 'Nilai penukaran poin lebih besar', 'value_bonus_percent' => 10],
@@ -719,19 +719,19 @@ class DemoSeeder extends Seeder
     {
         $copy = [
             'syarat-ketentuan' => 'Dengan melakukan pemesanan, pelanggan menyetujui detail produk, harga, metode pembayaran, serta kebijakan pengiriman yang ditampilkan saat checkout.',
-            'privasi' => 'Dthree menggunakan data pelanggan hanya untuk memproses pesanan, memberi layanan pelanggan, dan menjalankan fitur akun sesuai persetujuan.',
+            'privasi' => 'Asfara menggunakan data pelanggan hanya untuk memproses pesanan, memberi layanan pelanggan, dan menjalankan fitur akun sesuai persetujuan.',
             'pengiriman' => 'Pesanan ready stock diproses 1–2 hari kerja. Estimasi tiba mengikuti layanan kurir dan lokasi tujuan yang dipilih saat checkout.',
             'retur-garansi' => 'Pengajuan retur dapat dilakukan sesuai batas waktu dan kondisi produk pada kebijakan toko. Simpan bukti pembelian dan dokumentasi saat paket diterima.',
-            'tentang' => 'Dthree adalah brand modest fashion dari Tasikmalaya yang menghadirkan busana perempuan dan keluarga dengan fokus pada kenyamanan, detail, dan kebersamaan.',
-            'sejarah' => 'Dthree tumbuh dari Tasikmalaya dengan tujuan menghadirkan busana modest yang dekat dengan keseharian perempuan dan keluarga Indonesia.',
+            'tentang' => 'Asfara adalah brand modest fashion dari Tasikmalaya yang menghadirkan busana perempuan dan keluarga dengan fokus pada kenyamanan, detail, dan kebersamaan.',
+            'sejarah' => 'Asfara tumbuh dari Tasikmalaya dengan tujuan menghadirkan busana modest yang dekat dengan keseharian perempuan dan keluarga Indonesia.',
             'cara-pemesanan' => 'Pilih series, warna, dan ukuran yang tersedia. Tambahkan ke keranjang, lengkapi alamat, pilih pengiriman serta pembayaran, lalu tinjau pesanan sebelum konfirmasi.',
-            'pengiriman-internasional' => 'Pengiriman internasional dilayani melalui konfirmasi tim Dthree. Hubungi layanan pelanggan untuk pemeriksaan negara tujuan, ongkir, dan estimasi.',
+            'pengiriman-internasional' => 'Pengiriman internasional dilayani melalui konfirmasi tim Asfara. Hubungi layanan pelanggan untuk pemeriksaan negara tujuan, ongkir, dan estimasi.',
         ];
 
         foreach ($copy as $slug => $body) {
             $title = str($slug)->replace('-', ' ')->title()->toString();
             $page = Page::firstOrCreate(['slug' => $slug], ['title' => $title, 'body' => $body, 'active' => true]);
-            $page->update(['active' => true, 'body' => $body, 'editorial_status' => 'approved', 'seo_title' => $page->title.' — Dthree', 'seo_description' => $body]);
+            $page->update(['active' => true, 'body' => $body, 'editorial_status' => 'approved', 'seo_title' => $page->title.' — Asfara', 'seo_description' => $body]);
         }
     }
 }

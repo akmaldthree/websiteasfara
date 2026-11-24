@@ -51,7 +51,7 @@ class BusinessCommerceTest extends TestCase
             'variant_id' => $this->variant->id, 'price_group_id' => $this->group->id,
             'minimum_quantity' => 3, 'price' => 250000,
         ]);
-        Setting::put('bank_accounts', [['bank' => 'Bank Uji', 'number' => '000', 'owner' => 'Dthree']]);
+        Setting::put('bank_accounts', [['bank' => 'Bank Uji', 'number' => '000', 'owner' => 'Asfara']]);
         Setting::put('checkout_enabled', true);
     }
 
@@ -249,7 +249,7 @@ class BusinessCommerceTest extends TestCase
     private function checkoutInput(): array
     {
         return [
-            'name' => 'Mitra Dthree', 'phone' => '081234567890', 'email' => 'mitra@example.com',
+            'name' => 'Mitra Asfara', 'phone' => '081234567890', 'email' => 'mitra@example.com',
             'province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'district' => 'Cihideung',
             'postal_code' => '46111', 'detail' => 'Alamat pengujian', 'payment_method' => 'transfer',
             'shipping_rate_id' => $this->rate->id, 'terms' => '1',

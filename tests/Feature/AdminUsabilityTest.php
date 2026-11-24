@@ -91,7 +91,7 @@ class AdminUsabilityTest extends TestCase
             ->assertSee('Apa yang ingin Anda kelola?')
             ->assertDontSee('Varian &amp; SKU', false)
             ->assertDontSee('Galeri produk')
-            ->assertSee('css/dthree.css?v=', false)
+            ->assertSee('css/asfara.css?v=', false)
             ->assertSee('class="admin-sidebar-backdrop" data-sidebar-close hidden', false);
         $this->get(route('admin.settings'))->assertOk()->assertSee('Lompat ke:')->assertSee('Banner & konten website')->assertSee('Ivory — warna dasar')->assertSee('#F9F8F6');
         $this->get(route('admin.media'))->assertOk()->assertSee('Cara menggunakan gambar');

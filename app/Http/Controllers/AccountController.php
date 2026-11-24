@@ -252,7 +252,7 @@ class AccountController extends Controller
         ]);
         $existing = $r->user()->businessAccount;
         if ($existing?->status === 'approved') {
-            throw ValidationException::withMessages(['business_type' => 'Akun bisnis yang sudah disetujui tidak dapat diajukan ulang. Hubungi Dthree untuk perubahan grup.']);
+            throw ValidationException::withMessages(['business_type' => 'Akun bisnis yang sudah disetujui tidak dapat diajukan ulang. Hubungi Asfara untuk perubahan grup.']);
         }
 
         $document = $r->file('legal_document');
@@ -268,7 +268,7 @@ class AccountController extends Controller
             Audit::record('business.application_submitted', 'business_account:'.$account->id, $before, $account->toArray());
         });
 
-        return back()->with('success', 'Pengajuan akun bisnis dikirim dan menunggu peninjauan Dthree.');
+        return back()->with('success', 'Pengajuan akun bisnis dikirim dan menunggu peninjauan Asfara.');
     }
 
     public function address(Request $r)

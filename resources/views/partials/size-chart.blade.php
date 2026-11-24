@@ -5,5 +5,5 @@
     @if($chart->get('notes'))<p class="size-chart-note">{{ $chart->get('notes') }}</p>@endif
 </div>
 @else
-<p class="preserve-lines">{{ $series->size_guide ?: 'Panduan ukuran sedang dilengkapi. Hubungi tim Dthree untuk rekomendasi ukuran.' }}</p>
+<p class="preserve-lines">{{ $series->size_guide ?: 'Panduan ukuran sedang dilengkapi. Hubungi tim Asfara untuk rekomendasi ukuran.' }}</p>
 @endif

@@ -11,4 +11,4 @@
 <button class="btn btn-outline-dark w-100">Buat nomor kasus</button></form>
 @foreach($order->cases as $case)<div class="border-top mt-4 pt-3"><strong>{{ $case->number }}</strong> · {{ __('status.'.$case->status) }}<p class="small">{{ $case->resolution }}</p>
 @foreach($case->items as $line)<p class="small">{{ $line->item->sku }} · {{ $line->quantity }} unit @if($line->received_at) · Sudah diterima Gudang @endif</p>@endforeach
-@if(!empty($shop['whatsapp']))<a class="text-link" target="_blank" rel="noopener" href="https://wa.me/{{ $shop['whatsapp'] }}?text={{ urlencode('Halo Dthree, saya ingin membahas kasus '.$case->number.' untuk pesanan '.$order->number) }}">Lanjutkan ke WhatsApp ↗</a>@endif</div>@endforeach</div>
+@if(!empty($shop['whatsapp']))<a class="text-link" target="_blank" rel="noopener" href="https://wa.me/{{ $shop['whatsapp'] }}?text={{ urlencode('Halo Asfara, saya ingin membahas kasus '.$case->number.' untuk pesanan '.$order->number) }}">Lanjutkan ke WhatsApp ↗</a>@endif</div>@endforeach</div>

@@ -35,7 +35,7 @@ class StorefrontEditorialTest extends TestCase
         $admin->forceFill(['role' => 'admin'])->save();
         $entry = ContentEntry::create(['type' => 'home_section', 'title' => 'Best Combination', 'slug' => 'best-combination', 'active' => false]);
         $payload = [
-            'type' => 'home_section', 'title' => $entry->title, 'slug' => $entry->slug, 'summary' => 'Satu tampilan pilihan Dthree.', 'body' => '',
+            'type' => 'home_section', 'title' => $entry->title, 'slug' => $entry->slug, 'summary' => 'Satu tampilan pilihan Asfara.', 'body' => '',
             'template' => 'standard', 'blocks' => json_encode([['type' => 'product_hotspot', 'series_id' => $this->series->id, 'x' => 42, 'y' => 63]]),
             'link_url' => '/koleksi', 'link_label' => 'Lihat produk', 'seo_title' => '', 'seo_description' => '', 'sort_order' => 1,
             'editorial_status' => 'approved', 'review_note' => '', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
@@ -79,7 +79,7 @@ class StorefrontEditorialTest extends TestCase
     public function test_store_locations_and_language_switch_are_rendered_from_cms(): void
     {
         StoreLocation::create([
-            'name' => 'Dthree Bandung',
+            'name' => 'Asfara Bandung',
             'address' => 'Jl. Buah Batu No. 121',
             'city' => 'Bandung',
             'hours' => '09.00–19.00',
@@ -87,13 +87,13 @@ class StorefrontEditorialTest extends TestCase
             'active' => true,
         ]);
 
-        $this->get(route('home'))->assertOk()->assertSee('Dthree Bandung')->assertSee('Jl. Buah Batu No. 121');
+        $this->get(route('home'))->assertOk()->assertSee('Asfara Bandung')->assertSee('Jl. Buah Batu No. 121');
         $this->from(route('home'))->get(route('locale', 'en'))->assertRedirect(route('home'))->assertSessionHas('locale', 'en');
         $this->get(route('home'))->assertOk()->assertSee('All collections')->assertSee('Track order');
 
         $admin = User::factory()->create();
         $admin->forceFill(['role' => 'admin'])->save();
-        $this->actingAs($admin)->get(route('admin.resources', 'store-locations'))->assertOk()->assertSee('Dthree Bandung');
+        $this->actingAs($admin)->get(route('admin.resources', 'store-locations'))->assertOk()->assertSee('Asfara Bandung');
     }
 
     public function test_menu_entries_can_target_desktop_or_mobile_navigation(): void

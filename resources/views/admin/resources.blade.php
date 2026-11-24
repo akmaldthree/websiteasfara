@@ -20,7 +20,7 @@ $descriptions=[
 $typeLabels=['banner'=>'Banner','home_section'=>'Section beranda','menu'=>'Menu','faq'=>'FAQ','journal'=>'Journal','lookbook'=>'Lookbook','campaign'=>'Campaign'];
 $hasListFilter=request()->filled('q') || collect(array_keys($filters))->contains(fn($key)=>request()->filled($key));
 @endphp
-<div class="admin-heading"><div><span class="eyebrow">{{ in_array($resource,['content','pages'])?'WEBSITE & KONTEN':'MASTER DATA' }}</span><h1>{{ $schema['title'] }}</h1><p>{{ $descriptions[$resource]??'Kelola data yang digunakan oleh website dan operasional Dthree.' }}</p></div><a class="btn btn-dark" href="{{ route('admin.create',$resource) }}">+ Tambah {{ strtolower($schema['title']) }}</a></div>
+<div class="admin-heading"><div><span class="eyebrow">{{ in_array($resource,['content','pages'])?'WEBSITE & KONTEN':'MASTER DATA' }}</span><h1>{{ $schema['title'] }}</h1><p>{{ $descriptions[$resource]??'Kelola data yang digunakan oleh website dan operasional Asfara.' }}</p></div><a class="btn btn-dark" href="{{ route('admin.create',$resource) }}">+ Tambah {{ strtolower($schema['title']) }}</a></div>
 
 @if($resource==='variants')<div class="admin-help"><strong>Urutan kerja yang disarankan:</strong> buat kategori → produk/series → varian & SKU → isi stok melalui Inventori. SKU yang pernah dipesan tidak dapat diubah identitasnya.</div>@endif
 @if($resource==='content')<div class="admin-help"><strong>Untuk mengganti banner:</strong> tambah konten bertipe Banner, pilih gambar, ubah status menjadi Disetujui, lalu aktifkan. Gambar hero utama tetap dikelola melalui Pengaturan website.</div>@endif

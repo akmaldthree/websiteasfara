@@ -1,5 +1,5 @@
 @extends('layouts.store')
-@section('title',ucfirst($type).' — Dthree')
+@section('title',ucfirst($type).' — Asfara')
 @section('content')
 <section class="catalog-hero"><div class="container-xxl"><nav><a href="{{ route('home') }}">HOME</a> / {{ strtoupper($type) }}</nav><h1>{{ strtoupper($type) }}</h1></div></section>
 <section class="editorial-index container-xxl">

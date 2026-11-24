@@ -39,7 +39,7 @@ class ProductBundleTest extends TestCase
         BundleComponent::create(['bundle_variant_id' => $this->bundle->id, 'component_variant_id' => $this->first->id, 'quantity' => 2]);
         BundleComponent::create(['bundle_variant_id' => $this->bundle->id, 'component_variant_id' => $this->second->id, 'quantity' => 1]);
         $rate = ShippingRate::create(['courier' => 'JNE', 'service' => 'REG', 'province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'first_kg' => 15000, 'extra_kg' => 10000, 'estimate' => '2–3 hari']);
-        Setting::put('bank_accounts', [['bank' => 'Bank Uji', 'number' => '000', 'owner' => 'Dthree']]);
+        Setting::put('bank_accounts', [['bank' => 'Bank Uji', 'number' => '000', 'owner' => 'Asfara']]);
         Setting::put('checkout_enabled', true);
         $this->checkout = ['name' => 'Pelanggan', 'phone' => '081234567890', 'email' => 'test@example.com', 'province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'district' => 'Cihideung', 'postal_code' => '46111', 'detail' => 'Alamat uji', 'payment_method' => 'transfer', 'shipping_rate_id' => $rate->id, 'terms' => '1'];
     }

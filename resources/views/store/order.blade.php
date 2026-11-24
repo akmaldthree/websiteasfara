@@ -1,5 +1,5 @@
 @extends('layouts.store')
-@section('title',$order->number.' — Dthree')
+@section('title',$order->number.' — Asfara')
 @section('content')
 <section class="container-xxl section">
 <div class="section-top"><div><span class="eyebrow">PESANAN ANDA</span><h1 class="my-4">{{ $order->number }}</h1></div><a class="btn btn-outline-dark" target="_blank" href="{{ URL::signedRoute('orders.invoice',['order'=>$order->id]) }}">Invoice / cetak ↗</a></div>
@@ -15,7 +15,7 @@
 @if($order->status==='cancelled')<p>Pesanan dibatalkan. Silakan lihat rincian status dan pengembalian dana yang tercatat.</p>
 @elseif($order->paid_at)<p>Pembayaran telah diterima. Terima kasih.</p>
 @elseif($order->payment_method==='cod')<p>Siapkan pembayaran sebesar <strong>@rupiah($order->total)</strong> saat paket diterima. Customer Service akan mengonfirmasi pesanan Anda.</p>
-@elseif($order->payment_method==='credit')<p>Pesanan menggunakan termin bisnis. Pembayaran <strong>@rupiah($order->total)</strong> jatuh tempo pada {{ $order->credit_due_at?->format('d M Y H:i') }}. Tim Dthree akan mengonfirmasi pesanan sebelum diproses.</p>
+@elseif($order->payment_method==='credit')<p>Pesanan menggunakan termin bisnis. Pembayaran <strong>@rupiah($order->total)</strong> jatuh tempo pada {{ $order->credit_due_at?->format('d M Y H:i') }}. Tim Asfara akan mengonfirmasi pesanan sebelum diproses.</p>
 @else
 <p>Transfer tepat <strong>@rupiah($order->total)</strong> ke salah satu rekening berikut.</p>
 @foreach($order->bank_accounts??[] as $bank)<p><strong>{{ $bank['bank'] }} — {{ $bank['number'] }}</strong><br>a.n. {{ $bank['owner'] }}</p>@endforeach

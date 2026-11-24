@@ -22,14 +22,14 @@ class ProductMediaTest extends TestCase
         $category = Category::create(['name' => 'Dress', 'slug' => 'dress', 'active' => true]);
         $series = Series::create([
             'category_id' => $category->id, 'name' => 'Naira', 'slug' => 'naira', 'description' => 'Deskripsi produk.',
-            'seo_title' => 'Naira Premium Dthree', 'seo_description' => 'Meta Naira dari dashboard.', 'active' => true,
+            'seo_title' => 'Naira Premium Asfara', 'seo_description' => 'Meta Naira dari dashboard.', 'active' => true,
         ]);
         $variant = Variant::create(['series_id' => $series->id, 'sku' => 'NAIRA-BLACK-M', 'color' => 'Black', 'size' => 'M', 'price' => 350000, 'stock' => 5, 'weight' => 500]);
         ProductMedia::create(['series_id' => $series->id, 'variant_id' => $variant->id, 'color' => 'Black', 'image' => 'product-gallery/naira.jpg', 'alt_text' => 'Naira warna hitam tampak depan', 'focal_x' => 41, 'focal_y' => 22, 'active' => true]);
 
         $this->get(route('product', $series->slug))
             ->assertOk()
-            ->assertSee('Naira Premium Dthree')
+            ->assertSee('Naira Premium Asfara')
             ->assertSee('Meta Naira dari dashboard.')
             ->assertSee('Naira warna hitam tampak depan')
             ->assertSee('object-position:41% 22%', false)
@@ -67,12 +67,12 @@ class ProductMediaTest extends TestCase
     public function test_category_metadata_and_shareable_variant_are_rendered(): void
     {
         $this->seed();
-        $category = Category::create(['name' => 'Abaya', 'slug' => 'abaya-seo', 'description' => 'Koleksi abaya Dthree.', 'seo_title' => 'Abaya Dthree Premium', 'seo_description' => 'Temukan abaya Dthree pilihan.', 'active' => true]);
+        $category = Category::create(['name' => 'Abaya', 'slug' => 'abaya-seo', 'description' => 'Koleksi abaya Asfara.', 'seo_title' => 'Abaya Asfara Premium', 'seo_description' => 'Temukan abaya Asfara pilihan.', 'active' => true]);
         $series = Series::create(['category_id' => $category->id, 'name' => 'Rania', 'slug' => 'rania-share', 'active' => true]);
         $variant = Variant::create(['series_id' => $series->id, 'sku' => 'RANIA-OLIVE-L', 'color' => 'Olive', 'size' => 'L', 'price' => 320000, 'stock' => 4, 'weight' => 500]);
 
         $this->get(route('catalog', ['category' => $category->slug]))
-            ->assertOk()->assertSee('Abaya Dthree Premium')->assertSee('Temukan abaya Dthree pilihan.')
+            ->assertOk()->assertSee('Abaya Asfara Premium')->assertSee('Temukan abaya Asfara pilihan.')
             ->assertSee('CollectionPage')->assertSee('category=abaya-seo', false);
         $this->get(route('product', ['slug' => $series->slug, 'variant' => $variant->id]))
             ->assertOk()->assertSee('Bagikan pilihan')->assertSee('history.replaceState', false)

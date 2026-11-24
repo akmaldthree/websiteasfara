@@ -1,6 +1,6 @@
-# Status implementasi PRD Dthree v1.0
+# Status implementasi PRD Asfara v1.0
 
-Baseline: PRD Dthree Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **internal alpha** untuk fondasi dan alur transaksi inti, bukan pemenuhan seluruh kriteria go-live. PHP 8.4+ dan MySQL dikonfirmasi oleh pemilik. Produksi dan stok e-commerce dipisahkan dari aplikasi workspace lain.
+Baseline: PRD Asfara Ecommerce v1.0 tanggal 21 Oktober 2026. Rilis ini adalah **internal alpha** untuk fondasi dan alur transaksi inti, bukan pemenuhan seluruh kriteria go-live. PHP 8.4+ dan MySQL dikonfirmasi oleh pemilik. Produksi dan stok e-commerce dipisahkan dari aplikasi workspace lain.
 
 ## Tersedia pada alpha
 

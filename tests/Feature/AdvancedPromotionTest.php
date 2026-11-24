@@ -35,7 +35,7 @@ class AdvancedPromotionTest extends TestCase
         $this->first = Variant::create(['series_id' => $series->id, 'sku' => 'PROMO-A', 'color' => 'Black', 'size' => 'L', 'price' => 300000, 'stock' => 10, 'weight' => 400]);
         $this->second = Variant::create(['series_id' => $series->id, 'sku' => 'PROMO-B', 'color' => 'White', 'size' => 'M', 'price' => 200000, 'stock' => 10, 'weight' => 300]);
         $rate = ShippingRate::create(['courier' => 'JNE', 'service' => 'REG', 'province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'first_kg' => 15000, 'extra_kg' => 10000, 'estimate' => '2–3 hari']);
-        Setting::put('bank_accounts', [['bank' => 'Bank Uji', 'number' => '000', 'owner' => 'Dthree']]);
+        Setting::put('bank_accounts', [['bank' => 'Bank Uji', 'number' => '000', 'owner' => 'Asfara']]);
         Setting::put('checkout_enabled', true);
         $this->user = User::factory()->create();
         $this->checkout = ['name' => 'Pelanggan', 'phone' => '081234567890', 'province' => 'Jawa Barat', 'city' => 'Tasikmalaya', 'district' => 'Cihideung', 'postal_code' => '46111', 'detail' => 'Alamat', 'payment_method' => 'transfer', 'shipping_rate_id' => $rate->id, 'terms' => '1'];

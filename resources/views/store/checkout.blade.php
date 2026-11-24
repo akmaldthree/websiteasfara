@@ -1,5 +1,5 @@
 @extends('layouts.store')
-@section('title','Checkout — Dthree')
+@section('title','Checkout — Asfara')
 @section('body_class','checkout-body')
 @php
     $preferredAddress = auth()->user()?->addresses->first();
@@ -67,7 +67,7 @@
                 <div class="panel mt-4">
                     <h2>Pengiriman & pembayaran</h2>
                     <p class="small text-muted">Pesanan dikirim dari Tasikmalaya. Ongkir dan estimasi ditentukan langsung berdasarkan wilayah yang Anda pilih.</p>
-                    @if($rates->isEmpty())<p>Tarif belum tersedia. Hubungi Dthree sebelum memesan.</p>@endif
+                    @if($rates->isEmpty())<p>Tarif belum tersedia. Hubungi Asfara sebelum memesan.</p>@endif
                     <fieldset class="payment-methods"><legend>Metode pembayaran</legend><label><input type="radio" name="payment_method" value="transfer" @checked(old('payment_method','transfer')==='transfer')><span><b>Transfer bank manual</b><small>Konfirmasi pembayaran setelah pesanan dibuat</small></span><i>›</i></label>@if($businessAccount?->status==='approved' && $businessAccount->credit_terms_days>0 && $businessAccount->credit_limit>0)<label><input type="radio" name="payment_method" value="credit" @checked(old('payment_method')==='credit')><span><b>Termin {{ $businessAccount->credit_terms_days }} hari</b><small>Limit tersedia @rupiah($businessAccount->credit_limit)</small></span><i>›</i></label>@endif @if($shop['cod_enabled'] ?? false)<label><input type="radio" name="payment_method" value="cod" @checked(old('payment_method')==='cod')><span><b>COD — bayar di tempat</b><small>Ketersediaan diperiksa sesuai wilayah dan pesanan</small></span><i>›</i></label>@endif</fieldset>
                     <div class="form-grid"><div><label for="coupon">Kode voucher (pisahkan dengan koma jika dapat digabung)</label><input id="coupon" class="form-control" name="coupon" value="{{ old('coupon') }}"></div>@auth @if(\App\Models\Setting::get('loyalty_enabled',false))<div><label for="loyalty_points">Gunakan poin (saldo {{ app(\App\Services\LoyaltyService::class)->balance(auth()->user()) }})</label><input id="loyalty_points" class="form-control" type="number" min="0" name="loyalty_points" value="{{ old('loyalty_points',0) }}"></div>@endif @endauth<div><label for="notes">Catatan pesanan</label><input id="notes" class="form-control" name="notes" value="{{ old('notes') }}" maxlength="1000"></div></div>
                     <label class="mt-4"><input type="checkbox" name="terms" value="1" required @checked(old('terms'))> Saya menyetujui <a class="text-decoration-underline" href="{{ route('page','syarat-ketentuan') }}" target="_blank">syarat dan ketentuan</a> serta <a class="text-decoration-underline" href="{{ route('page','privasi') }}" target="_blank">kebijakan privasi</a>.</label>

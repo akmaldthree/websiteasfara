@@ -18,7 +18,7 @@ class ProductionReadinessTest extends TestCase
         $this->app->detectEnvironment(fn (): string => 'production');
         config([
             'app.debug' => false,
-            'app.url' => 'https://store.dthree.co.id',
+            'app.url' => 'https://store.asfara.co.id',
             'app.key' => 'base64:'.base64_encode(random_bytes(32)),
             'session.secure' => true,
             'commerce.email_notifications' => false,
@@ -29,10 +29,10 @@ class ProductionReadinessTest extends TestCase
 
     public function test_successful_backup_can_be_recorded_for_monitoring(): void
     {
-        $this->artisan('system:backup-record', ['file' => 'dthree-20261030T120000Z'])->assertSuccessful();
+        $this->artisan('system:backup-record', ['file' => 'asfara-20261030T120000Z'])->assertSuccessful();
 
         $backup = Setting::get('system_backup_last_seen');
-        $this->assertSame('dthree-20261030T120000Z', $backup['file']);
+        $this->assertSame('asfara-20261030T120000Z', $backup['file']);
         $this->assertNotEmpty($backup['at']);
     }
 
@@ -42,7 +42,7 @@ class ProductionReadinessTest extends TestCase
         $this->app->detectEnvironment(fn (): string => 'production');
 
         $this->withServerVariables(['HTTPS' => 'on'])
-            ->get('https://store.dthree.co.id/')
+            ->get('https://store.asfara.co.id/')
             ->assertOk()
             ->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
             ->assertHeader('Cross-Origin-Opener-Policy', 'same-origin')

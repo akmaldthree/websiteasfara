@@ -131,9 +131,9 @@ Before relying on a package's API, confirm its installed version:
 </laravel-boost-guidelines>
 
 
-## Dthree workflow
+## Asfara workflow
 
-- This is the standalone ecommerce repository: https://github.com/akmaldthree/websitedthree.git. Do not change parent-workspace repositories.
+- This is the standalone ecommerce repository: https://github.com/akmaldthree/websiteasfara.git. Do not change parent-workspace repositories.
 - Stack agreed with the owner: Laravel 13, Blade, Bootstrap 5, PHP 8.4+, MySQL.
 - The owner explicitly requests tested changes be committed and pushed here; hosting updates are pulled by the owner. Main is the deployment branch. Never force-push. Keep .env, uploads, databases and credentials out of Git.
 - Consult docs/STATUS_PRD.md for implemented scope and production gaps. Do not present the internal alpha as complete PRD delivery.

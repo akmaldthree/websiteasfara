@@ -18,9 +18,9 @@ class OrderCommunication
         NotificationDelivery::firstOrCreate(['dedupe_key' => hash('sha256', $event->id.':'.$channel)], [
             'order_event_id' => $event->id, 'channel' => $channel, 'recipient' => $order->email ?: $order->phone,
             'payload' => [
-                'subject' => 'Dthree · '.$order->number,
+                'subject' => 'Asfara · '.$order->number,
                 'body' => 'Halo '.$order->name.",\n\n".$message."\n\nPesanan: ".$order->number.
-                    "\nStatus dan rincian: ".$order->customerUrl()."\n\nSimpan tautan ini secara pribadi.\nDthree",
+                    "\nStatus dan rincian: ".$order->customerUrl()."\n\nSimpan tautan ini secara pribadi.\nAsfara",
             ],
             'status' => $channel === 'manual' ? 'manual' : 'pending', 'available_at' => now(),
         ]);

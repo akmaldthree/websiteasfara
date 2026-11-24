@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Validation\ValidationException;
 
-Artisan::command('dthree:admin {email} {--name=Administrator}', function () {
+Artisan::command('asfara:admin {email} {--name=Administrator}', function () {
     $email = strtolower(trim($this->argument('email')));
     if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $this->error('Email tidak valid.');

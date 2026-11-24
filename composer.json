@@ -2,7 +2,7 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "dthree/ecommerce",
     "type": "project",
-    "description": "Dthree storefront dan dashboard operasional",
+    "description": "Asfara storefront dan dashboard operasional",
     "keywords": [
         "laravel",
         "framework"

@@ -173,7 +173,7 @@ class StoreController extends Controller
         $question = $series->questions()->create($data + ['user_id' => $request->user()->id]);
         Audit::record('product_question.submitted', 'product_question:'.$question->id, null, ['series_id' => $series->id]);
 
-        return back()->with('success', 'Pertanyaan dikirim dan akan tampil setelah dijawab tim Dthree.');
+        return back()->with('success', 'Pertanyaan dikirim dan akan tampil setelah dijawab tim Asfara.');
     }
 
     public function helpful(Request $request, Review $review)
@@ -565,6 +565,6 @@ class StoreController extends Controller
             ['name' => $data['name'] ?? null, 'source' => 'footer', 'active' => true, 'subscribed_at' => now()]
         );
 
-        return back()->with('success', 'Terima kasih. Anda sudah terdaftar untuk menerima kabar Dthree.');
+        return back()->with('success', 'Terima kasih. Anda sudah terdaftar untuk menerima kabar Asfara.');
     }
 }

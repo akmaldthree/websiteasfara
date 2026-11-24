@@ -21,9 +21,9 @@ class ProductQuestionAnswered extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Pertanyaan Anda sudah dijawab · Dthree')
+            ->subject('Pertanyaan Anda sudah dijawab · Asfara')
             ->greeting('Halo '.$notifiable->name.',')
-            ->line('Tim Dthree sudah menjawab pertanyaan Anda tentang '.$this->question->series->name.'.')
+            ->line('Tim Asfara sudah menjawab pertanyaan Anda tentang '.$this->question->series->name.'.')
             ->line('Jawaban: '.$this->question->answer)
             ->action('Lihat produk', route('product', $this->question->series->slug));
     }

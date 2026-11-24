@@ -24,7 +24,7 @@ class ImportController extends Controller
     public function template(Request $request)
     {
         [$type, $definition] = $this->selected($request);
-        $path = tempnam(sys_get_temp_dir(), 'dthree-template-');
+        $path = tempnam(sys_get_temp_dir(), 'asfara-template-');
         $this->xlsx->create($path, $definition['label'], $definition['columns']);
 
         return response()->download($path, 'template-'.$type.'.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend(true);
@@ -33,7 +33,7 @@ class ImportController extends Controller
     public function export(Request $request)
     {
         [$type, $definition] = $this->selected($request);
-        $path = tempnam(sys_get_temp_dir(), 'dthree-export-');
+        $path = tempnam(sys_get_temp_dir(), 'asfara-export-');
         $this->xlsx->create($path, $definition['label'], $definition['columns'], $this->imports->exportRows($type));
 
         return response()->download($path, 'data-'.$type.'-'.now()->format('Ymd-His').'.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend(true);

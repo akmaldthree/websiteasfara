@@ -1,6 +1,6 @@
-# Dthree Ecommerce
+# Asfara Ecommerce
 
-Website e-commerce Dthree dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. Target hosting PHP 8.4 atau lebih baru. Repositori resmi: https://github.com/akmaldthree/websitedthree.
+Website e-commerce Asfara dengan Laravel 13, Blade, Bootstrap 5.3.8, dan MySQL. Target hosting PHP 8.4 atau lebih baru. Repositori resmi: https://github.com/akmaldthree/websiteasfara.
 
 **Status: internal alpha.** Fondasi katalog dan transaksi tersedia untuk pengujian. Seluruh PRD v1.0 belum selesai dan website belum dinyatakan siap transaksi publik. Lihat [status PRD](docs/STATUS_PRD.md) untuk batas fitur serta pekerjaan berikutnya.
 
@@ -38,7 +38,7 @@ Untuk domain `asfara.co.id`, gunakan [panduan deploy websiteasfara](docs/DEPLOY_
 Panduan tersebut memakai repository `https://github.com/akmaldthree/websiteasfara`
 dan mencakup instalasi pertama serta pembaruan berikutnya dari branch `main`.
 
-Ikuti [panduan deploy store.dthree.co.id](docs/DEPLOY_STORE_SUBDOMAIN.md). Panduan [domain utama](docs/HOSTING.md) dan [public_html](docs/DEPLOY_PUBLIC_HTML.md) tetap tersedia sebagai referensi. Aset Bootstrap disimpan dalam `public/vendor/bootstrap`, sehingga hosting tidak membutuhkan Node.js atau npm build. Dependensi PHP dikunci dalam `composer.lock`.
+Ikuti [panduan deploy store.asfara.co.id](docs/DEPLOY_STORE_SUBDOMAIN.md). Panduan [domain utama](docs/HOSTING.md) dan [public_html](docs/DEPLOY_PUBLIC_HTML.md) tetap tersedia sebagai referensi. Aset Bootstrap disimpan dalam `public/vendor/bootstrap`, sehingga hosting tidak membutuhkan Node.js atau npm build. Dependensi PHP dikunci dalam `composer.lock`.
 
 ```bash
 composer install
@@ -47,7 +47,7 @@ cp .env.example .env
 php artisan key:generate
 php artisan migrate --seed
 php artisan storage:link
-php artisan dthree:admin email-admin-anda@example.com
+php artisan asfara:admin email-admin-anda@example.com
 php artisan serve
 ```
 
@@ -55,7 +55,7 @@ Password admin diminta secara tersembunyi. Tidak ada akun atau password bawaan. 
 
 ## Data demonstrasi lokal
 
-Gunakan database development terpisah, `APP_ENV=local`. Jalankan `php artisan db:seed --class=DemoSeeder` untuk mengisi contoh lengkap pada seluruh area CMS: kategori, 10 series, 169 varian, galeri, bundling, ukuran custom, harga B2B, stok, pelanggan, tujuh kondisi pesanan, retur, notifikasi, ulasan, pertanyaan produk, newsletter, voucher, tarif, lokasi toko, banner, Shop the Look, journal, lookbook, campaign, menu, dan halaman kebijakan. Semua SKU diawali `DEMO-`; gambar generatif bukan foto produk Dthree. Aset mengikuti rasio slot CMS: hero 2:1, produk 4:5, promo 3:4, editorial 3:2, dan Shop the Look 4:5. Seeder aman dijalankan ulang dan tidak membuat akun admin. Seeder membuka checkout serta memasang rekening contoh, jadi gunakan hanya untuk pratinjau atau staging dan ganti semua data contoh sebelum menerima transaksi nyata.
+Gunakan database development terpisah, `APP_ENV=local`. Jalankan `php artisan db:seed --class=DemoSeeder` untuk mengisi contoh lengkap pada seluruh area CMS: kategori, 10 series, 169 varian, galeri, bundling, ukuran custom, harga B2B, stok, pelanggan, tujuh kondisi pesanan, retur, notifikasi, ulasan, pertanyaan produk, newsletter, voucher, tarif, lokasi toko, banner, Shop the Look, journal, lookbook, campaign, menu, dan halaman kebijakan. Semua SKU diawali `DEMO-`; gambar generatif bukan foto produk Asfara. Aset mengikuti rasio slot CMS: hero 2:1, produk 4:5, promo 3:4, editorial 3:2, dan Shop the Look 4:5. Seeder aman dijalankan ulang dan tidak membuat akun admin. Seeder membuka checkout serta memasang rekening contoh, jadi gunakan hanya untuk pratinjau atau staging dan ganti semua data contoh sebelum menerima transaksi nyata.
 
 ## Pembaruan
 
@@ -78,6 +78,6 @@ CI menjalankan tes pada SQLite dan MySQL 8. Tes lokal memakai database SQLite in
 
 ## Referensi
 
-- PRD Dthree Ecommerce v1.0, 21 Oktober 2026, dokumen yang diberikan pemilik.
+- PRD Asfara Ecommerce v1.0, 21 Oktober 2026, dokumen yang diberikan pemilik.
 - [Laravel 13 deployment](https://laravel.com/docs/13.x/deployment).
 - [Bootstrap 5.3](https://getbootstrap.com/docs/5.3/getting-started/introduction/).

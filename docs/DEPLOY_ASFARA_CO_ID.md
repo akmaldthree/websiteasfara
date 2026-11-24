@@ -214,7 +214,7 @@ sebagai web root tidak aman dan tidak direkomendasikan.
 ## 8. Buat akun administrator
 
 ```bash
-php artisan dthree:admin admin@asfara.co.id --name="Administrator Asfara"
+php artisan asfara:admin admin@asfara.co.id --name="Administrator Asfara"
 ```
 
 Masukkan password kuat saat diminta. Password tidak akan ditampilkan di

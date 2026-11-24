@@ -20,9 +20,9 @@ class StaffLoginCode extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Kode masuk dashboard Dthree')
+            ->subject('Kode masuk dashboard Asfara')
             ->greeting('Halo '.$notifiable->name.',')
-            ->line('Gunakan kode berikut untuk menyelesaikan proses masuk ke dashboard Dthree:')
+            ->line('Gunakan kode berikut untuk menyelesaikan proses masuk ke dashboard Asfara:')
             ->line($this->code)
             ->line('Kode berlaku selama 10 menit. Abaikan email ini jika Anda tidak mencoba masuk.');
     }

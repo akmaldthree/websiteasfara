@@ -1,5 +1,5 @@
 @extends('layouts.store')
-@section('title','Keranjang — Dthree')
+@section('title','Keranjang — Asfara')
 @section('body_class','cart-body')
 @section('content')
 <section class="container-xxl section cart-page">

@@ -2,18 +2,18 @@
 <html lang="id" class="admin-document">
 <head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
-    <title>@yield('title','Dashboard') · Dthree Admin</title>
+    <title>@yield('title','Dashboard') · Asfara Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}?v={{ filemtime(public_path('vendor/bootstrap/bootstrap.min.css')) }}"><link rel="stylesheet" href="{{ asset('css/dthree.css') }}?v={{ filemtime(public_path('css/dthree.css')) }}">
+    <link rel="stylesheet" href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}?v={{ filemtime(public_path('vendor/bootstrap/bootstrap.min.css')) }}"><link rel="stylesheet" href="{{ asset('css/asfara.css') }}?v={{ filemtime(public_path('css/asfara.css')) }}">
     <style>:root{--palette-sage:{{ \App\Models\Setting::get('theme_palette_base',config('theme.palette.theme_palette_base.color')) }};--palette-sand:{{ \App\Models\Setting::get('theme_palette_surface',config('theme.palette.theme_palette_surface.color')) }};--palette-taupe:{{ \App\Models\Setting::get('theme_palette_structure',config('theme.palette.theme_palette_structure.color')) }};--palette-gold:{{ \App\Models\Setting::get('theme_palette_accent',config('theme.palette.theme_palette_accent.color')) }};--palette-cream:{{ \App\Models\Setting::get('theme_palette_base',config('theme.palette.theme_palette_base.color')) }};--ink:{{ \App\Models\Setting::get('theme_text_color',config('theme.text_color')) }};--gold:var(--palette-gold);--cream:var(--palette-cream);--paper:var(--palette-sage);--surface:var(--palette-sand);--line:var(--palette-taupe)}</style>
 </head>
 <body class="admin-body">
 <a class="skip-link visually-hidden-focusable" href="#main-content">Lewati navigasi</a>
 <div class="admin-shell">
 <aside class="admin-sidebar" id="admin-sidebar">
-    <div class="admin-sidebar-brand"><a class="wordmark" href="{{ route('admin.dashboard') }}">dthree<span>BUSINESS DESK</span></a><button class="admin-sidebar-close" type="button" aria-label="Tutup menu" data-sidebar-close hidden>×</button></div>
+    <div class="admin-sidebar-brand"><a class="wordmark" href="{{ route('admin.dashboard') }}">asfara<span>BUSINESS DESK</span></a><button class="admin-sidebar-close" type="button" aria-label="Tutup menu" data-sidebar-close hidden>×</button></div>
     <nav aria-label="Navigasi CMS">
         <div class="admin-nav-group"><p>Operasional</p>
             @foreach(['admin.dashboard'=>['Ringkasan','dashboard'],'admin.orders'=>['Pesanan','orders.read'],'admin.inventory'=>['Stok & inventori','inventory.read'],'admin.customers'=>['Pelanggan','customers.read'],'admin.cases'=>['Retur & layanan','orders.read'],'admin.notifications'=>['Notifikasi','cases.write'],'admin.reports'=>['Laporan','reports.read']] as $route=>$nav)
@@ -56,11 +56,11 @@
             @foreach(['admin.settings'=>['Pengaturan website','settings.write'],'admin.team'=>['Tim & hak akses','users.write'],'admin.security'=>['Keamanan akun','dashboard'],'admin.monitoring'=>['Monitoring sistem','audit.read'],'admin.audit'=>['Audit log','audit.read']] as $route=>$nav)@if(auth()->user()->allowed($nav[1]))<a href="{{ route($route) }}" @class(['active'=>request()->routeIs($route)])>{{ $nav[0] }}</a>@endif @endforeach
         </div>
     </nav>
-    <footer>DTHREE OPERATIONS<br><span>Ruang kerja tim Anda.</span></footer>
+    <footer>ASFARA OPERATIONS<br><span>Ruang kerja tim Anda.</span></footer>
 </aside>
 <div class="admin-sidebar-backdrop" data-sidebar-close hidden></div>
 <div class="admin-main">
-    <header class="admin-topbar"><div class="d-flex align-items-center gap-3"><button class="admin-menu-button" type="button" aria-label="Buka menu" aria-controls="admin-sidebar" aria-expanded="false" data-sidebar-open hidden>☰</button><div><small>CMS Dthree</small><strong>@yield('title','Ringkasan')</strong></div></div><div class="admin-topbar-actions"><a href="{{ route('home') }}" target="_blank" rel="noopener">Lihat website ↗</a><span class="admin-user">{{ auth()->user()->name }}<small>{{ auth()->user()->role }}</small></span><form method="post" action="{{ route('logout') }}">@csrf<button class="btn btn-outline-dark btn-sm">Keluar</button></form></div></header>
+    <header class="admin-topbar"><div class="d-flex align-items-center gap-3"><button class="admin-menu-button" type="button" aria-label="Buka menu" aria-controls="admin-sidebar" aria-expanded="false" data-sidebar-open hidden>☰</button><div><small>CMS Asfara</small><strong>@yield('title','Ringkasan')</strong></div></div><div class="admin-topbar-actions"><a href="{{ route('home') }}" target="_blank" rel="noopener">Lihat website ↗</a><span class="admin-user">{{ auth()->user()->name }}<small>{{ auth()->user()->role }}</small></span><form method="post" action="{{ route('logout') }}">@csrf<button class="btn btn-outline-dark btn-sm">Keluar</button></form></div></header>
     @include('partials.alerts')
     <main class="admin-content" id="main-content" tabindex="-1">@yield('content')</main>
 </div>
@@ -73,7 +73,7 @@ const menuButton=document.querySelector('[data-sidebar-open]');
 const sidebarClose=document.querySelector('.admin-sidebar-close');
 const sidebarBackdrop=document.querySelector('.admin-sidebar-backdrop');
 const activeSidebarLink=adminSidebar?.querySelector('nav a.active');
-const sidebarScrollKey='dthree-admin-sidebar-scroll';
+const sidebarScrollKey='asfara-admin-sidebar-scroll';
 const revealActiveSidebarLink=(center=false)=>{
     if(!adminSidebar||!activeSidebarLink)return;
     const sidebarBox=adminSidebar.getBoundingClientRect();

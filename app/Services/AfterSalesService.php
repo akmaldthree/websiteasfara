@@ -70,7 +70,7 @@ class AfterSalesService
             }
             $case->events()->create(['user_id' => auth()->id(), 'type' => 'opened', 'message' => 'Permintaan diterima dan menunggu peninjauan.']);
             Audit::record('case.created', 'case:'.$case->id, null, ['type' => $case->type, 'items' => $selected]);
-            OrderCommunication::record($order, 'case-'.$case->id, 'case_opened', 'Permintaan '.$case->number.' telah diterima. Tim Dthree akan meninjau permintaan Anda.');
+            OrderCommunication::record($order, 'case-'.$case->id, 'case_opened', 'Permintaan '.$case->number.' telah diterima. Tim Asfara akan meninjau permintaan Anda.');
 
             return $case;
         }, 3);

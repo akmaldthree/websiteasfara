@@ -82,7 +82,7 @@ class AdminOperationsEnhancementTest extends TestCase
 
         $this->actingAs($finance)->post(route('admin.commission-payout.store'), [
             'sales_user_id' => $sales->id,
-            'recipient_name' => 'Sales Dthree',
+            'recipient_name' => 'Sales Asfara',
             'bank_name' => 'Bank Uji',
             'account_number' => '1234567890',
             'payment_reference' => 'TRX-COMMISSION-001',
@@ -99,7 +99,7 @@ class AdminOperationsEnhancementTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'commission.paid', 'subject' => 'commission_payout:'.$payout->id]);
 
         $this->post(route('admin.commission-payout.store'), [
-            'sales_user_id' => $sales->id, 'recipient_name' => 'Sales Dthree', 'bank_name' => 'Bank Uji',
+            'sales_user_id' => $sales->id, 'recipient_name' => 'Sales Asfara', 'bank_name' => 'Bank Uji',
             'account_number' => '1234567890', 'payment_reference' => 'TRX-COMMISSION-002',
             'paid_at' => now()->format('Y-m-d H:i:s'),
         ])->assertSessionHasErrors('sales_user_id');
