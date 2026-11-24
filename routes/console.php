@@ -91,7 +91,7 @@ Artisan::command('system:backup-record {file}', function () {
 })->purpose('Mencatat backup database dan storage yang berhasil dibuat');
 
 Artisan::command('system:production-check', function (SystemHealthService $health) {
-    $blockingChecks = ['Database', 'Storage', 'Environment', 'Mode aplikasi', 'HTTPS', 'Cookie sesi', 'Kunci aplikasi', 'Email transaksi', 'Ruang disk'];
+    $blockingChecks = ['Database', 'Storage', 'Environment', 'Mode aplikasi', 'HTTPS', 'Cookie sesi', 'Enkripsi sesi', 'Akses cookie', 'SameSite cookie', 'Kunci aplikasi', 'Cache produksi', 'Queue produksi', 'Tabel runtime', 'Storage publik', 'Email transaksi', 'Ruang disk'];
     $failed = false;
 
     foreach ($health->checks() as $check) {

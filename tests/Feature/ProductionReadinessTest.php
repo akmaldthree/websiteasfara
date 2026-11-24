@@ -21,6 +21,12 @@ class ProductionReadinessTest extends TestCase
             'app.url' => 'https://store.asfara.co.id',
             'app.key' => 'base64:'.base64_encode(random_bytes(32)),
             'session.secure' => true,
+            'session.encrypt' => true,
+            'session.http_only' => true,
+            'session.same_site' => 'lax',
+            'session.driver' => 'database',
+            'cache.default' => 'database',
+            'queue.default' => 'database',
             'commerce.email_notifications' => false,
         ]);
 
@@ -41,12 +47,28 @@ class ProductionReadinessTest extends TestCase
         $this->seed();
         $this->app->detectEnvironment(fn (): string => 'production');
 
-        $this->withServerVariables(['HTTPS' => 'on'])
+        $response = $this->withServerVariables(['HTTPS' => 'on'])
             ->get('https://store.asfara.co.id/')
             ->assertOk()
             ->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
             ->assertHeader('Cross-Origin-Opener-Policy', 'same-origin')
+            ->assertHeader('Cross-Origin-Resource-Policy', 'same-origin')
+            ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
             ->assertHeader('X-Permitted-Cross-Domain-Policies', 'none');
+
+        $contentSecurityPolicy = (string) $response->headers->get('Content-Security-Policy');
+        $this->assertStringContainsString("default-src 'self'", $contentSecurityPolicy);
+        $this->assertStringContainsString('upgrade-insecure-requests', $contentSecurityPolicy);
+    }
+
+    public function test_not_found_page_is_branded_and_not_indexable(): void
+    {
+        $this->get('/halaman-yang-tidak-tersedia')
+            ->assertNotFound()
+            ->assertSee('ASFARA')
+            ->assertSee('Halaman ini tidak ditemukan.')
+            ->assertSee('name="robots" content="noindex,nofollow"', false)
+            ->assertDontSee('Laravel');
     }
 
     public function test_storefront_and_cms_expose_keyboard_and_screen_reader_context(): void

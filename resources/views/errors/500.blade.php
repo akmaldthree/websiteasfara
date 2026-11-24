@@ -1,0 +1,5 @@
+@extends('errors.minimal')
+@section('title', 'Terjadi kendala')
+@section('code', 'ERROR 500')
+@section('heading', 'Kami sedang merapikannya.')
+@section('message', 'Terjadi kendala sementara saat memproses permintaan Anda. Silakan coba kembali beberapa saat lagi.')

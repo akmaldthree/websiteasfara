@@ -45,8 +45,35 @@ class SystemHealthService
         $checks[] = $this->check('HTTPS', $https ? 'ok' : 'error', $https ? 'APP_URL menggunakan HTTPS.' : 'APP_URL belum menggunakan HTTPS.');
         $secureCookie = (bool) config('session.secure');
         $checks[] = $this->check('Cookie sesi', $secureCookie ? 'ok' : 'error', $secureCookie ? 'Cookie sesi hanya dikirim melalui HTTPS.' : 'SESSION_SECURE_COOKIE belum aktif.');
+        $encryptedSession = (bool) config('session.encrypt');
+        $checks[] = $this->check('Enkripsi sesi', $encryptedSession ? 'ok' : 'error', $encryptedSession ? 'Data sesi terenkripsi.' : 'SESSION_ENCRYPT belum aktif.');
+        $httpOnlySession = (bool) config('session.http_only');
+        $checks[] = $this->check('Akses cookie', $httpOnlySession ? 'ok' : 'error', $httpOnlySession ? 'Cookie sesi tidak dapat dibaca JavaScript.' : 'SESSION_HTTP_ONLY harus aktif.');
+        $sameSite = (string) config('session.same_site');
+        $sameSiteSafe = in_array($sameSite, ['lax', 'strict'], true);
+        $checks[] = $this->check('SameSite cookie', $sameSiteSafe ? 'ok' : 'error', $sameSiteSafe ? "Kebijakan SameSite {$sameSite}." : 'SESSION_SAME_SITE harus lax atau strict.');
         $hasKey = filled(config('app.key'));
         $checks[] = $this->check('Kunci aplikasi', $hasKey ? 'ok' : 'error', $hasKey ? 'APP_KEY tersedia.' : 'APP_KEY belum diatur.');
+
+        $cacheDriver = (string) config('cache.default');
+        $persistentCache = ! in_array($cacheDriver, ['array', 'null'], true);
+        $checks[] = $this->check('Cache produksi', $persistentCache ? 'ok' : 'error', $persistentCache ? "Cache menggunakan {$cacheDriver}." : "Driver cache {$cacheDriver} tidak persisten.");
+        $queueDriver = (string) config('queue.default');
+        $persistentQueue = ! in_array($queueDriver, ['sync', 'null'], true);
+        $checks[] = $this->check('Queue produksi', $persistentQueue ? 'ok' : 'error', $persistentQueue ? "Queue menggunakan {$queueDriver}." : "Driver queue {$queueDriver} tidak menjalankan worker asinkron.");
+
+        $requiredTables = collect([
+            config('session.driver') === 'database' ? (string) config('session.table', 'sessions') : null,
+            $cacheDriver === 'database' ? (string) config('cache.stores.database.table', 'cache') : null,
+            $queueDriver === 'database' ? (string) config('queue.connections.database.table', 'jobs') : null,
+            $queueDriver === 'database' ? 'failed_jobs' : null,
+        ])->filter()->unique();
+        $missingTables = $requiredTables->reject(fn (string $table): bool => Schema::hasTable($table))->values();
+        $checks[] = $this->check('Tabel runtime', $missingTables->isEmpty() ? 'ok' : 'error', $missingTables->isEmpty() ? 'Tabel sesi, cache, dan queue tersedia.' : 'Tabel belum tersedia: '.$missingTables->implode(', ').'. Jalankan migrasi.');
+
+        $publicRoot = (string) config('filesystems.disks.public.root');
+        $publicStorageReady = is_dir($publicRoot) && is_writable($publicRoot);
+        $checks[] = $this->check('Storage publik', $publicStorageReady ? 'ok' : 'error', $publicStorageReady ? 'Penyimpanan gambar publik tersedia dan dapat ditulis.' : 'Root disk public belum tersedia atau tidak dapat ditulis.');
 
         $emailEnabled = (bool) config('commerce.email_notifications');
         $mailDriver = (string) config('mail.default');

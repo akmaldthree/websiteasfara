@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "dthree/ecommerce",
+    "name": "asfara/storefront",
     "type": "project",
     "description": "Asfara storefront dan dashboard operasional",
     "keywords": [

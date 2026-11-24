@@ -1,0 +1,5 @@
+@extends('errors.minimal')
+@section('title', 'Pemeliharaan sementara')
+@section('code', 'MAINTENANCE')
+@section('heading', 'Asfara segera kembali.')
+@section('message', 'Kami sedang melakukan pemeliharaan singkat agar pengalaman berbelanja tetap nyaman. Silakan kunjungi kembali beberapa saat lagi.')
