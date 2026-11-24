@@ -91,10 +91,20 @@ class DemoSeederTest extends TestCase
             ->assertSee('EXPLORE ASFARA')
             ->assertSee('SAVE IDR')
             ->assertSee('4.');
-        $this->get('/koleksi')->assertOk()->assertSee('Raffah Signature')->assertSee('Hana Flow Khimar');
+        $this->get('/koleksi')->assertOk()
+            ->assertSee('Raffah Signature')
+            ->assertSee('Hana Flow Khimar')
+            ->assertSee('class="catalog-category-strip"', false)
+            ->assertSee('class="catalog-hero-heading"', false);
         $this->get('/koleksi?q=Zayna')->assertOk()->assertSee('Zayna Essential');
         $this->get('/koleksi?q=Safa')->assertOk()->assertSee('Safa Daily Khimar');
-        $this->get('/koleksi/raffah-signature')->assertOk()->assertSee('Raffah Signature')->assertSee('Olive');
+        $this->get('/koleksi/raffah-signature')->assertOk()
+            ->assertSee('Raffah Signature')
+            ->assertSee('Olive')
+            ->assertSee('class="product-heading-meta"', false)
+            ->assertSee('class="product-promise-list"', false)
+            ->assertSee('class="mobile-purchase-bar"', false)
+            ->assertSee('id="product-reviews"', false);
     }
 
     private function assertImageRatio(string $file, float $expected): void
