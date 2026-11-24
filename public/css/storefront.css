@@ -156,6 +156,27 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 .home-transparent-header .site-header:not(.is-scrolled) .wordmark,.home-transparent-header .site-header:not(.is-scrolled) .desktop-nav a,.home-transparent-header .site-header:not(.is-scrolled) .header-actions a{color:#fff}
 @media(max-width:767px){.catalog-sidebar,.checkout-body,.checkout-body .checkout-summary{background:var(--palette-sand)}}
 
+/* Phase 4: polished cart and conversion flow. */
+.cart-page-header{display:flex;align-items:flex-end;justify-content:space-between;gap:32px;margin-bottom:42px;padding-bottom:20px;border-bottom:1px solid var(--palette-taupe)}
+.cart-page-header h1,.checkout-page-header h1{margin:9px 0 0;font-size:34px;font-weight:500;letter-spacing:.05em;text-transform:uppercase}
+.cart-page-header>p{margin:0;color:#69645f;font-size:13px}.cart-page-header>p strong{color:var(--text);font-size:18px;font-weight:500}
+.cart-line-meta{margin-bottom:8px;color:#66615d;font-size:12px}.cart-stock-status{display:inline-block;margin-bottom:18px;color:#65755f;font-size:9px;font-weight:600;letter-spacing:.1em}
+.cart-body .cart-line-actions{display:flex;align-items:center;gap:12px}.cart-line-quantity{display:grid;grid-template-columns:38px 44px 38px;height:40px;border:1px solid var(--palette-taupe);background:var(--palette-sand)}
+.cart-line-quantity button,.cart-line-quantity input{width:auto!important;min-height:0!important;padding:0;border:0;background:transparent;color:var(--text);text-align:center}.cart-line-quantity button{font-size:16px}.cart-line-quantity input{appearance:textfield;font-size:12px}.cart-line-quantity input::-webkit-inner-spin-button{appearance:none}
+.cart-line-update,.cart-line-remove{padding:5px 0;border:0;border-bottom:1px solid transparent;background:transparent;color:var(--text);font-size:9px;font-weight:600;letter-spacing:.1em}.cart-line-update{opacity:.45}.cart-line-actions.is-dirty .cart-line-update{border-color:currentColor;opacity:1}.cart-line-remove{margin-left:auto;border-color:currentColor;color:#746b64}.cart-line-total{font-size:14px;font-weight:500;white-space:nowrap}
+.cart-assurances{display:grid;gap:9px;margin:20px 0 24px;padding:18px 0;border-top:1px solid var(--palette-taupe);border-bottom:1px solid var(--palette-taupe);list-style:none}.cart-assurances li{position:relative;padding-left:20px;color:#5f5a55;font-size:11px}.cart-assurances li:before{content:'✓';position:absolute;left:0;color:var(--palette-gold);font-weight:700}
+.cart-drawer>header>.eyebrow{display:block;margin-bottom:8px}.cart-drawer>header h2{margin:0}.cart-drawer>header h2 small{font-size:11px;font-weight:500}.cart-drawer-footer>small{display:block;margin:-8px 0 14px;color:#716b65;font-size:10px}.cart-drawer-footer>em{display:block;margin-top:14px;color:#716b65;font-size:8px;font-style:normal;letter-spacing:.1em;text-align:center}
+.checkout-page-header{max-width:650px;margin:28px 0 30px}.checkout-page-header p{max-width:570px;margin:14px 0 0;color:#68635e;font-size:13px}
+.checkout-trust{display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:48px;border:1px solid var(--palette-taupe);background:var(--palette-cream)}.checkout-trust>span{position:relative;display:grid;grid-template-columns:auto 1fr;gap:2px 12px;padding:19px 20px}.checkout-trust>span+span{border-left:1px solid var(--palette-taupe)}.checkout-trust b{grid-row:span 2;color:var(--palette-gold);font-size:11px;font-weight:600}.checkout-trust strong{font-size:9px;letter-spacing:.1em}.checkout-trust small{color:#716b65;font-size:10px;line-height:1.45}
+.checkout-section-heading{margin-bottom:28px}.checkout-section-heading>span{display:block;margin-bottom:7px;color:var(--palette-gold);font-size:9px;font-weight:600;letter-spacing:.13em}.checkout-section-heading h2{margin-bottom:7px}.checkout-section-heading p{margin:0;color:#716b65;font-size:11px}.checkout-summary>.eyebrow{display:block;margin-bottom:8px}
+.payment-methods i{display:grid;width:18px;height:18px;place-items:center;border:1px solid var(--palette-taupe);border-radius:50%}.payment-methods i:after{content:'';width:8px;height:8px;border-radius:50%;background:transparent}.payment-methods input:checked~i{border-color:var(--palette-gold)}.payment-methods input:checked~i:after{background:var(--palette-gold)}
+.secure-checkout{letter-spacing:.1em}
+@media(max-width:767px){
+    .cart-page-header{align-items:flex-start;margin-bottom:28px}.cart-page-header h1,.checkout-page-header h1{font-size:26px}.cart-page-header>p{padding-top:26px;white-space:nowrap}
+    .cart-body .cart-item{position:relative}.cart-body .cart-item>div{min-width:0}.cart-line-total{grid-column:2;grid-row:2;justify-self:start;margin-top:-4px}.cart-body .cart-line-actions{gap:9px}.cart-line-quantity{grid-template-columns:36px 40px 36px}.cart-line-update{display:none}.cart-line-remove{margin-left:0}
+    .checkout-page-header{margin:24px 0}.checkout-page-header p{font-size:12px}.checkout-trust{grid-template-columns:1fr;margin-bottom:32px}.checkout-trust>span{padding:14px 16px}.checkout-trust>span+span{border-top:1px solid var(--palette-taupe);border-left:0}.checkout-trust small{font-size:9px}.checkout-body .checkout-summary-details .checkout-summary>.eyebrow{display:none}
+}
+
 /* Phase 3 final cascade locks. */
 .store-body .catalog-hero{display:block;min-height:0;align-items:initial;padding:42px 0 0;background:var(--palette-sand)!important;color:var(--text)!important}
 .store-body .catalog-hero .container-xxl{text-align:left}

@@ -86,6 +86,14 @@ class CommerceTest extends TestCase
             ->assertJsonPath('count', 3)
             ->assertJsonPath('lines.0.quantity', 3)
             ->assertJsonPath('subtotal', 'Rp 900.000');
+
+        $this->withSession(['cart' => [$this->variant->id => 2]])
+            ->get(route('cart'))
+            ->assertOk()
+            ->assertSee('cart-page-header', false)
+            ->assertSee('cart-line-quantity', false)
+            ->assertSee('data-cart-page-checkout', false)
+            ->assertSee('Total akhir ditampilkan sebelum konfirmasi');
     }
 
     public function test_cart_rejects_quantity_above_available_stock_without_corrupting_session(): void
@@ -129,6 +137,9 @@ class CommerceTest extends TestCase
             ->assertSee('Tasikmalaya, Jawa Barat')
             ->assertSee('checkout-summary-details', false)
             ->assertSee('mobile-checkout-action', false)
+            ->assertSee('checkout-page-header', false)
+            ->assertSee('data-checkout-trust', false)
+            ->assertSee('TOTAL TRANSPARAN')
             ->assertSee('autocomplete="postal-code"', false);
     }
 
