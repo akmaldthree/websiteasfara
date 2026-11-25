@@ -113,7 +113,7 @@ class StorefrontEditorialTest extends TestCase
 
         $this->get(route('content.index', 'lookbook'))->assertOk()->assertSee('Eid Lookbook');
         $this->get(route('catalog', ['sort' => 'title_asc', 'color' => 'Black']))->assertOk()->assertSee('WARNA')->assertSee('Black')->assertSee('UKURAN')->assertSee('ZAYNA SERIES')
-            ->assertSee('FILTER AKTIF')->assertSee('Warna: Black')->assertSee('queueCatalogFilters', false);
+            ->assertSee('FILTER AKTIF')->assertSee('Warna: Black')->assertSee('Filter lanjutan')->assertSee('data-filter-submit', false);
     }
 
     public function test_store_locations_and_language_switch_are_rendered_from_cms(): void
@@ -210,9 +210,9 @@ class StorefrontEditorialTest extends TestCase
 
         $product = $this->get(route('product', $this->series->slug))->assertOk();
         $this->assertMatchesRegularExpression('/<option value="'.$variant->id.'"[^>]*selected>/', $product->getContent());
-        $product->assertSee('const initial=select.selectedOptions[0]', false)
+        $product->assertSee('data-cart-add', false)
             ->assertSee('data-product-gallery-next', false)
-            ->assertSee('product-stock-bar', false)
+            ->assertDontSee('product-stock-bar', false)
             ->assertSee('S&amp;K PENGEMBALIAN', false);
     }
 
@@ -224,6 +224,19 @@ class StorefrontEditorialTest extends TestCase
             ->assertSee('id="direct-add-'.$this->series->id.'"', false)
             ->assertSee('name="variant_id" value="'.$variant->id.'"', false)
             ->assertSee('form="direct-add-'.$this->series->id.'" class="product-quick">ADD TO CART', false);
+    }
+
+    public function test_sold_out_product_has_no_quick_purchase_action(): void
+    {
+        $variant = $this->series->variants()->firstOrFail();
+        $variant->update(['stock' => 0]);
+
+        $this->get(route('catalog'))->assertOk()
+            ->assertSee('SOLD OUT')
+            ->assertDontSee('data-quick-open="quick-product-'.$this->series->id.'"', false)
+            ->assertDontSee('form="direct-add-'.$this->series->id.'"', false);
+        $this->get(route('product', ['slug' => $this->series->slug, 'variant' => $variant->id]))
+            ->assertOk()->assertSee('Stok habis')->assertSee('data-product-submit disabled', false);
     }
 
     public function test_scheduled_visual_voucher_popup_renders_from_cms_settings(): void

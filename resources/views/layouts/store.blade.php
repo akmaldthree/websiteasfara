@@ -121,8 +121,19 @@
     </nav>
 </header>
 <dialog class="search-drawer" id="search-drawer" aria-labelledby="search-drawer-title"><button type="button" id="close-search" aria-label="Tutup pencarian">×</button><form action="{{ route('catalog') }}" method="get"><label id="search-drawer-title" for="global-search">{{ $storeCopy['search_title'] }}</label><div><input id="global-search" name="q" placeholder="{{ $storeCopy['search_placeholder'] }}" autocomplete="off" aria-describedby="search-hint"><button type="submit" aria-label="Mulai mencari">→</button></div></form><p id="search-hint">{{ $storeCopy['search_hint'] }}</p><div class="predictive-search" id="predictive-search" aria-live="polite"></div></dialog>
-<dialog class="cart-drawer" id="cart-drawer" aria-labelledby="cart-drawer-title"><button type="button" class="drawer-close" data-close-cart aria-label="Tutup keranjang">×</button><header><span class="eyebrow">PILIHAN ANDA</span><h2 id="cart-drawer-title">{{ $storeCopy['cart_title'] }} @if(array_sum(session('cart',[]))>0)<small>({{ array_sum(session('cart',[])) }})</small>@endif</h2></header><div class="drawer-shipping" id="cart-drawer-shipping" hidden><p id="cart-drawer-shipping-copy"></p><div><i id="cart-drawer-shipping-bar"></i></div></div><div id="cart-drawer-lines" aria-live="polite"><p>Memuat keranjang…</p></div><div class="cart-drawer-recommendations" id="cart-drawer-recommendations"></div><div class="cart-drawer-footer" id="cart-drawer-footer" hidden><p><span>SUBTOTAL</span><strong id="cart-drawer-subtotal"></strong></p><small>Ongkir dan total akhir dihitung pada checkout.</small><a class="btn btn-dark" href="{{ route('cart') }}">LIHAT KERANJANG</a><a class="btn btn-outline-dark" href="{{ route('checkout') }}">CHECKOUT</a><em>TRANSAKSI AMAN · DATA TERLINDUNGI</em></div></dialog>
-<dialog class="quick-product-dialog" id="quick-product-dialog" aria-labelledby="quick-product-name"><button type="button" class="drawer-close" data-quick-close aria-label="Tutup pilihan produk">×</button><div class="quick-product-layout"><img id="quick-product-image" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="900" height="1125" loading="lazy" decoding="async"><div><span class="eyebrow">{{ $storeCopy['quick_shop'] }}</span><h2 id="quick-product-name"></h2><p class="quick-price" id="quick-product-price" aria-live="polite"></p><form method="post" action="{{ route('cart.add') }}" id="quick-product-form">@csrf<div id="quick-product-options"></div><input type="hidden" name="variant_id" id="quick-variant"><input type="hidden" name="quantity" value="1"><button class="btn btn-dark w-100" id="quick-submit" disabled>ADD TO CART</button></form><a id="quick-product-link" href="#">{{ $storeCopy['quick_view_detail'] }}</a></div></div></dialog>
+<dialog class="cart-drawer" id="cart-drawer" aria-labelledby="cart-drawer-title">
+    <button type="button" class="drawer-close" data-close-cart aria-label="Tutup keranjang">×</button>
+    <header><h2 id="cart-drawer-title">{{ $storeCopy['cart_title'] }} <small id="cart-drawer-count"></small></h2></header>
+    <p id="cart-drawer-status" class="cart-drawer-status" role="status" hidden></p>
+    <div id="cart-drawer-lines" aria-live="polite"><p>Memuat keranjang…</p></div>
+    <div class="cart-drawer-footer" id="cart-drawer-footer" hidden>
+        <p><span>SUBTOTAL</span><strong id="cart-drawer-subtotal"></strong></p>
+        <small>Ongkir dan total akhir dihitung saat checkout.</small>
+        <a class="btn btn-dark" href="{{ route('checkout') }}">CHECKOUT</a>
+        <a class="btn btn-outline-dark" href="{{ route('cart') }}">LIHAT KERANJANG</a>
+    </div>
+</dialog>
+<dialog class="quick-product-dialog" id="quick-product-dialog" aria-labelledby="quick-product-name"><button type="button" class="drawer-close" data-quick-close aria-label="Tutup pilihan produk">×</button><div class="quick-product-layout"><img id="quick-product-image" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="900" height="1125" loading="lazy" decoding="async"><div><span class="eyebrow">{{ $storeCopy['quick_shop'] }}</span><h2 id="quick-product-name"></h2><p class="quick-price" id="quick-product-price" aria-live="polite"></p><form method="post" action="{{ route('cart.add') }}" id="quick-product-form" data-cart-add>@csrf<div id="quick-product-options"></div><input type="hidden" name="variant_id" id="quick-variant"><input type="hidden" name="quantity" value="1"><button class="btn btn-dark w-100" id="quick-submit" disabled>ADD TO CART</button><p class="cart-form-error" data-cart-add-error role="alert" hidden></p></form><a id="quick-product-link" href="#">{{ $storeCopy['quick_view_detail'] }}</a></div></div></dialog>
 <main id="main" tabindex="-1">@include('partials.alerts')@yield('content')</main>
 @php($welcomeStartsAt=!empty($shop['welcome_voucher_start'])?\Illuminate\Support\Carbon::parse($shop['welcome_voucher_start']):null)
 @php($welcomeEndsAt=!empty($shop['welcome_voucher_end'])?\Illuminate\Support\Carbon::parse($shop['welcome_voucher_end']):null)
@@ -203,11 +214,202 @@ const catalogTrigger=document.querySelector('.catalog-nav-link'),catalogMenu=doc
 const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
 const storefrontCopy=@json($storeCopy);
 const searchDrawer=document.getElementById('search-drawer'),searchInput=document.getElementById('global-search'),searchResults=document.getElementById('predictive-search');const openSearch=()=>{searchDrawer.showModal();setTimeout(()=>searchInput?.focus(),50)};document.getElementById('open-search')?.addEventListener('click',openSearch);document.getElementById('mobile-open-search')?.addEventListener('click',()=>{bootstrap.Collapse.getOrCreateInstance(document.getElementById('mobile-nav')).hide();openSearch()});document.getElementById('close-search')?.addEventListener('click',()=>searchDrawer.close());searchDrawer?.addEventListener('click',event=>{if(event.target===searchDrawer)searchDrawer.close()});let searchTimer;searchInput?.addEventListener('input',()=>{clearTimeout(searchTimer);const query=searchInput.value.trim();if(query.length<2){searchResults.innerHTML='';return}searchResults.innerHTML='<p>Mencari…</p>';searchTimer=setTimeout(async()=>{try{const response=await fetch(@json(route('search.suggestions'))+'?q='+encodeURIComponent(query),{headers:{Accept:'application/json'}});const data=await response.json();searchResults.innerHTML=data.products.length?data.products.map(item=>`<a href="${esc(item.url)}"><img src="${esc(item.image)}" alt="${esc(item.name)}" width="128" height="160" loading="lazy" decoding="async"><span><b>${esc(item.name)}</b><small>${esc(item.price)}</small></span><i aria-hidden="true">→</i></a>`).join(''):'<p>Produk tidak ditemukan.</p>'}catch(error){searchResults.innerHTML='<p>Pencarian belum dapat dimuat.</p>'}},250)});
-const cartDrawer=document.getElementById('cart-drawer'),cartLines=document.getElementById('cart-drawer-lines'),cartFooter=document.getElementById('cart-drawer-footer'),cartRecommendations=document.getElementById('cart-drawer-recommendations'),cartShipping=document.getElementById('cart-drawer-shipping');
-const renderCartDrawer=data=>{cartLines.innerHTML=data.lines.length?data.lines.map(line=>`<div class="cart-drawer-line" data-drawer-line="${line.variant_id}"><a href="${esc(line.url)}"><img src="${esc(line.image)}" alt="${esc(line.name)}" width="176" height="224" decoding="async"></a><span><a href="${esc(line.url)}"><b>${esc(line.name)}</b></a><small>${esc(line.variant)}</small><strong>${esc(line.total)}</strong><span class="drawer-quantity"><button type="button" data-drawer-quantity="${line.quantity-1}" data-variant="${line.variant_id}" aria-label="Kurangi jumlah">−</button><span>${line.quantity}</span><button type="button" data-drawer-quantity="${line.quantity+1}" data-variant="${line.variant_id}" aria-label="Tambah jumlah">+</button><button type="button" class="drawer-remove" data-drawer-quantity="0" data-variant="${line.variant_id}">HAPUS</button></span></span></div>`).join(''):`<div class="drawer-empty"><p>${esc(storefrontCopy.cart_empty)}</p><a href="{{ route('catalog') }}">${esc(storefrontCopy.cart_start)}</a></div>`;cartRecommendations.innerHTML=data.recommendations?.length?`<h3>${esc(storefrontCopy.cart_recommendations)}</h3>${data.recommendations.map(item=>`<a href="${esc(item.url)}"><img src="${esc(item.image)}" alt="" width="128" height="160" loading="lazy" decoding="async"><span><b>${esc(item.name)}</b><small>${esc(item.price)}</small></span><i>→</i></a>`).join('')}`:'';cartShipping.hidden=data.free_shipping_target<1;if(data.free_shipping_target>0){document.getElementById('cart-drawer-shipping-bar').style.width=data.free_shipping_progress+'%';document.getElementById('cart-drawer-shipping-copy').textContent=data.free_shipping_remaining>0?'Tambah Rp '+new Intl.NumberFormat('id-ID').format(data.free_shipping_remaining)+' lagi untuk mencapai promo gratis ongkir.':'Target promo gratis ongkir sudah tercapai.'}cartFooter.hidden=!data.lines.length;if(data.lines.length)document.getElementById('cart-drawer-subtotal').textContent=data.subtotal;const cartLink=document.querySelector('[data-open-cart]');let badge=cartLink?.querySelector('span');if(data.count>0&&!badge){badge=document.createElement('span');cartLink.append(badge)}if(badge){badge.textContent=data.count;badge.hidden=data.count<1}};
-const loadCartDrawer=async()=>{cartLines.innerHTML='<p class="drawer-loading">Memuat keranjang…</p>';cartRecommendations.innerHTML='';cartFooter.hidden=true;cartShipping.hidden=true;try{const response=await fetch(@json(route('cart.summary')),{headers:{Accept:'application/json'}});renderCartDrawer(await response.json())}catch(error){cartLines.innerHTML='<p>Keranjang belum dapat dimuat. <a href="{{ route('cart') }}">Buka halaman keranjang</a>.</p>'}};
-document.querySelector('[data-open-cart]')?.addEventListener('click',event=>{if(!cartDrawer?.showModal)return;event.preventDefault();cartDrawer.showModal();loadCartDrawer()});cartLines?.addEventListener('click',async event=>{const button=event.target.closest('[data-drawer-quantity]');if(!button)return;button.disabled=true;try{const response=await fetch(@json(route('cart.update')),{method:'POST',headers:{Accept:'application/json','Content-Type':'application/x-www-form-urlencoded','X-CSRF-TOKEN':@json(csrf_token())},body:new URLSearchParams({variant_id:button.dataset.variant,quantity:button.dataset.drawerQuantity})});if(!response.ok)throw new Error('cart-update-failed');renderCartDrawer(await response.json())}catch(error){button.disabled=false}});document.querySelector('[data-close-cart]')?.addEventListener('click',()=>cartDrawer.close());cartDrawer?.addEventListener('click',event=>{if(event.target===cartDrawer)cartDrawer.close()});
-const quickColor=value=>{const color=String(value).toLowerCase();if(color.includes('black'))return'#202020';if(color.includes('navy'))return'#26344c';if(color.includes('olive'))return'#747452';if(color.includes('sage'))return'#a8b19a';if(color.includes('rose')||color.includes('pink'))return'#d8a7ad';if(color.includes('plum'))return'#70445d';if(color.includes('mauve'))return'#b58b96';if(color.includes('taupe'))return'#a18d7d';if(color.includes('sand')||color.includes('beige'))return'#d5c2a5';if(color.includes('ivory'))return'#f1ebdd';return'#b6aca1'};const quickDialog=document.getElementById('quick-product-dialog'),quickOptions=document.getElementById('quick-product-options'),quickVariant=document.getElementById('quick-variant'),quickSubmit=document.getElementById('quick-submit');let quickData=null,quickSelected={};const renderQuick=()=>{const kinds=[...(quickData.usesType?[['type','JENIS PRODUK']]:[]),['color','WARNA'],['size','UKURAN']];quickOptions.innerHTML=kinds.map(([kind,label])=>{const values=[...new Set(quickData.variants.map(item=>item[kind]).filter(Boolean))];return `<fieldset><legend>${label}</legend><div>${values.map(value=>{const possible=quickData.variants.some(item=>item.available>0&&item[kind]===value&&kinds.every(([other])=>other===kind||!quickSelected[other]||item[other]===quickSelected[other]));return `<button type="button" data-quick-kind="${kind}" data-quick-value="${esc(value)}" class="${quickSelected[kind]===value?'is-active':''} ${kind==='color'?'color-choice':''}" ${possible?'':'disabled'}>${kind==='color'?`<i style="--swatch:${quickColor(value)}"></i>`:''}${esc(value)}</button>`}).join('')}</div></fieldset>`}).join('');const match=quickData.variants.find(item=>item.available>0&&kinds.every(([kind])=>item[kind]===quickSelected[kind]));quickVariant.value=match?.id||'';quickSubmit.disabled=!match;document.getElementById('quick-product-price').textContent=match?new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(match.price):'Pilih opsi yang tersedia';quickOptions.querySelectorAll('[data-quick-kind]').forEach(button=>button.addEventListener('click',()=>{quickSelected[button.dataset.quickKind]=button.dataset.quickValue;renderQuick()}))};document.querySelectorAll('[data-quick-open]').forEach(button=>button.addEventListener('click',()=>{quickData=JSON.parse(document.getElementById(button.dataset.quickOpen).textContent);quickSelected={};document.getElementById('quick-product-name').textContent=quickData.name;document.getElementById('quick-product-image').src=quickData.image;document.getElementById('quick-product-image').alt=quickData.name;document.getElementById('quick-product-link').href=quickData.url;renderQuick();quickDialog.showModal()}));document.querySelector('[data-quick-close]')?.addEventListener('click',()=>quickDialog.close());quickDialog?.addEventListener('click',event=>{if(event.target===quickDialog)quickDialog.close()});
+const cartDrawer = document.getElementById('cart-drawer');
+const cartLines = document.getElementById('cart-drawer-lines');
+const cartFooter = document.getElementById('cart-drawer-footer');
+const cartDrawerStatus = document.getElementById('cart-drawer-status');
+let cartReadSequence = 0;
+let cartReturnFocus = null;
+const cartRequest = async (url, options = {}) => {
+    const endpoint = new URL(url, location.href);
+    endpoint.searchParams.set('compact', '1');
+    const response = await fetch(endpoint, {...options, headers: {Accept: 'application/json'}});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Keranjang belum dapat diperbarui.');
+    return data;
+};
+const showCartStatus = message => {
+    cartDrawerStatus.textContent = message || '';
+    cartDrawerStatus.hidden = !message;
+};
+const renderCartDrawer = data => {
+    cartLines.innerHTML = data.lines.length ? data.lines.map(line => `
+        <div class="cart-drawer-line" data-drawer-line="${line.variant_id}">
+            <a href="${esc(line.url)}"><img src="${esc(line.image)}" alt="" width="176" height="224" decoding="async"></a>
+            <div>
+                <a href="${esc(line.url)}"><b>${esc(line.name)}</b></a>
+                <small>${esc(line.variant)}</small>
+                <strong>${esc(line.total)}</strong>
+                <div class="drawer-quantity">
+                    <button type="button" data-drawer-quantity="${line.quantity - 1}" data-variant="${line.variant_id}" data-cart-control="minus" aria-label="Kurangi jumlah">−</button>
+                    <span>${line.quantity}</span>
+                    <button type="button" data-drawer-quantity="${line.quantity + 1}" data-variant="${line.variant_id}" data-cart-control="plus" aria-label="Tambah jumlah" ${line.quantity >= 100 ? 'disabled' : ''}>+</button>
+                    <button type="button" class="drawer-remove" data-drawer-quantity="0" data-variant="${line.variant_id}" aria-label="Hapus ${esc(line.name)}">Hapus</button>
+                </div>
+            </div>
+        </div>`).join('') : `<div class="drawer-empty"><p>${esc(storefrontCopy.cart_empty)}</p><a href="{{ route('catalog') }}">${esc(storefrontCopy.cart_start)}</a></div>`;
+    cartFooter.hidden = !data.lines.length;
+    document.getElementById('cart-drawer-subtotal').textContent = data.subtotal;
+    document.getElementById('cart-drawer-count').textContent = data.count ? '(' + data.count + ')' : '';
+    const cartLink = document.querySelector('[data-open-cart]');
+    let badge = cartLink?.querySelector('span');
+    if (data.count > 0 && !badge && cartLink) {
+        badge = document.createElement('span');
+        cartLink.append(badge);
+    }
+    if (badge) {
+        badge.textContent = data.count;
+        badge.hidden = data.count < 1;
+    }
+};
+const openCartDrawer = () => {
+    if (!cartDrawer.open) cartDrawer.showModal();
+};
+const loadCartDrawer = async (message = '') => {
+    const read = ++cartReadSequence;
+    openCartDrawer();
+    showCartStatus(message);
+    cartLines.innerHTML = '<p>Memuat keranjang…</p>';
+    cartFooter.hidden = true;
+    try {
+        const data = await cartRequest(@json(route('cart.summary')));
+        if (read === cartReadSequence) renderCartDrawer(data);
+    } catch {
+        if (read === cartReadSequence) cartLines.innerHTML = '<p>Keranjang belum dapat dimuat. <a href="{{ route('cart') }}">Buka halaman keranjang</a>.</p>';
+    }
+};
+let cartMutationPending = false;
+document.querySelector('[data-open-cart]')?.addEventListener('click', event => {
+    if (!cartDrawer?.showModal) return;
+    event.preventDefault();
+    if (!cartMutationPending) loadCartDrawer();
+});
+const cartErrorMessage = error => error instanceof SyntaxError || error instanceof TypeError
+    ? 'Status keranjang belum bisa dipastikan. Periksa isi keranjang sebelum mencoba lagi.'
+    : error.message;
+cartLines.addEventListener('click', async event => {
+    const button = event.target.closest('[data-drawer-quantity]');
+    if (!button || cartMutationPending) return;
+    cartMutationPending = true;
+    button.disabled = true;
+    showCartStatus('');
+    try {
+        const data = await cartRequest(@json(route('cart.update')), {
+            method: 'POST',
+            body: new URLSearchParams({_token: @json(csrf_token()), variant_id: button.dataset.variant, quantity: button.dataset.drawerQuantity}),
+        });
+        renderCartDrawer(data);
+        const updated = cartLines.querySelector(`[data-drawer-line="${button.dataset.variant}"] [data-cart-control="${button.dataset.cartControl}"]`);
+        (updated && !updated.disabled ? updated : cartDrawer.querySelector('[data-close-cart]')).focus();
+    } catch (error) {
+        button.disabled = false;
+        showCartStatus(cartErrorMessage(error));
+    } finally {
+        cartMutationPending = false;
+    }
+});
+document.addEventListener('submit', async event => {
+    const form = event.target;
+    if (!form.matches('form[data-cart-add]') || event.submitter?.name === 'buy_now' || !cartDrawer?.showModal) return;
+    event.preventDefault();
+    if (cartMutationPending) return;
+    cartMutationPending = true;
+    ++cartReadSequence;
+    const button = event.submitter;
+    const returnTarget = quickDialog.open ? quickTrigger : (document.activeElement || button);
+    const errors = form.querySelector('[data-cart-add-error]');
+    if (errors) errors.hidden = true;
+    form.setAttribute('aria-busy', 'true');
+    if (button) button.disabled = true;
+    try {
+        const data = await cartRequest(form.action, {method: 'POST', body: new FormData(form)});
+        if (quickDialog.open) quickDialog.close();
+        renderCartDrawer(data);
+        showCartStatus('Produk ditambahkan ke keranjang.');
+        cartReturnFocus = returnTarget;
+        openCartDrawer();
+    } catch (error) {
+        if (errors) {
+            errors.textContent = cartErrorMessage(error);
+            errors.hidden = false;
+        } else {
+            cartReturnFocus = returnTarget;
+            await loadCartDrawer(cartErrorMessage(error));
+        }
+    } finally {
+        if (button) button.disabled = false;
+        form.removeAttribute('aria-busy');
+        cartMutationPending = false;
+    }
+});
+document.querySelector('[data-close-cart]')?.addEventListener('click', () => cartDrawer.close());
+cartDrawer?.addEventListener('click', event => { if (event.target === cartDrawer) cartDrawer.close(); });
+cartDrawer.addEventListener('close', () => {
+    const target = cartReturnFocus;
+    cartReturnFocus = null;
+    if (target?.isConnected) requestAnimationFrame(() => target.focus());
+});
+const quickColor=value=>{const color=String(value).toLowerCase();if(color.includes('black'))return'#202020';if(color.includes('navy'))return'#26344c';if(color.includes('olive'))return'#747452';if(color.includes('sage'))return'#a8b19a';if(color.includes('rose')||color.includes('pink'))return'#d8a7ad';if(color.includes('plum'))return'#70445d';if(color.includes('mauve'))return'#b58b96';if(color.includes('taupe'))return'#a18d7d';if(color.includes('sand')||color.includes('beige'))return'#d5c2a5';if(color.includes('ivory'))return'#f1ebdd';return'#b6aca1'};
+const quickDialog = document.getElementById('quick-product-dialog');
+const quickOptions = document.getElementById('quick-product-options');
+const quickVariant = document.getElementById('quick-variant');
+const quickSubmit = document.getElementById('quick-submit');
+let quickData = null;
+let quickSelected = {};
+let quickTrigger = null;
+const renderQuick = () => {
+    const available = quickData.variants.filter(item => item.available > 0);
+    const kinds = [
+        ...(quickData.usesType ? [['type', 'Jenis produk']] : []),
+        ['color', 'Warna'],
+        ['size', 'Ukuran'],
+    ].filter(([kind]) => available.some(item => item[kind]));
+    quickOptions.innerHTML = kinds.map(([kind, label]) => {
+        const values = [...new Set(quickData.variants.map(item => item[kind]).filter(Boolean))];
+        const choices = values.map(value => {
+            const possible = available.some(item => item[kind] === value);
+            const selected = quickSelected[kind] === value;
+            const swatch = kind === 'color' ? `<i style="--swatch:${quickColor(value)}"></i>` : '';
+            return `<button type="button" data-quick-kind="${kind}" data-quick-value="${esc(value)}" class="${selected ? 'is-active' : ''} ${kind === 'color' ? 'color-choice' : ''}" aria-pressed="${selected}" ${possible ? '' : 'disabled'}>${swatch}${esc(value)}</button>`;
+        });
+        return `<fieldset><legend>${label}</legend><div>${choices.join('')}</div></fieldset>`;
+    }).join('');
+    const match = available.find(item => kinds.every(([kind]) => item[kind] === quickSelected[kind]));
+    quickVariant.value = match?.id || '';
+    quickSubmit.disabled = !match;
+    document.getElementById('quick-product-price').textContent = match
+        ? new Intl.NumberFormat('id-ID', {style: 'currency', currency: 'IDR', maximumFractionDigits: 0}).format(match.price)
+        : 'Pilih opsi yang tersedia';
+    quickOptions.querySelectorAll('[data-quick-kind]').forEach(button => button.addEventListener('click', () => {
+        const {quickKind, quickValue} = button.dataset;
+        const score = candidate => kinds.filter(([kind]) => kind !== quickKind && quickSelected[kind] === candidate[kind]).length;
+        const candidates = available.filter(item => item[quickKind] === quickValue);
+        const closest = candidates.sort((a, b) => score(b) - score(a))[0];
+        if (!closest) return;
+        quickSelected[quickKind] = quickValue;
+        kinds.forEach(([kind]) => {
+            if (quickSelected[kind] !== closest[kind]) delete quickSelected[kind];
+        });
+        renderQuick();
+        [...quickOptions.querySelectorAll('[data-quick-kind]')]
+            .find(choice => choice.dataset.quickKind === quickKind && choice.dataset.quickValue === quickValue)?.focus();
+    }));
+};
+document.querySelectorAll('[data-quick-open]').forEach(button => button.addEventListener('click', () => {
+    quickTrigger = button;
+    quickData = JSON.parse(document.getElementById(button.dataset.quickOpen).textContent);
+    quickSelected = {};
+    quickDialog.querySelector('[data-cart-add-error]').hidden = true;
+    document.getElementById('quick-product-name').textContent = quickData.name;
+    const photo = document.getElementById('quick-product-image');
+    photo.src = quickData.image;
+    photo.alt = quickData.name;
+    document.getElementById('quick-product-link').href = quickData.url;
+    renderQuick();
+    quickDialog.showModal();
+}));
+document.querySelector('[data-quick-close]')?.addEventListener('click', () => quickDialog.close());
+quickDialog.addEventListener('click', event => { if (event.target === quickDialog) quickDialog.close(); });
 const observer='IntersectionObserver'in window?new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target)}}),{threshold:.12}):null;document.querySelectorAll('.reveal').forEach(element=>observer?observer.observe(element):element.classList.add('is-visible'));
 document.querySelectorAll('[data-drag-scroll]').forEach(track=>{let down=false,startX=0,startLeft=0;track.addEventListener('pointerdown',event=>{if(event.pointerType==='mouse'){down=true;startX=event.clientX;startLeft=track.scrollLeft;track.classList.add('is-dragging')}});addEventListener('pointerup',()=>{down=false;track.classList.remove('is-dragging')});track.addEventListener('pointermove',event=>{if(down)track.scrollLeft=startLeft-(event.clientX-startX)})});
 document.querySelectorAll('.reference-carousel').forEach(shell=>{const track=shell.querySelector('.product-carousel');const move=direction=>track?.scrollBy({left:direction*(track.querySelector('.product-carousel-item')?.getBoundingClientRect().width||280),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});shell.querySelector('[data-carousel-prev]')?.addEventListener('click',()=>move(-1));shell.querySelector('[data-carousel-next]')?.addEventListener('click',()=>move(1));track?.addEventListener('scroll',()=>{const max=track.scrollWidth-track.clientWidth;shell.querySelector('[data-carousel-prev]')?.toggleAttribute('disabled',track.scrollLeft<4);shell.querySelector('[data-carousel-next]')?.toggleAttribute('disabled',track.scrollLeft>max-4)},{passive:true});shell.querySelector('[data-carousel-prev]')?.toggleAttribute('disabled',true)});

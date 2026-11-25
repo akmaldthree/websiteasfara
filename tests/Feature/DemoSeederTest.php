@@ -41,7 +41,7 @@ class DemoSeederTest extends TestCase
 
         $this->assertSame(20, Series::whereIn('slug', ['raffah-signature', 'naura-pleated', 'mahira-luxe', 'alesha-everyday', 'arcelia-family', 'sakina-family', 'harmoni-raya', 'zahara-kids', 'livia-layer-outer', 'hana-flow-khimar', 'zayna-essential', 'kamila-embroidery', 'samira-flare', 'nayla-travel', 'amara-family', 'nadhira-family', 'aira-kids', 'maryam-kids', 'inara-long-outer', 'safa-daily-khimar'])->count());
         $this->assertSame(319, Variant::where('sku', 'like', 'DEMO-%')->count());
-        $this->assertSame(60, ProductMedia::count());
+        $this->assertSame(62, ProductMedia::count());
         $this->assertSame(20, Review::where('status', 'approved')->count());
         $this->assertSame(25, ContentEntry::whereIn('slug', ['demo-banner', 'demo-banner-kids', 'demo-banner-travel', 'demo-cerita', 'demo-harmoni', 'demo-menu-faq', 'demo-menu-journal', 'pertanyaan-umum', 'akurasi-warna', 'waktu-proses', 'sarimbit-terpisah', 'cara-retur', 'ukuran-custom', 'merawat-busana', 'memilih-sarimbit', 'memadukan-abaya', 'bahan-untuk-perjalanan', 'palet-warna-keluarga', 'mencuci-busana-anak', 'warm-gathering', 'everyday-modest-edit', 'soft-earth-journey', 'little-celebration', 'promo-demo', 'promo-family'])->count());
         $this->assertSame(1, Coupon::where('code', 'DEMO10')->count());
@@ -54,7 +54,7 @@ class DemoSeederTest extends TestCase
         $this->assertSame(1, CustomQuote::where('number', 'ASF-CUSTOM-DEMO-001')->count());
         $this->assertSame(12, NewsletterSubscriber::where('email', 'like', 'newsletter%.demo@asfara.co.id')->count());
         $this->assertSame(10, ProductQuestion::where('status', 'answered')->count());
-        $this->assertSame(20, MediaAsset::where('path', 'like', 'demo/%')->count());
+        $this->assertSame(22, MediaAsset::where('path', 'like', 'demo/%')->count());
         $this->assertSame(13, Order::where(fn ($query) => $query->where('number', 'like', 'ASF-DEMO-%')->orWhere('number', 'DEMO-REVIEW-001'))->count());
         $this->assertSame(12, NotificationDelivery::count());
         $this->assertSame(15, ShippingRate::count());
@@ -114,7 +114,9 @@ class DemoSeederTest extends TestCase
             ->assertSee('Raffah Signature')
             ->assertSee('Olive')
             ->assertSee('class="product-heading-meta"', false)
-            ->assertSee('class="product-promise-list"', false)
+            ->assertSee('Raffah Signature warna olive tampak belakang')
+            ->assertSee('Detail jahitan manset dan tekstur kain')
+            ->assertDontSee('class="product-promise-list"', false)
             ->assertSee('class="mobile-purchase-bar"', false)
             ->assertSee('id="product-reviews"', false);
     }

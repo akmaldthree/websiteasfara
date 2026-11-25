@@ -24,9 +24,9 @@
                     <div class="cart-item">
                         <img src="{{ $v->series->image_url }}" alt="{{ $v->series->name }}" width="240" height="300" loading="lazy" decoding="async">
                         <div class="flex-grow-1">
-                            <h2>{{ $v->series->name }}</h2>
+                            <h2><a href="{{ route('product', $v->series->slug) }}">{{ $v->series->name }}</a></h2>
                             <p class="cart-line-meta">{{ $v->label }} · {{ $v->sku }}<br>@rupiah($line['unit_price']) / item @if($line['price_tier_minimum'])· Tier {{ $line['price_tier_minimum'] }}+@endif</p>
-                            <span class="cart-stock-status">READY STOCK · {{ $v->available }} TERSEDIA</span>
+                            <span class="cart-stock-status">{{ match($v->fulfillment) {'pre_order' => 'PRE-ORDER', 'custom_made' => 'CUSTOM', 'bundle' => 'BUNDLE', default => 'READY STOCK'} }} · {{ $v->available }} TERSEDIA</span>
                             @if($line['customization'])<p class="small"><strong>Ukuran custom:</strong> @foreach($line['customization']['measurements'] as $key=>$value){{ $line['customization']['template']['fields'][$loop->index]['label'] ?? $key }} {{ $value }}{{ $line['customization']['template']['fields'][$loop->index]['unit'] ?? '' }}{{ !$loop->last?' · ':'' }}@endforeach<br>Biaya custom @rupiah($line['custom_cost']) · {{ $line['customization']['lead_time'] }}</p>@endif
                             @if($line['bundle'])<p class="small"><strong>Isi bundle:</strong> @foreach($line['bundle'] as $component){{ $component['sku'] }} × {{ $component['quantity'] }}{{ !$loop->last?' · ':'' }}@endforeach</p>@endif
                             <form method="post" action="{{ route('cart.update') }}" class="cart-line-actions" data-cart-line-form>@csrf
@@ -60,8 +60,8 @@
         </div>
     @endif
 </section>
-@if(!empty($lines) && ($shop['cart_recommendations_enabled'] ?? true) && $recommendations->isNotEmpty())<section class="recently-viewed container-xxl"><span class="eyebrow">{{ $storeCopy['cart_recommendations'] }}</span><h2>{{ $storeCopy['related_products'] }}</h2><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($recommendations as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></section>@endif
-@if($recentlyViewed->isNotEmpty())<section class="recently-viewed container-xxl"><h2>{{ $storeCopy['recently_viewed'] }}</h2><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($recentlyViewed as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></section>@endif
+@if(!empty($lines) && ($shop['cart_recommendations_enabled'] ?? true) && $recommendations->isNotEmpty())<section class="recently-viewed container-xxl"><span class="eyebrow">{{ $storeCopy['cart_recommendations'] }}</span><h2>{{ $storeCopy['related_products'] }}</h2><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($recommendations as $collection)<div class="product-carousel-item">@include('partials.product-card', ['cardContext' => 'cart-recommendation-'])</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></section>@endif
+@if($recentlyViewed->isNotEmpty())<section class="recently-viewed container-xxl"><h2>{{ $storeCopy['recently_viewed'] }}</h2><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($recentlyViewed as $collection)<div class="product-carousel-item">@include('partials.product-card', ['cardContext' => 'cart-recent-'])</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></section>@endif
 @endsection
 @push('scripts')
 <script>

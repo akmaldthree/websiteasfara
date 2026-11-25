@@ -236,7 +236,7 @@ class StoreController extends Controller
         $lines = $cart ? $service->lines($cart, false, $request->user(), $request->session()->get('cart_customizations', [])) : [];
         $subtotal = array_sum(array_column($lines, 'total'));
         $target = max(0, (int) Setting::get('free_shipping_threshold', 500000));
-        $recommendations = $this->cartRecommendations($lines)->take(3)->map(fn ($series) => [
+        $recommendations = ($request->boolean('compact') ? collect() : $this->cartRecommendations($lines))->take(3)->map(fn ($series) => [
             'name' => $series->name,
             'price' => 'Rp '.number_format((int) $series->variants_min_price, 0, ',', '.'),
             'image' => $series->image_url,
@@ -281,6 +281,10 @@ class StoreController extends Controller
         }
         $r->session()->forget('checkout_key');
         $analytics->record($r, 'add_to_cart', ['variant_id' => $variant->id, 'sku' => $variant->sku, 'quantity' => $d['quantity'], 'value' => $variant->price * $d['quantity']]);
+
+        if ($r->expectsJson() && ! $r->boolean('buy_now')) {
+            return $this->cartSummary($r, $service, $cartService);
+        }
 
         return redirect()->route($r->boolean('buy_now') ? 'checkout' : 'cart')->with('success', 'Pilihan Anda sudah ditambahkan.');
     }

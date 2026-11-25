@@ -65,6 +65,21 @@ class CommerceTest extends TestCase
         $this->get('/pesanan/'.$order->id)->assertForbidden();
     }
 
+    public function test_compact_cart_add_returns_totals_and_refuses_quantities_above_stock(): void
+    {
+        $endpoint = route('cart.add', ['compact' => 1]);
+        $payload = ['variant_id' => $this->variant->id, 'quantity' => 1];
+
+        $this->postJson($endpoint, $payload)->assertOk()
+            ->assertJsonPath('count', 1)
+            ->assertJsonPath('lines.0.quantity', 1)
+            ->assertJsonPath('lines.0.variant_id', $this->variant->id)
+            ->assertJsonPath('recommendations', []);
+        $this->postJson($endpoint, array_replace($payload, ['quantity' => 100]))
+            ->assertUnprocessable();
+        $this->getJson(route('cart.summary', ['compact' => 1]))->assertOk()->assertJsonPath('count', 1);
+    }
+
     public function test_predictive_search_and_cart_drawer_return_storefront_data(): void
     {
         $this->getJson(route('search.suggestions', ['q' => 'Raff']))
