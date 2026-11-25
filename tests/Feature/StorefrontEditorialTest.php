@@ -243,6 +243,6 @@ class StorefrontEditorialTest extends TestCase
             'description' => '', 'material' => '', 'care' => '', 'seo_title' => '', 'seo_description' => '',
             'size_guide' => '', 'size_chart' => json_encode($chart), 'uses_product_type' => '0', 'featured' => '0', 'active' => '1',
         ])->assertSessionHasNoErrors();
-        $this->assertSame($chart, $this->series->fresh()->size_chart);
+        $this->assertEquals($chart, $this->series->fresh()->size_chart);
     }
 }

@@ -52,10 +52,12 @@ return new class extends Migration
         }
 
         if (Schema::hasTable('settings')) {
-            DB::table('settings')
-                ->where('key', 'hero_image')
-                ->where('value', json_encode('demo/hero-family-2x1.png'))
-                ->update(['value' => json_encode('demo/hero-family-2x1.webp')]);
+            $heroImage = DB::table('settings')->where('key', 'hero_image')->value('value');
+            if (json_decode((string) $heroImage, true) === 'demo/hero-family-2x1.png') {
+                DB::table('settings')->where('key', 'hero_image')->update([
+                    'value' => json_encode('demo/hero-family-2x1.webp'),
+                ]);
+            }
         }
     }
 

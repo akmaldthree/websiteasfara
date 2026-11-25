@@ -38,10 +38,10 @@ class DemoImageMigrationTest extends TestCase
         $migration = require database_path('migrations/2026_10_30_140000_migrate_demo_images_to_webp.php');
         $migration->up();
 
-        $this->assertDatabaseHas('settings', [
-            'key' => 'hero_image',
-            'value' => json_encode('demo/hero-family-2x1.webp'),
-        ]);
+        $this->assertSame(
+            'demo/hero-family-2x1.webp',
+            json_decode((string) DB::table('settings')->where('key', 'hero_image')->value('value'), true),
+        );
         $this->assertDatabaseHas('content_entries', [
             'slug' => 'banner-lama',
             'image' => 'demo/hero-family-2x1.webp',
