@@ -604,7 +604,7 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 /* Phase 3 final cascade locks. */
 .store-body .catalog-hero{display:block;min-height:0;align-items:initial;padding:42px 0 0;background:var(--palette-sand)!important;color:var(--text)!important}
 .store-body .catalog-hero .container-xxl{text-align:left}
-.store-body .btn-dark,.product-detail-body .product-buy-now,.cart-empty .btn,.product-voucher-stack>button{color:#fff!important}
+.store-body .btn-dark,.cart-empty .btn,.product-voucher-stack>button{color:#fff!important}
 .store-body .btn-dark:hover,.store-body .btn-dark:focus-visible,.product-detail-body .product-buy-now:hover{background:var(--palette-sand);color:var(--text)!important}
 @media(max-width:767px){
     .store-body .catalog-hero{min-height:0;padding-top:28px}

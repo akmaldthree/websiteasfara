@@ -30,7 +30,9 @@
         <div class="col-lg-5 product-info-column">
             <span class="eyebrow">{{ $series->category->name }}</span>
             <h1 class="display-4 mt-3">{{ $series->name }}</h1>
-            <div class="product-heading-meta"><a href="#product-reviews"><span aria-hidden="true">★★★★★</span> {{ $reviews->isNotEmpty() ? number_format($reviews->avg('rating'),1).' ('.$reviews->count().')' : 'BELUM ADA ULASAN' }}</a><small>SKU {{ $series->variants->first()?->sku }}</small></div>
+            @if($reviews->isNotEmpty())
+                <div class="product-heading-meta"><a href="#product-reviews"><span aria-hidden="true">★★★★★</span> {{ number_format($reviews->avg('rating'),1).' ('.$reviews->count().')' }}</a></div>
+            @endif
             <div class="product-price-row"><div @class(['product-price','sale-price'=>$series->compare_at_price>$minimumPrice]) id="display-product-price">@rupiah($minimumPrice)</div><del id="display-compare-price" @if(!$series->compare_at_price || $series->compare_at_price<=$minimumPrice) hidden @endif>@rupiah($series->compare_at_price)</del></div>
             @if($saving>0)<div class="product-saving">SAVE {{ $savingPercent }}% · HEMAT @rupiah($saving)</div>@endif
             @php($totalStock=$series->variants->sum(fn($variant)=>$variant->available))
