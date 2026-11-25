@@ -101,7 +101,7 @@
     <section class="home-campaign-preview home-primary-campaign" aria-labelledby="home-campaign-title">
         <a href="{{ $primaryEdit['url'] ?? ($campaign->link_url ?: route('catalog')) }}">
             <picture>
-                @if($mobileBanner = $primaryEdit ? $primaryEdit['mobile_image'] : (collect($campaign->blocks)->firstWhere('type', 'hero_options')['mobile_url'] ?? null))<source media="(max-width: 767px)" srcset="{{ $mobileBanner }}">@endif
+                @if($mobileBanner = $primaryEdit ? $primaryEdit['mobile_image'] : $campaign->mobileCoverUrl())<source media="(max-width: 767px)" srcset="{{ $mobileBanner }}">@endif
                 <img src="{{ $primaryEdit['image'] ?? ($campaign->image_url ?: $heroSlides->first()['image']) }}" alt="" width="1600" height="800" loading="lazy" decoding="async">
             </picture>
             <div class="home-primary-campaign-copy">

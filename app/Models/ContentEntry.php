@@ -24,6 +24,13 @@ class ContentEntry extends Model
         return $this->image ? asset('storage/'.$this->image) : null;
     }
 
+    public function mobileCoverUrl(): ?string
+    {
+        $url = collect($this->blocks)->firstWhere('type', 'hero_options')['mobile_url'] ?? null;
+
+        return is_string($url) && $url !== '' ? $url : null;
+    }
+
     /** @return Collection<int, int> */
     public function campaignProductIds(): Collection
     {

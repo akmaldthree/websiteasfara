@@ -120,7 +120,27 @@ if (block.type === 'campaign_options') {
     select.addEventListener('change', () => { block.group = select.value; syncBlocks(); });
     card.append(label, select);
 }
-if(block.type==='hero_options'){const options=document.createElement('div');options.className='form-grid';[['align','Posisi teks',[['left','Kiri'],['center','Tengah'],['right','Kanan']]],['tone','Warna teks',[['light','Terang'],['dark','Gelap']]]].forEach(([key,label,values])=>{const wrap=document.createElement('div');const caption=document.createElement('label');caption.textContent=label;const select=document.createElement('select');select.className='form-select';values.forEach(([value,text])=>{const option=document.createElement('option');option.value=value;option.textContent=text;option.selected=(block[key]||values[0][0])===value;select.append(option)});select.addEventListener('change',()=>{block[key]=select.value;syncBlocks()});wrap.append(caption,select);options.append(wrap)});options.append(blockField('URL gambar khusus mobile',block.mobile_url??'',value=>{block.mobile_url=value;syncBlocks()}),blockField('URL video desktop (opsional)',block.video_url??'',value=>{block.video_url=value;syncBlocks()}),blockField('URL video mobile (opsional)',block.mobile_video_url??'',value=>{block.mobile_video_url=value;syncBlocks()}));const note=document.createElement('small');note.className='span-2';note.textContent='Video harus MP4/WebM dari HTTPS atau media internal. Durasi carousel diatur melalui Pengaturan website.';options.append(note);card.append(options)}
+if (block.type === 'hero_options' && contentType?.value === 'campaign') {
+    title.textContent = 'Sampul kampanye untuk HP';
+    const field = blockField('URL gambar sampul HP', block.mobile_url, value => { block.mobile_url = value; syncBlocks(); });
+    card.append(field);
+    if (mediaAssets.length) {
+        const label = document.createElement('label');
+        label.htmlFor = 'campaign-mobile-media-' + index;
+        label.textContent = 'Pilih sampul HP dari media library';
+        const picker = document.createElement('select');
+        picker.id = label.htmlFor;
+        picker.className = 'form-select';
+        picker.add(new Option('— Pilih gambar —', ''));
+        mediaAssets.forEach(asset => picker.add(new Option(asset.name, asset.url, false, asset.url === block.mobile_url)));
+        picker.addEventListener('change', () => {
+            block.mobile_url = picker.value;
+            field.querySelector('input').value = picker.value;
+            syncBlocks();
+        });
+        card.append(label, picker);
+    }
+} else if(block.type==='hero_options'){const options=document.createElement('div');options.className='form-grid';[['align','Posisi teks',[['left','Kiri'],['center','Tengah'],['right','Kanan']]],['tone','Warna teks',[['light','Terang'],['dark','Gelap']]]].forEach(([key,label,values])=>{const wrap=document.createElement('div');const caption=document.createElement('label');caption.textContent=label;const select=document.createElement('select');select.className='form-select';values.forEach(([value,text])=>{const option=document.createElement('option');option.value=value;option.textContent=text;option.selected=(block[key]||values[0][0])===value;select.append(option)});select.addEventListener('change',()=>{block[key]=select.value;syncBlocks()});wrap.append(caption,select);options.append(wrap)});options.append(blockField('URL gambar khusus mobile',block.mobile_url??'',value=>{block.mobile_url=value;syncBlocks()}),blockField('URL video desktop (opsional)',block.video_url??'',value=>{block.video_url=value;syncBlocks()}),blockField('URL video mobile (opsional)',block.mobile_video_url??'',value=>{block.mobile_video_url=value;syncBlocks()}));const note=document.createElement('small');note.className='span-2';note.textContent='Video harus MP4/WebM dari HTTPS atau media internal. Durasi carousel diatur melalui Pengaturan website.';options.append(note);card.append(options)}
 blockEditor.append(card)});syncBlocks()}
 const contentType = document.getElementById('type');
 const blockTypePicker = document.getElementById('new-block-type');
@@ -130,7 +150,7 @@ const syncBlockTypes = () => {
     campaignOptions.forEach(option => { option.hidden = !isCampaign; option.disabled = !isCampaign; });
     if (!isCampaign && blockTypePicker.value === 'campaign_product') blockTypePicker.value = 'paragraph';
 };
-contentType?.addEventListener('change', syncBlockTypes);
+contentType?.addEventListener('change', () => { syncBlockTypes(); renderBlocks(); });
 syncBlockTypes();
 document.getElementById('add-content-block').addEventListener('click',()=>{const type=document.getElementById('new-block-type').value;const block=type==='columns'?{type,items:[{heading:'',text:''},{heading:'',text:''}]}:type==='product_hotspot'?{type,series_id:'',x:50,y:50}:type==='campaign_options'?{type,group:'main'}:type==='campaign_product'?{type,series_id:''}:type==='hero_options'?{type,align:'left',tone:'light',mobile_url:'',video_url:'',mobile_video_url:''}:{type,...(['heading','paragraph','quote'].includes(type)?{text:''}:{url:'',label:''})};contentBlocks.push(block);renderBlocks()});renderBlocks();
 </script>

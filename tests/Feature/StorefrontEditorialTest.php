@@ -78,6 +78,7 @@ class StorefrontEditorialTest extends TestCase
             ['type' => 'campaign_options', 'group' => 'signature'],
             ['type' => 'campaign_product', 'series_id' => $second->id],
             ['type' => 'campaign_product', 'series_id' => $this->series->id],
+            ['type' => 'hero_options', 'mobile_url' => '/storage/demo/hero.webp'],
         ];
         $payload = [
             'type' => 'campaign', 'title' => $entry->title, 'slug' => $entry->slug, 'summary' => 'Koleksi pilihan.',
@@ -94,7 +95,11 @@ class StorefrontEditorialTest extends TestCase
             ->assertDontSee('class="campaign-tab-banner"', false)
             ->assertSee($url, false)
             ->assertSee('data-collection-tab="campaign-'.$entry->id.'"', false);
-        $this->get($url)->assertOk()->assertSeeInOrder(['ASTER EDITION', 'ZAYNA SERIES']);
+        $this->get($url)->assertOk()->assertSeeInOrder(['ASTER EDITION', 'ZAYNA SERIES'])
+            ->assertSee('srcset="/storage/demo/hero.webp"', false)
+            ->assertSee('href="#campaign-products-heading"', false);
+        $this->get(route('admin.content.preview', $entry))->assertOk()
+            ->assertSee('Pratinjau admin')->assertSee('srcset="/storage/demo/hero.webp"', false);
 
         $payload['blocks'] = json_encode([$products[1], $products[1]]);
         $this->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasErrors('blocks');

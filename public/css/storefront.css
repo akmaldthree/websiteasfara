@@ -1492,13 +1492,133 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
     scroll-margin-block: 96px;
 }
 
+.campaign-intro {
+    display: grid;
+    background: #302831;
+    color: #fff;
+}
+
+.campaign-intro-with-image {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+
+.campaign-intro-copy {
+    align-self: center;
+    padding: clamp(24px, 5vw, 72px);
+}
+
+.store-body .campaign-intro-copy .eyebrow {
+    color: #e9ded3;
+}
+
+.campaign-intro-copy h1 {
+    margin-block: 10px 14px;
+    font-size: clamp(2rem, 5vw, 4.5rem);
+    letter-spacing: -.035em;
+    overflow-wrap: anywhere;
+}
+
+.campaign-intro-copy p {
+    max-width: 35ch;
+    line-height: 1.65;
+}
+
+.store-body .campaign-intro .btn {
+    border-color: #fff;
+    background: #fff;
+    color: #302831 !important;
+}
+
+.campaign-intro picture {
+    display: block;
+    min-width: 0;
+}
+
+.campaign-intro img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 340px;
+    max-height: 580px;
+    object-fit: cover;
+    object-position: center 35%;
+}
+
+.campaign-products h2 {
+    scroll-margin-top: 96px;
+}
+
+.catalog-filter-backdrop,
+.store-body .catalog-reset[hidden] {
+    display: none;
+}
+
+[data-catalog-results][aria-busy="true"] {
+    opacity: .55;
+}
+
 @media (min-width: 768px) {
+    .home-primary-campaign a {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        place-items: stretch;
+        background: #302831;
+    }
+
+    .home-primary-campaign a::after {
+        content: none;
+    }
+
+    .home-primary-campaign picture {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .home-primary-campaign img {
+        z-index: auto;
+    }
+
+    .home-primary-campaign .home-primary-campaign-copy {
+        align-self: center;
+    }
+
     .store-body .catalog-filter-button {
         display: none !important;
     }
 }
 
 @media (max-width: 767px) {
+    .campaign-intro-with-image {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .campaign-intro picture {
+        grid-row: 1;
+    }
+
+    .campaign-intro img {
+        min-height: 0;
+        max-height: 390px;
+        aspect-ratio: 5 / 4;
+    }
+
+    .store-body .campaign-intro-copy .btn {
+        min-height: 44px;
+    }
+
+    .catalog-filter-backdrop:not([hidden]) {
+        position: fixed;
+        z-index: 149;
+        inset: 0;
+        display: block;
+        width: 100%;
+        border: 0;
+        background: #211a2666;
+    }
+
+    .catalog-sidebar.is-open {
+        overscroll-behavior: contain;
+    }
+
     .store-body .announcement {
         grid-template-columns: 38px minmax(0, 1fr) 38px;
         padding-inline: 0;

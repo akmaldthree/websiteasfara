@@ -444,7 +444,9 @@ const renderQuick = () => {
             .find(choice => choice.dataset.quickKind === quickKind && choice.dataset.quickValue === quickValue)?.focus();
     }));
 };
-document.querySelectorAll('[data-quick-open]').forEach(button => button.addEventListener('click', () => {
+document.addEventListener('click', event => {
+    const button = event.target.closest('[data-quick-open]');
+    if (!button) return;
     quickTrigger = button;
     quickData = JSON.parse(document.getElementById(button.dataset.quickOpen).textContent);
     quickSelected = {};
@@ -456,7 +458,7 @@ document.querySelectorAll('[data-quick-open]').forEach(button => button.addEvent
     document.getElementById('quick-product-link').href = quickData.url;
     renderQuick();
     quickDialog.showModal();
-}));
+});
 document.querySelector('[data-quick-close]')?.addEventListener('click', () => quickDialog.close());
 quickDialog.addEventListener('click', event => { if (event.target === quickDialog) quickDialog.close(); });
 const observer='IntersectionObserver'in window?new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target)}}),{threshold:.12}):null;document.querySelectorAll('.reveal').forEach(element=>observer?observer.observe(element):element.classList.add('is-visible'));
@@ -464,7 +466,7 @@ document.querySelectorAll('[data-drag-scroll]').forEach(track=>{let down=false,s
 document.querySelectorAll('.reference-carousel').forEach(shell=>{const track=shell.querySelector('.product-carousel');const move=direction=>track?.scrollBy({left:direction*(track.querySelector('.product-carousel-item')?.getBoundingClientRect().width||280),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});shell.querySelector('[data-carousel-prev]')?.addEventListener('click',()=>move(-1));shell.querySelector('[data-carousel-next]')?.addEventListener('click',()=>move(1));track?.addEventListener('scroll',()=>{const max=track.scrollWidth-track.clientWidth;shell.querySelector('[data-carousel-prev]')?.toggleAttribute('disabled',track.scrollLeft<4);shell.querySelector('[data-carousel-next]')?.toggleAttribute('disabled',track.scrollLeft>max-4)},{passive:true});shell.querySelector('[data-carousel-prev]')?.toggleAttribute('disabled',true)});
 document.addEventListener('click',event=>document.querySelectorAll('.language-picker[open]').forEach(picker=>{if(!picker.contains(event.target))picker.removeAttribute('open')}));
 document.querySelectorAll('[data-product-voucher-copy]').forEach(button=>button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(button.dataset.productVoucherCopy);button.querySelector('small').textContent='KODE TERSALIN'}catch(error){button.querySelector('small').textContent=button.dataset.productVoucherCopy}}));
-document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;closeCatalog();document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());document.querySelector('[data-filter-panel]')?.classList.remove('is-open')});document.querySelectorAll('.mobile-nav a').forEach(link=>link.addEventListener('click',()=>bootstrap.Collapse.getInstance(document.getElementById('mobile-nav'))?.hide()));
+document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;closeCatalog();document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close())});document.querySelectorAll('.mobile-nav a').forEach(link=>link.addEventListener('click',()=>bootstrap.Collapse.getInstance(document.getElementById('mobile-nav'))?.hide()));
 const campaignNav = document.querySelector('.campaign-nav');
 if (campaignNav) {
     document.addEventListener('pointerdown', event => {
@@ -485,7 +487,7 @@ if (welcomeVoucher) {
     const lastShown = Number(storage.getItem(key) || 0);
     const canShow = !lastShown || (days > 0 && Date.now() - lastShown >= days * 86400000);
     const showVoucher = () => {
-        if (document.querySelector('dialog[open]')) return;
+        if (document.querySelector('dialog[open], [data-filter-panel].is-open')) return;
         welcomeVoucher.showModal();
         storage.setItem(key, String(Date.now()));
     };

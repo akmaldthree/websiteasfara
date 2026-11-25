@@ -69,8 +69,8 @@ class StoreController extends Controller
         $campaignEdits = $campaigns->mapWithKeys(fn (ContentEntry $campaign) => ['campaign-'.$campaign->id => [
             'label' => $campaign->title,
             'group' => $campaign->campaignGroup(),
-            'image' => $campaign->image_url,
-            'mobile_image' => collect($campaign->blocks)->firstWhere('type', 'hero_options')['mobile_url'] ?? null,
+            'image' => $campaign->image_url ?: $campaign->mobileCoverUrl(),
+            'mobile_image' => $campaign->mobileCoverUrl(),
             'items' => $campaign->campaignProductIds()->map(fn (int $id) => $campaignProducts->get($id))->filter()->take(8),
             'url' => route('content.show', ['campaign', $campaign->slug]),
         ]])->filter(fn (array $campaign) => $campaign['items']->isNotEmpty())->groupBy('group', preserveKeys: true);
