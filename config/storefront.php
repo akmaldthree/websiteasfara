@@ -3,10 +3,10 @@
 return [
     'home_sections' => [
         'hero' => 'Hero / banner',
-        'campaign' => 'Banner kampanye',
         'new_in' => 'New In',
-        'categories' => 'Kategori visual',
+        'campaign' => 'Banner kampanye',
         'collections' => 'Latest Collection',
+        'categories' => 'Kategori visual',
         'signature_banner' => 'Banner Signature',
         'signature' => 'Asfara Signature',
         'studio_banner' => 'Banner Asfara Studio',

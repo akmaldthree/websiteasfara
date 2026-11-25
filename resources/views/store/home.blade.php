@@ -11,13 +11,15 @@
     $categorySlugs = collect(preg_split('/[,\r\n]+/', $shop['home_category_slugs'] ?? ''))->map(fn($slug)=>trim($slug))->filter();
     $categoryCollections = $categorySlugs->isEmpty() ? $collections->unique('category_id')->take(3) : $categorySlugs->map(fn($slug)=>$collections->firstWhere('slug',$slug))->filter()->unique('category_id')->take(3);
     $defaultOrder = collect(array_keys(config('storefront.home_sections')));
-    $homeOrder = collect($shop['home_section_order'] ?? $defaultOrder->all());
+    $homeOrder = collect($shop['home_section_order'] ?? $defaultOrder->all())->intersect($defaultOrder)->values();
+    if ($homeOrder->all() === ['hero', 'campaign', 'new_in', 'categories', 'collections', 'signature_banner', 'signature', 'studio_banner', 'studio']) {
+        $homeOrder = $defaultOrder;
+    }
     if (!$homeOrder->contains('campaign') || !$homeOrder->contains('new_in')) {
         $openingSections = $defaultOrder->take(5);
         $homeOrder = $openingSections->concat($homeOrder->diff($openingSections));
     }
     $homeOrder = $homeOrder->intersect($defaultOrder)->concat($defaultOrder->diff($homeOrder))->values();
-    $homePosition = fn(string $section) => (($position=$homeOrder->search($section)) === false ? 99 : $position) + 1;
     $heroVideoUrl = fn ($path) => match ($path) {
         'demo/hero-desktop.webm' => route('media.demo-hero', ['format' => 'desktop', 'v' => filemtime(database_path('seeders/assets/demo/hero-desktop.webm'))]),
         'demo/hero-mobile.webm' => route('media.demo-hero', ['format' => 'mobile', 'v' => filemtime(database_path('seeders/assets/demo/hero-mobile.webm'))]),
@@ -28,6 +30,7 @@
     $heroContentStyle = $shop['hero_content_style'] ?? 'editorial';
     $heroContentClass = $videoHero && $heroContentStyle === 'editorial' ? '' : 'hero-content-'.$heroContentStyle;
     $homeBanners = $contentEntries->where('type', 'banner');
+    $primaryEdit = $campaignEdits->get('main', collect())->firstWhere('image', '!=', null);
     $campaign = $homeBanners->first();
     $heroSlides = collect([[
         'image' => !empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg'),
@@ -56,15 +59,24 @@
 @endphp
 @push('head')
 <link rel="preload" as="image" href="{{ $heroSlides->first()['image'] }}" fetchpriority="high"@if($heroSlides->first()['mobile_image']) imagesrcset="{{ $heroSlides->first()['mobile_image'] }} 767w, {{ $heroSlides->first()['image'] }} 1600w" imagesizes="100vw"@endif>
-<style>.home-transparent-header #main{display:flex;flex-direction:column}</style>
 @endpush
 @php($heroAutoplayMs=(int)round((float)($shop['hero_autoplay_seconds'] ?? 5)*1000))
-<section @class(['commerce-hero', 'hero-content-video' => $videoHero, $heroContentClass => $heroContentClass !== '']) style="order:{{ $homePosition('hero') }}" data-hero-slider @if($heroSlides->count()>1) aria-roledescription="carousel" @endif>
+@section('home-hero')
+<section @class(['commerce-hero', 'hero-content-video' => $videoHero, $heroContentClass => $heroContentClass !== '']) data-hero-slider @if($heroSlides->count()>1) aria-roledescription="carousel" @endif>
     @foreach($heroSlides as $slide)
         <article class="commerce-hero-slide hero-align-{{ $slide['align'] }} hero-tone-{{ $slide['tone'] }} {{ $loop->first?'is-active':'' }}" data-hero-slide data-duration="{{ $loop->first ? $heroAutoplayMs : (int) $slide['duration'] }}" aria-hidden="{{ $loop->first?'false':'true' }}">
             @if($slide['video'])
-                <video class="commerce-hero-video" poster="{{ $slide['image'] }}" autoplay muted loop playsinline preload="metadata" data-hero-video>@if($slide['mobile_video'])<source media="(max-width:767px)" src="{{ $slide['mobile_video'] }}">@endif<source src="{{ $slide['video'] }}">Browser Anda belum mendukung video.</video>
-                @if(!($loop->first && ($shop['hero_video'] ?? '') === 'demo/hero-desktop.webm'))<button type="button" class="hero-sound-toggle" data-hero-sound aria-label="Aktifkan suara video" aria-pressed="false"><span aria-hidden="true">⌁</span><em>SUARA</em></button>@endif
+                <video class="commerce-hero-video" poster="{{ $slide['image'] }}" muted loop playsinline preload="none" data-hero-video>@if($slide['mobile_video'])<source media="(max-width:767px)" src="{{ $slide['mobile_video'] }}">@endif<source src="{{ $slide['video'] }}">Browser Anda belum mendukung video.</video>
+                <div class="hero-media-controls">
+                    <button type="button" data-hero-play aria-label="Putar video">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="hero-icon-play" d="m9 5 11 7-11 7z"/><path class="hero-icon-pause" d="M9 5v14m6-14v14"/></svg>
+                    </button>
+                    @unless($loop->first && ($shop['hero_video'] ?? '') === 'demo/hero-desktop.webm')
+                        <button type="button" data-hero-sound aria-label="Suara video" aria-pressed="false">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="hero-icon-muted" d="m16 9 5 6m0-6-5 6"/><path class="hero-icon-sound" d="M16 9a4 4 0 0 1 0 6m3-9a8 8 0 0 1 0 12"/></svg>
+                        </button>
+                    @endunless
+                </div>
             @else
                 <picture>@if($slide['mobile_image'])<source media="(max-width:767px)" srcset="{{ $slide['mobile_image'] }}">@endif<img src="{{ $slide['image'] }}" alt="{{ $slide['title'] }}" width="1600" height="800" loading="{{ $loop->first ? 'eager' : 'lazy' }}" fetchpriority="{{ $loop->first ? 'high' : 'low' }}" decoding="async"></picture>
             @endif
@@ -82,26 +94,39 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
     </a>
 </section>
-@if($videoHero && $campaign)
-    <section class="home-campaign-preview" style="order:{{ $homePosition('campaign') }}" aria-label="{{ $campaign->title }}">
-        <a href="{{ $campaign->link_url ?: route('catalog') }}">
+@endsection
+@if($videoHero && ($primaryEdit || $campaign))
+    @section('home-campaign')
+    @php($campaignTitle = $primaryEdit['label'] ?? $campaign->title)
+    <section class="home-campaign-preview home-primary-campaign" aria-labelledby="home-campaign-title">
+        <a href="{{ $primaryEdit['url'] ?? ($campaign->link_url ?: route('catalog')) }}">
             <picture>
-                @if($mobileBanner = collect($campaign->blocks)->firstWhere('type', 'hero_options')['mobile_url'] ?? null)<source media="(max-width: 767px)" srcset="{{ $mobileBanner }}">@endif
-                <img src="{{ $campaign->image_url ?: $heroSlides->first()['image'] }}" alt="" width="1600" height="800" loading="lazy" decoding="async">
+                @if($mobileBanner = $primaryEdit ? $primaryEdit['mobile_image'] : (collect($campaign->blocks)->firstWhere('type', 'hero_options')['mobile_url'] ?? null))<source media="(max-width: 767px)" srcset="{{ $mobileBanner }}">@endif
+                <img src="{{ $primaryEdit['image'] ?? ($campaign->image_url ?: $heroSlides->first()['image']) }}" alt="" width="1600" height="800" loading="lazy" decoding="async">
             </picture>
-            <span>{{ $campaign->link_label ?: 'Lihat koleksi' }}</span>
+            <div class="home-primary-campaign-copy">
+                <h2 id="home-campaign-title">{{ $campaignTitle }}</h2>
+                <span>{{ $primaryEdit ? 'Jelajahi kampanye' : ($campaign->link_label ?: 'Lihat koleksi') }}</span>
+            </div>
         </a>
     </section>
+    @endsection
 @endif
-@if($shop['home_categories_enabled'] ?? true)<section class="category-media-grid container-xxl reveal" style="order:{{ $homePosition('categories') }}">
+@if($shop['home_categories_enabled'] ?? true)
+@section('home-categories')
+<section class="category-media-grid container-xxl reveal">
     @foreach($categoryCollections as $categoryProduct)<a href="{{ route('catalog',['category'=>$categoryProduct->category->slug]) }}"><img src="{{ $categoryProduct->image_url }}" alt="{{ $categoryProduct->category->name }}" width="800" height="1000" loading="lazy" decoding="async"><span>{{ strtoupper($categoryProduct->category->name) }}</span></a>@endforeach
-</section>@endif
+</section>
+@endsection
+@endif
 
 @if($shop['home_collections_enabled'] ?? true)
-<section class="commerce-section home-new-in container-xxl reveal" id="new-in" style="order:{{ $homePosition('new_in') }}">
+@section('home-new_in')
+<section class="commerce-section home-new-in container-xxl reveal" id="new-in">
     <div class="commerce-heading"><h2>NEW IN</h2><a href="{{ route('catalog',['sort'=>'newest']) }}">{{ $storeCopy['view_all'] }}</a></div>
     <div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@forelse($newCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@empty<div class="empty-state"><h3>Koleksi sedang disiapkan.</h3></div>@endforelse</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div>
 </section>
+@endsection
 
 @foreach(config('storefront.campaign_groups') as $group => $groupTitle)
     @php($edits = $campaignEdits->get($group, collect()))
@@ -109,7 +134,8 @@
     @php($sectionKey = $group === 'main' ? 'collections' : $group)
     @php($banner = $group === 'main' ? null : $edits->firstWhere('image', '!=', null))
     @if($banner)
-        <section class="home-campaign-preview home-group-banner" style="order:{{ $homePosition($group.'_banner') }}" aria-label="{{ $banner['label'] }}">
+        @section('home-'.$group.'_banner')
+        <section class="home-campaign-preview home-group-banner" aria-label="{{ $banner['label'] }}">
             <a href="{{ $banner['url'] }}">
                 <picture>
                     @if($banner['mobile_image'])<source media="(max-width: 767px)" srcset="{{ $banner['mobile_image'] }}">@endif
@@ -118,8 +144,10 @@
                 <span>{{ $banner['label'] }}</span>
             </a>
         </section>
+        @endsection
     @endif
-    <section class="commerce-section latest-collection container-xxl reveal" style="order:{{ $homePosition($sectionKey) }}" data-campaign-tabs="{{ $group }}" aria-labelledby="campaign-title-{{ $group }}">
+    @section('home-'.$sectionKey)
+    <section class="commerce-section latest-collection container-xxl reveal" data-campaign-tabs="{{ $group }}" aria-labelledby="campaign-title-{{ $group }}">
         <div class="commerce-heading">
             <h2 id="campaign-title-{{ $group }}">{{ $group === 'main' ? $storeCopy['featured_collection'] : $groupTitle }}</h2>
         </div>
@@ -143,9 +171,13 @@
             </div>
         @endforeach
     </section>
+    @endsection
 @endforeach
 @endif
 
+@foreach($homeOrder as $section)
+    @yield('home-'.$section)
+@endforeach
 @endsection
 @push('scripts')
 <script>

@@ -84,7 +84,8 @@ class DemoSeederTest extends TestCase
         $this->assertImageRatio('payment-proof-demo-3x4.webp', 0.75);
         $this->get('/')->assertOk()
             ->assertSee('Koleksi terbaru Asfara')
-            ->assertSee('Kebersamaan dalam satu warna')
+            ->assertSeeInOrder(['id="new-in"', 'class="home-campaign-preview home-primary-campaign"', 'id="home-campaign-title">Ruang Raya'], false)
+            ->assertSee('data-hero-play', false)
             ->assertSee(route('media.demo-hero', 'desktop'), false)
             ->assertSee(route('media.demo-hero', 'mobile'), false)
             ->assertSee('id="new-in"', false)

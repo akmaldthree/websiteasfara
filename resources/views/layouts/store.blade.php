@@ -45,9 +45,9 @@
 @php($announcements=collect(preg_split('/[\r\n]+/',$shop['announcement_lines'] ?? ''))->map(fn($line)=>trim($line))->filter())
 @php($announcements=$announcements->isEmpty()?collect([$shop['tagline'] ?? '','WORLDWIDE SHIPPING'])->filter():$announcements)
 @if($shop['header_announcement_enabled'] ?? true)<div class="announcement" data-announcement-interval="{{ (int)round((float)($shop['announcement_interval_seconds'] ?? 5)*1000) }}">
-    <button type="button" data-notice-prev aria-label="Pengumuman sebelumnya" @disabled($announcements->count()<2)><span aria-hidden="true">‹</span></button>
+    <button type="button" data-notice-prev aria-label="Pengumuman sebelumnya" @disabled($announcements->count()<2)><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
     <div aria-live="polite">@foreach($announcements as $notice)<span class="{{ $loop->first?'is-active':'' }}">{{ $notice }}</span>@endforeach</div>
-    <button type="button" data-notice-next aria-label="Pengumuman berikutnya" @disabled($announcements->count()<2)><span aria-hidden="true">›</span></button>
+    <button type="button" data-notice-next aria-label="Pengumuman berikutnya" @disabled($announcements->count()<2)><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
 </div>@endif
 <header @class(['site-header','sticky-top'=>($shop['header_sticky'] ?? true)])>
     <div class="container-xxl header-row">
@@ -57,11 +57,11 @@
             @else<strong>{{ strtoupper($shop['brand_name'] ?? 'Asfara') }}</strong><span>{{ $shop['brand_subtitle'] ?? 'MODEST WEAR' }}</span>@endif
         </a>
         <nav class="desktop-nav" aria-label="Utama">
-            <a href="{{ route('catalog',['sort'=>'newest']) }}">NEW IN</a>
-            <a href="{{ route('catalog') }}" class="catalog-nav-link" aria-haspopup="true" aria-expanded="false" aria-controls="catalog-mega-menu" @if(request()->routeIs('catalog','product')) aria-current="page" @endif>SHOP</a>
+            <a href="{{ route('catalog',['sort'=>'newest']) }}">New In</a>
+            <a href="{{ route('catalog') }}" class="catalog-nav-link" aria-haspopup="true" aria-expanded="false" aria-controls="catalog-mega-menu" @if(request()->routeIs('catalog','product')) aria-current="page" @endif>Shop</a>
             @if($campaignMenu->isNotEmpty())
                 <details class="campaign-nav">
-                    <summary>COLLECTIONS</summary>
+                    <summary>Collections</summary>
                     <div>
                         @foreach(config('storefront.campaign_groups') as $group => $label)
                             @php($menuEntries = $campaignMenu->get($group, collect())->take(8))
@@ -77,11 +77,11 @@
                     </div>
                 </details>
             @else
-                <a href="{{ route('catalog',['sort'=>'featured']) }}">COLLECTIONS</a>
+                <a href="{{ route('catalog',['sort'=>'featured']) }}">Collections</a>
             @endif
             @foreach($cmsMenus->whereIn('placement',['both','desktop'])->take(1) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
-            <a href="#store-locations">FIND US</a>
-            <a href="{{ route('catalog',['sale'=>1]) }}">SPECIAL OFFER</a>
+            <a href="#store-locations">Find Us</a>
+            <a href="{{ route('catalog',['sale'=>1]) }}">Special Offer</a>
         </nav>
         <div class="header-actions">
             <details class="language-picker"><summary>{{ app()->getLocale()==='id'?'INDONESIA':'ENGLISH' }}</summary><div><a href="{{ route('locale','id') }}" @class(['is-active'=>app()->getLocale()==='id'])><span>Indonesia</span><small>ID</small></a><a href="{{ route('locale','en') }}" @class(['is-active'=>app()->getLocale()==='en'])><span>English</span><small>EN</small></a></div></details>
@@ -164,18 +164,25 @@
     const bar=document.querySelector('.announcement');
     const notices=[...document.querySelectorAll('.announcement div>span')];
     if(!bar||notices.length<2)return;
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
     let active=Math.max(0,notices.findIndex(notice=>notice.classList.contains('is-active'))),timer;
+    let hovered = false;
     const show=index=>{
         active=(index+notices.length)%notices.length;
         notices.forEach((notice,i)=>notice.classList.toggle('is-active',i===active));
     };
     const play=()=>{
         clearTimeout(timer);
-        if(document.hidden)return;
+        if(document.hidden || reducedMotion.matches || hovered || bar.matches(':focus-within'))return;
         const delay=Math.max(2000,Number(bar.dataset.announcementInterval)||5000);
         timer=setTimeout(()=>{show(active+1);play()},delay);
     };
     document.addEventListener('visibilitychange',play);
+    reducedMotion.addEventListener('change', play);
+    bar.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') { hovered = true; play(); } });
+    bar.addEventListener('pointerleave', () => { hovered = false; play(); });
+    bar.addEventListener('focusin', play);
+    bar.addEventListener('focusout', () => requestAnimationFrame(play));
     bar.querySelector('[data-notice-prev]')?.addEventListener('click',()=>{show(active-1);play()});
     bar.querySelector('[data-notice-next]')?.addEventListener('click',()=>{show(active+1);play()});
     play();
@@ -187,8 +194,20 @@
     const slides=[...document.querySelectorAll('[data-hero-slide]')];
     const dots=[...document.querySelectorAll('[data-hero-dot]')];
     if(!hero||!slides.length)return;
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    const playbackPreferences = new WeakMap();
     let active=Math.max(0,slides.findIndex(slide=>slide.classList.contains('is-active'))),timer,startX=0;
-    const syncVideos=()=>slides.forEach((slide,index)=>{const video=slide.querySelector('[data-hero-video]');if(!video)return;if(index===active&&!document.hidden)video.play().catch(()=>{});else video.pause()});
+    let heroVisible = hero.getBoundingClientRect().bottom > 0;
+    const syncVideos = () => slides.forEach((slide, index) => {
+        const video = slide.querySelector('[data-hero-video]');
+        if (!video) return;
+        const requestedPlayback = playbackPreferences.get(video) ?? !reducedMotion.matches;
+        if (index === active && heroVisible && !document.hidden && requestedPlayback) {
+            video.play().catch(() => {});
+        } else {
+            video.pause();
+        }
+    });
     const show=index=>{
         active=(index+slides.length)%slides.length;
         slides.forEach((slide,i)=>{slide.classList.toggle('is-active',i===active);slide.setAttribute('aria-hidden',i===active?'false':'true')});
@@ -197,19 +216,48 @@
     };
     const play=()=>{
         clearTimeout(timer);
-        if(document.hidden)return;
+        if(document.hidden || reducedMotion.matches || !heroVisible || hero.matches(':focus-within'))return;
         if(slides.length>1){const delay=Math.max(2500,Number(slides[active]?.dataset.duration)||5000);timer=setTimeout(()=>{show(active+1);play()},delay)}
     };
-    hero.querySelectorAll('[data-hero-sound]').forEach(button=>button.addEventListener('click',()=>{const video=button.closest('[data-hero-slide]')?.querySelector('[data-hero-video]');if(!video)return;video.muted=!video.muted;button.setAttribute('aria-pressed',video.muted?'false':'true');button.setAttribute('aria-label',video.muted?'Aktifkan suara video':'Matikan suara video');button.querySelector('em').textContent=video.muted?'SUARA':'BISU'}));
+    slides.forEach(slide => {
+        const video = slide.querySelector('[data-hero-video]');
+        if (!video) return;
+        const playButton = slide.querySelector('[data-hero-play]');
+        const soundButton = slide.querySelector('[data-hero-sound]');
+        const updatePlayButton = () => {
+            playButton.classList.toggle('is-playing', !video.paused);
+            playButton.setAttribute('aria-label', video.paused ? 'Putar video' : 'Jeda video');
+        };
+        video.addEventListener('play', updatePlayButton);
+        video.addEventListener('pause', updatePlayButton);
+        playButton.addEventListener('click', () => {
+            playbackPreferences.set(video, video.paused);
+            syncVideos();
+        });
+        soundButton?.addEventListener('click', () => {
+            video.muted = !video.muted;
+            soundButton.setAttribute('aria-pressed', String(!video.muted));
+        });
+    });
     hero.addEventListener('pointerdown',event=>{startX=event.clientX});
     hero.addEventListener('pointerup',event=>{const delta=event.clientX-startX;if(Math.abs(delta)>55){show(active+(delta<0?1:-1));play()}});
     document.addEventListener('visibilitychange',()=>{syncVideos();play()});
+    reducedMotion.addEventListener('change', () => { syncVideos(); play(); });
+    hero.addEventListener('focusin', play);
+    hero.addEventListener('focusout', () => requestAnimationFrame(play));
+    if ('IntersectionObserver' in window) {
+        new IntersectionObserver(([entry]) => {
+            heroVisible = entry.isIntersecting;
+            syncVideos();
+            play();
+        }).observe(hero);
+    }
     syncVideos();
     play();
 })();
 </script>
 <script>
-(()=>{const header=document.querySelector('.site-header'),floatingWhatsApp=document.querySelector('[data-floating-whatsapp]');const syncHeader=()=>{header?.classList.toggle('is-scrolled',scrollY>24);floatingWhatsApp?.classList.toggle('is-compact',scrollY>160)};syncHeader();addEventListener('scroll',syncHeader,{passive:true});
+(()=>{const header=document.querySelector('.site-header'),floatingWhatsApp=document.querySelector('[data-floating-whatsapp]');const syncHeader=()=>{header?.classList.toggle('is-scrolled',header.classList.contains('sticky-top')&&scrollY>80);floatingWhatsApp?.classList.toggle('is-compact',scrollY>160)};syncHeader();addEventListener('scroll',syncHeader,{passive:true});
 const catalogTrigger=document.querySelector('.catalog-nav-link'),catalogMenu=document.querySelector('.catalog-mega-menu');let catalogCloseTimer;const setCatalogOpen=open=>{clearTimeout(catalogCloseTimer);header?.classList.toggle('is-catalog-open',open);catalogTrigger?.setAttribute('aria-expanded',open?'true':'false');catalogMenu?.setAttribute('aria-hidden',open?'false':'true')};const openCatalog=()=>setCatalogOpen(true),closeCatalog=()=>setCatalogOpen(false),scheduleCatalogClose=()=>{clearTimeout(catalogCloseTimer);catalogCloseTimer=setTimeout(closeCatalog,90)};catalogTrigger?.addEventListener('pointerenter',openCatalog);catalogTrigger?.addEventListener('pointerleave',scheduleCatalogClose);catalogTrigger?.addEventListener('focus',openCatalog);catalogMenu?.addEventListener('pointerenter',openCatalog);catalogMenu?.addEventListener('pointerleave',scheduleCatalogClose);catalogMenu?.addEventListener('focusin',openCatalog);header?.addEventListener('focusout',()=>setTimeout(()=>{if(!header.contains(document.activeElement))closeCatalog()}));document.querySelectorAll('.desktop-nav a:not(.catalog-nav-link)').forEach(link=>link.addEventListener('pointerenter',closeCatalog));document.addEventListener('pointerdown',event=>{if(!catalogTrigger?.contains(event.target)&&!catalogMenu?.contains(event.target))closeCatalog()});
 const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
 const storefrontCopy=@json($storeCopy);

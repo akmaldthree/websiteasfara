@@ -19,13 +19,13 @@
     <div class="catalog-toolbar"><div class="catalog-density" aria-label="Ukuran gambar"><button class="catalog-filter-button" type="button" aria-expanded="false" aria-controls="catalog-filters" data-filter-open><span aria-hidden="true">≡</span> {{ $storeCopy['catalog_filter'] }}@if($activeFilterCount=request()->collect()->only(['q','category','color','size','product_type','min','max','fulfillment','available'])->filter()->count()) <b>{{ $activeFilterCount }}</b>@endif</button><button type="button" data-grid="large" aria-label="Gambar besar">▦</button><button class="is-active" type="button" data-grid="normal" aria-label="Gambar sedang">▦</button><button type="button" data-grid="compact" aria-label="Gambar kecil">☷</button></div><strong>{{ $collections->total() }} {{ $storeCopy['catalog_title'] }}</strong><label for="sort-top">{{ $storeCopy['catalog_sort'] }} <select id="sort-top" data-sort-select>@foreach(['new'=>'Terbaru','featured'=>'Pilihan Asfara','best_selling'=>'Terlaris','price_asc'=>'Harga terendah','price_desc'=>'Harga tertinggi','title_asc'=>'Nama A–Z','title_desc'=>'Nama Z–A','oldest'=>'Terlama'] as $value=>$label)<option value="{{ $value }}" @selected(request('sort','new')===$value)>{{ $label }}</option>@endforeach</select></label></div>
     <div class="catalog-content">
         <aside class="catalog-sidebar" id="catalog-filters" aria-label="Filter produk" data-filter-panel><button type="button" class="filter-close" data-filter-close aria-label="Tutup filter">×</button>
-            <form method="get" id="catalog-filter-form">@if(request('sale'))<input type="hidden" name="sale" value="1">@endif<input type="hidden" name="sort" value="{{ request('sort','new') }}" data-sort-input>
+            <form method="get" action="{{ route('catalog') }}" id="catalog-filter-form">@if(request('sale'))<input type="hidden" name="sale" value="1">@endif<input type="hidden" name="sort" value="{{ request('sort','new') }}" data-sort-input>
                 <div class="catalog-search"><input type="search" name="q" value="{{ request('q') }}" aria-label="Cari produk atau SKU" placeholder="Cari produk atau SKU"><button type="submit" aria-label="Cari">⌕</button></div>
-                <details open><summary>Ketersediaan</summary><label><input type="checkbox" name="available" value="1" @checked(request('available'))> Hanya stok tersedia</label></details>
+                <details @if($currentCategory) open @endif><summary>Kategori</summary><div class="catalog-filter-list"><label><input type="radio" name="category" value="" data-filter-instant @checked(!request('category'))> Semua produk</label>@foreach($categories as $c)<label><input type="radio" name="category" value="{{ $c->slug }}" data-filter-instant @checked(request('category')===$c->slug)> {{ $c->name }}</label>@endforeach</div></details>
+                <details open><summary>Ketersediaan</summary><label><input type="checkbox" name="available" value="1" data-filter-instant @checked(request('available'))> Hanya stok tersedia</label></details>
                 <details open><summary>Harga</summary><div class="catalog-price-inputs"><input name="min" value="{{ request('min') }}" inputmode="numeric" aria-label="Harga minimum" placeholder="Minimum"><input name="max" value="{{ request('max') }}" inputmode="numeric" aria-label="Harga maksimum" placeholder="Maksimum"></div></details>
                 <details class="catalog-advanced" @if(request()->filled('color') || request()->filled('size') || request()->filled('product_type') || request()->filled('fulfillment')) open @endif>
                     <summary>Filter lanjutan</summary>
-                <details><summary>KATEGORI</summary><div class="catalog-filter-list"><label><input type="radio" name="category" value="" @checked(!request('category'))> Semua produk</label>@foreach($categories as $c)<label><input type="radio" name="category" value="{{ $c->slug }}" @checked(request('category')===$c->slug)> {{ $c->name }}</label>@endforeach</div></details>
                 <details><summary>WARNA</summary><div class="catalog-filter-list">@foreach($filterOptions['colors'] as $option)<label><input type="radio" name="color" value="{{ $option->color }}" @checked(request('color')===$option->color)> {{ $option->color }} <small>({{ $option->total }})</small></label>@endforeach</div></details>
                 <details><summary>UKURAN</summary><div class="catalog-filter-list filter-chip-list">@foreach($filterOptions['sizes'] as $option)<label><input type="radio" name="size" value="{{ $option->size }}" @checked(request('size')===$option->size)><span>{{ $option->size }}</span><small>{{ $option->total }}</small></label>@endforeach</div></details>
                 @if($filterOptions['types']->isNotEmpty())<details><summary>JENIS PRODUK</summary><div class="catalog-filter-list">@foreach($filterOptions['types'] as $option)<label><input type="radio" name="product_type" value="{{ $option->product_type }}" @checked(request('product_type')===$option->product_type)> {{ $option->product_type }} <small>({{ $option->total }})</small></label>@endforeach</div></details>@endif
@@ -60,7 +60,19 @@ const rememberCatalogScroll = () => {
         sessionStorage.setItem(catalogScrollKey, JSON.stringify({path: location.pathname, y: scrollY}));
     } catch {}
 };
-catalogForm.addEventListener('submit', rememberCatalogScroll);
+catalogForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const url = new URL(catalogForm.action);
+    url.search = '';
+    for (const [field, value] of new FormData(catalogForm)) {
+        if (value.trim()) url.searchParams.set(field, value.trim());
+    }
+    rememberCatalogScroll();
+    location.assign(url);
+});
+catalogForm.addEventListener('change', event => {
+    if (event.target.matches('[data-filter-instant]')) catalogForm.requestSubmit();
+});
 document.querySelector('[data-sort-select]')?.addEventListener('change', event => {
     const url = new URL(location.href);
     url.searchParams.set('sort', event.target.value);
