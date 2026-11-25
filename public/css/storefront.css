@@ -157,6 +157,58 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 .home-transparent-header .site-header:not(.is-scrolled) .wordmark,.home-transparent-header .site-header:not(.is-scrolled) .desktop-nav a,.home-transparent-header .site-header:not(.is-scrolled) .header-actions a{color:#fff}
 @media(max-width:767px){.catalog-sidebar,.checkout-body,.checkout-body .checkout-summary{background:var(--palette-sand)}}
 
+.commerce-hero.hero-content-editorial {
+    display: grid;
+    height: auto;
+    min-height: clamp(480px, calc(100svh - 38px), var(--hero-height, 633px));
+}
+
+.hero-content-editorial .commerce-hero-slide {
+    position: relative;
+    grid-area: 1 / 1;
+    min-width: 0;
+}
+
+.hero-content-editorial .commerce-hero-copy {
+    position: relative;
+    min-height: 100%;
+    padding-block: 126px 76px;
+    overflow-wrap: anywhere;
+}
+
+.hero-content-editorial .commerce-hero-copy h1 {
+    max-width: min(15ch, 100%);
+    margin-block: 12px;
+    font-size: clamp(2rem, 3.7vw, 3.875rem);
+    line-height: 1.08;
+}
+
+.hero-content-editorial .commerce-hero-copy p {
+    max-width: min(42ch, 100%);
+    margin-bottom: 0;
+    line-height: 1.55;
+}
+
+.hero-content-editorial .commerce-hero-copy .btn {
+    max-width: 100%;
+}
+
+@media (max-width: 767px) {
+    .commerce-hero.hero-content-editorial {
+        height: auto !important;
+        min-height: 550px !important;
+    }
+
+    .hero-content-editorial .commerce-hero-copy {
+        padding-block: 90px 76px;
+    }
+
+    .hero-content-editorial .hero-sound-toggle {
+        left: 18px;
+        bottom: 18px;
+    }
+}
+
 /* Phase 4: polished cart and conversion flow. */
 .cart-page-header{display:flex;align-items:flex-end;justify-content:space-between;gap:32px;margin-bottom:42px;padding-bottom:20px;border-bottom:1px solid var(--palette-taupe)}
 .cart-page-header h1,.checkout-page-header h1{margin:9px 0 0;font-size:34px;font-weight:500;letter-spacing:.05em;text-transform:uppercase}
