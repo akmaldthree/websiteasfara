@@ -170,13 +170,18 @@ class StoreController extends Controller
 
     public function product(Request $r, string $slug, PricingService $pricing, Analytics $analytics)
     {
+        $priceGroup = $pricing->groupFor($r->user());
         $series = Series::published()->where('slug', $slug)->with([
             'category',
             'media' => fn ($q) => $q->where('active', true),
-            'variants' => fn ($q) => $q->where('active', true)->with(['measurementTemplate', 'bundleComponents.componentVariant'])->orderBy('id'),
+            'variants' => fn ($q) => $q->where('active', true)
+                ->with(['measurementTemplate', 'bundleComponents.componentVariant'])
+                ->when($priceGroup, fn ($variants) => $variants->with(['prices' => fn ($prices) => $prices
+                    ->where('price_group_id', $priceGroup->id)->where('active', true)->orderBy('minimum_quantity')]))
+                ->orderBy('id'),
         ])->firstOrFail();
-        $priceGroup = $pricing->groupFor($r->user());
-        $businessTiers = $series->variants->mapWithKeys(fn (Variant $variant) => [$variant->id => $pricing->tiersFor($variant, $r->user())]);
+        $businessTiers = $series->variants->mapWithKeys(fn (Variant $variant) => [$variant->id => $priceGroup ? $variant->prices : collect()]);
+        $unitPrices = $series->variants->mapWithKeys(fn (Variant $variant) => [$variant->id => $pricing->resolveForGroup($variant, 1, $priceGroup)['price']]);
         $reviews = Review::where('status', 'approved')->whereHas('variant', fn ($query) => $query->where('series_id', $series->id))->with('user')->withCount('helpfulVotes')->latest()->get();
         $questions = ProductQuestion::where('series_id', $series->id)->where('status', 'answered')->with('user')->latest('answered_at')->get();
         $helpfulReviewIds = $r->user() ? ReviewHelpfulVote::where('user_id', $r->user()->id)->whereIn('review_id', $reviews->pluck('id'))->pluck('review_id')->all() : [];
@@ -193,7 +198,7 @@ class StoreController extends Controller
         $r->session()->put('recently_viewed', $recentlyViewedIds);
         $analytics->record($r, 'view_item', ['series_id' => $series->id, 'variant_id' => $r->integer('variant') ?: null]);
 
-        return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'reviews', 'questions', 'helpfulReviewIds', 'isWishlisted', 'relatedProducts'));
+        return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'unitPrices', 'reviews', 'questions', 'helpfulReviewIds', 'isWishlisted', 'relatedProducts'));
     }
 
     public function question(Request $request, Series $series)

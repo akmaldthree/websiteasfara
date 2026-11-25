@@ -1460,6 +1460,38 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
     transform: rotate(180deg);
 }
 
+.product-detail-body .product-price-status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.product-detail-body .product-price-status :is(.product-stock, .product-saving) {
+    margin: 0;
+    font-style: normal;
+}
+
+.product-detail-body :is(.product-saving, .product-gallery-count, [data-gallery-grid])[hidden],
+.product-detail-body .product-gallery-arrow:disabled {
+    display: none;
+}
+
+.product-detail-body .variant-option-label {
+    min-height: 28px;
+    margin-bottom: 4px;
+}
+
+.product-detail-body .variant-choice.active:not(:disabled) {
+    outline: 1px solid currentColor;
+    outline-offset: -2px;
+}
+
+.product-detail-body .cart-form-error {
+    scroll-margin-block: 96px;
+}
+
 @media (min-width: 768px) {
     .store-body .catalog-filter-button {
         display: none !important;
@@ -1478,5 +1510,67 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 
     .catalog-sidebar:not(.is-open) {
         visibility: hidden;
+    }
+
+    .product-detail-body .product-gallery-main,
+    .product-detail-body .product-gallery-main img {
+        aspect-ratio: 5 / 4;
+    }
+
+    .product-detail-body .product-gallery-main {
+        background: color-mix(in srgb, var(--palette-sand) 60%, var(--palette-taupe));
+    }
+
+    .store-body.product-detail-body .product-gallery-main img {
+        object-fit: contain;
+    }
+
+    .product-detail-body .product-gallery-pager {
+        margin-top: 9px;
+    }
+
+    .store-body.product-detail-body .product-info-column {
+        padding-top: 16px;
+    }
+
+    .product-detail-body .product-heading-meta {
+        margin-block: 4px 6px;
+        padding-bottom: 8px;
+    }
+
+    .product-detail-body .product-price-row .product-price {
+        margin-block: 5px;
+    }
+
+    .product-detail-body .product-price-status {
+        margin-top: 2px;
+    }
+
+    .product-detail-body .variant-option-groups > div {
+        margin-block: 10px;
+    }
+
+    .product-detail-body .variant-option-label:has(.size-guide-link) {
+        min-height: 44px;
+    }
+
+    .product-detail-body .variant-choice {
+        min-height: 44px;
+        padding: 8px 12px;
+    }
+
+    .product-detail-body .product-quantity-block {
+        margin-block: 14px;
+    }
+
+    .product-detail-body .mobile-purchase-bar small {
+        max-width: none;
+        font-size: .6875rem;
+        letter-spacing: 0;
+    }
+
+    .product-detail-body .mobile-purchase-bar .btn {
+        min-width: min(145px, 50vw);
+        padding-inline: 10px;
     }
 }

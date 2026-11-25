@@ -70,6 +70,8 @@ class ProductMediaTest extends TestCase
         $category = Category::create(['name' => 'Abaya', 'slug' => 'abaya-seo', 'description' => 'Koleksi abaya Asfara.', 'seo_title' => 'Abaya Asfara Premium', 'seo_description' => 'Temukan abaya Asfara pilihan.', 'active' => true]);
         $series = Series::create(['category_id' => $category->id, 'name' => 'Rania', 'slug' => 'rania-share', 'active' => true]);
         $variant = Variant::create(['series_id' => $series->id, 'sku' => 'RANIA-OLIVE-L', 'color' => 'Olive', 'size' => 'L', 'price' => 320000, 'stock' => 4, 'weight' => 500]);
+        $soldOut = Variant::create(['series_id' => $series->id, 'sku' => 'RANIA-SAND-M', 'color' => 'Sand', 'size' => 'M', 'price' => 360000, 'stock' => 0, 'weight' => 500]);
+        ProductMedia::create(['series_id' => $series->id, 'variant_id' => $soldOut->id, 'color' => 'Sand', 'image' => 'product-gallery/rania-sand.jpg', 'alt_text' => 'Rania warna Sand', 'active' => true]);
 
         $this->get(route('catalog', ['category' => $category->slug]))
             ->assertOk()->assertSee('Abaya Asfara Premium')->assertSee('Temukan abaya Asfara pilihan.')
@@ -77,5 +79,13 @@ class ProductMediaTest extends TestCase
         $this->get(route('product', ['slug' => $series->slug, 'variant' => $variant->id]))
             ->assertOk()->assertSee('Bagikan pilihan')->assertSee('history.replaceState', false)
             ->assertSee('selected', false);
+
+        $response = $this->get(route('product', ['slug' => $series->slug, 'variant' => $soldOut->id]))
+            ->assertOk()
+            ->assertSee('id="display-product-price">Rp 360.000', false)
+            ->assertSee('id="display-product-stock">Varian ini habis', false)
+            ->assertSee('data-product-submit disabled', false);
+        $this->assertMatchesRegularExpression('/<option value="'.$soldOut->id.'"[^>]*disabled[^>]*selected>/', $response->getContent());
+        $this->assertMatchesRegularExpression('~id="product-main-image" src="[^"]+/rania-sand\.jpg"~', $response->getContent());
     }
 }

@@ -380,6 +380,7 @@ document.addEventListener('submit', async event => {
         if (errors) {
             errors.textContent = cartErrorMessage(error);
             errors.hidden = false;
+            if (errors.hasAttribute('tabindex')) errors.focus();
         } else {
             cartReturnFocus = returnTarget;
             await loadCartDrawer(cartErrorMessage(error));

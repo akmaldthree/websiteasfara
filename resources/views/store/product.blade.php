@@ -2,13 +2,39 @@
 @section('title',$series->seo_title ?: $series->name.' — '.($shop['brand_name'] ?? 'Asfara'))
 @section('description',$series->seo_description ?: \Illuminate\Support\Str::limit($series->description ?? '',160))
 @section('body_class','product-detail-body')
-@php($gallery=$series->media->sortByDesc(fn($media)=>$series->image===$media->image)->values())
-@php($mainMedia=$gallery->first())
+@php
+    $standardVariants = $series->variants->where('fulfillment', '!=', 'custom_made');
+    $availableVariants = $standardVariants->filter(fn ($variant) => $variant->available > 0);
+    $variantGroups = $series->uses_product_type ? ['type', 'color', 'size'] : ['color', 'size'];
+    $requestedVariant = $standardVariants->firstWhere('id', request()->integer('variant'));
+    $selectedVariant = $requestedVariant ?? $availableVariants->first();
+    $canBuySelected = $selectedVariant && $selectedVariant->available > 0;
+    $needsVariantSelection = $availableVariants->isNotEmpty() && (!$canBuySelected || (!$requestedVariant && $availableVariants->count() > 1));
+    $displayPrice = $selectedVariant ? $unitPrices[$selectedVariant->id] : (int) $unitPrices->min();
+    $compareAtPrice = (int) $series->compare_at_price;
+    $saving = max(0, $compareAtPrice - $displayPrice);
+    $stockLabel = match (true) {
+        $canBuySelected && $selectedVariant->fulfillment === 'pre_order' => 'Pre-order tersedia',
+        $canBuySelected => 'Stok tersedia',
+        $selectedVariant !== null => 'Varian ini habis',
+        $standardVariants->isEmpty() && $series->variants->contains('fulfillment', 'custom_made') => 'Dibuat sesuai pesanan',
+        default => 'Stok habis',
+    };
+
+    $gallery = $series->media->sortByDesc(fn ($media) => $series->image === $media->image)->values();
+    $mainMedia = null;
+    if ($selectedVariant) {
+        $color = mb_strtolower($selectedVariant->color);
+        $colorMedia = $gallery->filter(fn ($media) => $color !== '' && mb_strtolower($media->color ?? '') === $color);
+        $mainMedia = $gallery->firstWhere('variant_id', $selectedVariant->id)
+            ?? $colorMedia->firstWhere('variant_id', null)
+            ?? $colorMedia->first();
+    }
+    $mainMedia ??= $gallery->first(fn ($media) => !$media->variant_id && !$media->color) ?? $gallery->first();
+    $mainIndex = $mainMedia ? (int) $gallery->search($mainMedia) : 0;
+@endphp
 @php($mainImage=$mainMedia?->image_url ?? $series->image_url)
 @section('image',$mainImage)
-@php($minimumPrice=(int)$series->variants->min('price'))
-@php($saving=max(0,(int)$series->compare_at_price-$minimumPrice))
-@php($savingPercent=$saving>0 && $series->compare_at_price>0 ? (int)round($saving/$series->compare_at_price*100) : 0)
 @php($productSchema=['@context'=>'https://schema.org','@type'=>'Product','name'=>$series->name,'description'=>$series->seo_description ?: $series->description,'image'=>$gallery->pluck('image_url')->prepend($series->image_url)->unique()->values()->all(),'sku'=>$series->variants->first()?->sku,'brand'=>['@type'=>'Brand','name'=>$shop['brand_name'] ?? 'Asfara'],'offers'=>['@type'=>'AggregateOffer','priceCurrency'=>'IDR','lowPrice'=>(int)$series->variants->min('price'),'highPrice'=>(int)$series->variants->max('price'),'offerCount'=>$series->variants->count(),'availability'=>$series->variants->sum(fn($variant)=>$variant->available)>0?'https://schema.org/InStock':'https://schema.org/OutOfStock']])
 @push('head')
 <script type="application/ld+json">{!! json_encode($productSchema, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
@@ -19,12 +45,12 @@
     <nav class="breadcrumb"><a href="{{ route('catalog') }}">Koleksi</a> / {{ $series->category->name }} / {{ $series->name }}</nav>
     <div class="row g-5 product-layout">
         <div class="col-lg-7 product-gallery-column">
-            <div class="detail-image product-gallery-main product-gallery-stage"><img id="product-main-image" src="{{ $mainImage }}" alt="{{ $mainMedia?->alt_text ?? $series->name }}" style="object-position:{{ $mainMedia?->focal_x ?? 50 }}% {{ $mainMedia?->focal_y ?? 50 }}%" width="1000" height="1250" loading="eager" fetchpriority="high" decoding="async"><button type="button" class="product-gallery-arrow is-prev" data-product-gallery-prev aria-label="Foto sebelumnya">‹</button><button type="button" class="product-gallery-arrow is-next" data-product-gallery-next aria-label="Foto berikutnya">›</button><button type="button" class="product-zoom-button" id="open-product-zoom" aria-label="Perbesar foto">⌕</button><span class="product-gallery-count"><b data-product-gallery-current>1</b> / {{ max(1,$gallery->count()) }}</span></div>
+            <div class="detail-image product-gallery-main product-gallery-stage"><img id="product-main-image" src="{{ $mainImage }}" alt="{{ $mainMedia?->alt_text ?? $series->name }}" style="object-position:{{ $mainMedia?->focal_x ?? 50 }}% {{ $mainMedia?->focal_y ?? 50 }}%" width="1000" height="1250" loading="eager" fetchpriority="high" decoding="async"><button type="button" class="product-gallery-arrow is-prev" data-product-gallery-prev aria-label="Foto sebelumnya" @disabled($gallery->count() < 2)>‹</button><button type="button" class="product-gallery-arrow is-next" data-product-gallery-next aria-label="Foto berikutnya" @disabled($gallery->count() < 2)>›</button><button type="button" class="product-zoom-button" id="open-product-zoom" aria-label="Perbesar foto">⌕</button><span class="product-gallery-count" @if($gallery->count() < 2) hidden @endif><b data-product-gallery-current>{{ $mainIndex + 1 }}</b> / {{ max(1,$gallery->count()) }}</span></div>
             @if($gallery->isNotEmpty())
                 <div class="product-gallery-pager" aria-label="Galeri foto produk">
-                    @foreach($gallery as $media)<button type="button" class="product-thumbnail {{ $loop->first?'active':'' }}" data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text }}" data-focal-x="{{ $media->focal_x }}" data-focal-y="{{ $media->focal_y }}" data-variant="{{ $media->variant_id }}" data-color="{{ mb_strtolower($media->color ?? '') }}" aria-label="Tampilkan foto {{ $loop->iteration }}" aria-pressed="{{ $loop->first ? 'true' : 'false' }}"><img src="{{ $media->image_url }}" alt="" width="64" height="80" loading="lazy" decoding="async"></button>@endforeach
+                    @foreach($gallery as $media)<button type="button" class="product-thumbnail {{ $loop->index === $mainIndex ? 'active' : '' }}" data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text ?: $series->name }}" data-focal-x="{{ $media->focal_x }}" data-focal-y="{{ $media->focal_y }}" data-variant="{{ $media->variant_id }}" data-color="{{ mb_strtolower($media->color ?? '') }}" aria-label="Tampilkan foto {{ $loop->iteration }}" aria-pressed="{{ $loop->index === $mainIndex ? 'true' : 'false' }}"><img src="{{ $media->image_url }}" alt="" width="64" height="80" loading="lazy" decoding="async"></button>@endforeach
                 </div>
-                @if($gallery->count()>1)<div class="product-gallery-grid">@foreach($gallery->skip(1) as $media)<button type="button" data-gallery-grid data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text }}" aria-label="Perbesar {{ $media->alt_text }}"><img src="{{ $media->image_url }}" alt="{{ $media->alt_text }}" style="object-position:{{ $media->focal_x }}% {{ $media->focal_y }}%" width="320" height="400" loading="lazy" decoding="async"></button>@endforeach</div>@endif
+                @if($gallery->count()>1)<div class="product-gallery-grid">@foreach($gallery as $media)<button type="button" data-gallery-grid="{{ $loop->index }}" data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text ?: $series->name }}" aria-label="Perbesar {{ $media->alt_text ?: $series->name }}" @if($loop->index === $mainIndex) hidden @endif><img src="{{ $media->image_url }}" alt="{{ $media->alt_text }}" style="object-position:{{ $media->focal_x }}% {{ $media->focal_y }}%" width="320" height="400" loading="lazy" decoding="async"></button>@endforeach</div>@endif
             @elseif(!$series->image)<small class="text-muted">Ilustrasi koleksi. Foto produk dapat ditambahkan melalui dashboard admin.</small>@endif
         </div>
         <div class="col-lg-5 product-info-column">
@@ -33,34 +59,32 @@
             @if($reviews->isNotEmpty())
                 <div class="product-heading-meta"><a href="#product-reviews"><span aria-hidden="true">★★★★★</span> {{ number_format($reviews->avg('rating'),1).' ('.$reviews->count().')' }}</a></div>
             @endif
-            <div class="product-price-row"><div @class(['product-price','sale-price'=>$series->compare_at_price>$minimumPrice]) id="display-product-price">@rupiah($minimumPrice)</div><del id="display-compare-price" @if(!$series->compare_at_price || $series->compare_at_price<=$minimumPrice) hidden @endif>@rupiah($series->compare_at_price)</del></div>
-            @if($saving>0)<div class="product-saving">SAVE {{ $savingPercent }}% · HEMAT @rupiah($saving)</div>@endif
-            @php($totalStock=$series->variants->sum(fn($variant)=>$variant->available))
-            <div class="product-stock">{{ $totalStock > 0 ? 'Stok tersedia' : 'Stok habis' }}</div>
+            <div class="product-price-row"><div @class(['product-price','sale-price'=>$saving>0]) id="display-product-price">@rupiah($displayPrice)</div><del id="display-compare-price" @if($saving<=0) hidden @endif>@rupiah($compareAtPrice)</del></div>
+            <div class="product-price-status">
+                <span class="product-stock" id="display-product-stock">{{ $stockLabel }}</span>
+                @if($compareAtPrice > 0)<span class="product-saving" id="display-product-saving" @if($saving<=0) hidden @endif>Hemat @rupiah($saving)</span>@endif
+            </div>
             @if($priceGroup)
                 <div class="alert alert-success">Harga privat <strong>{{ $priceGroup->name }}</strong> aktif. Harga menyesuaikan jumlah SKU yang dipilih.</div>
             @endif
-            @php($standardVariants=$series->variants->where('fulfillment','!=','custom_made'))
-            @php($defaultVariant=$standardVariants->first(fn($variant)=>$variant->available>0))
-            @php($selectedVariant=$standardVariants->first(fn($variant)=>$variant->id === (int) request('variant') && $variant->available > 0) ?? $defaultVariant)
             @if($standardVariants->isNotEmpty())<form method="post" action="{{ route('cart.add') }}" id="product-purchase-form" data-cart-add>@csrf
-                <div class="variant-option-groups">
-                    @if($series->uses_product_type)<div><label>Jenis produk</label><div class="variant-choices">@foreach($standardVariants->pluck('product_type')->unique() as $type)<button type="button" class="variant-choice" data-kind="type" data-value="{{ mb_strtolower($type) }}">{{ $type }}</button>@endforeach</div></div>@endif
-                    <div><label>Warna</label><div class="variant-choices">@foreach($standardVariants->pluck('color')->unique() as $color)<button type="button" class="variant-choice color-choice" data-kind="color" data-value="{{ mb_strtolower($color) }}"><i style="--swatch:{{ \App\Support\ColorSwatch::hex($color) }}"></i>{{ $color }}</button>@endforeach</div></div>
-                    <div><div class="variant-option-label"><span>Ukuran</span><button type="button" class="size-guide-link" data-open-size-guide>Panduan ukuran</button></div><div class="variant-choices">@foreach($standardVariants->pluck('size')->unique() as $size)<button type="button" class="variant-choice" data-kind="size" data-value="{{ mb_strtolower($size) }}">{{ $size }}</button>@endforeach</div></div>
+                <div class="variant-option-groups" id="product-variant-options">
+                    @if($series->uses_product_type)<div><div class="variant-option-label" id="variant-type-label">Jenis produk</div><div class="variant-choices" role="group" aria-labelledby="variant-type-label">@foreach($standardVariants->pluck('product_type')->unique() as $type)<button type="button" class="variant-choice" data-kind="type" data-value="{{ mb_strtolower($type) }}">{{ $type }}</button>@endforeach</div></div>@endif
+                    <div><div class="variant-option-label" id="variant-color-label">Warna</div><div class="variant-choices" role="group" aria-labelledby="variant-color-label">@foreach($standardVariants->pluck('color')->unique() as $color)<button type="button" class="variant-choice color-choice" data-kind="color" data-value="{{ mb_strtolower($color) }}"><i style="--swatch:{{ \App\Support\ColorSwatch::hex($color) }}"></i>{{ $color }}</button>@endforeach</div></div>
+                    <div><div class="variant-option-label"><span id="variant-size-label">Ukuran</span><button type="button" class="size-guide-link" data-open-size-guide aria-haspopup="dialog">Panduan ukuran</button></div><div class="variant-choices" role="group" aria-labelledby="variant-size-label">@foreach($standardVariants->pluck('size')->unique() as $size)<button type="button" class="variant-choice" data-kind="size" data-value="{{ mb_strtolower($size) }}">{{ $size }}</button>@endforeach</div></div>
                 </div>
                 <label class="visually-hidden" for="variant">Kombinasi varian</label>
                 <select name="variant_id" id="variant" class="visually-hidden" required>
                     <option value="">Pilih varian Anda</option>
                     @foreach($standardVariants as $v)
                         @php($tiers=$businessTiers[$v->id]->map(fn($tier)=>['minimum'=>$tier->minimum_quantity,'price'=>$tier->price])->values())
-                        <option value="{{ $v->id }}" data-price="{{ $v->price }}" data-tiers="{{ $tiers->toJson() }}" data-stock="{{ $v->available }}" data-sku="{{ $v->sku }}" data-type="{{ mb_strtolower($v->product_type) }}" data-color="{{ mb_strtolower($v->color) }}" data-size="{{ mb_strtolower($v->size) }}" data-method="{{ $v->fulfillment==='ready_stock'?'Ready stock':($v->fulfillment==='bundle'?'Bundle':'Pre-order') }}" data-estimate="{{ $v->lead_time }}" @disabled($v->available<1) @selected($selectedVariant?->id === $v->id)>{{ $v->label }} — @rupiah($v->price) {{ $v->available<1?'(habis)':'' }}</option>
+                        <option value="{{ $v->id }}" data-price="{{ $unitPrices[$v->id] }}" data-tiers="{{ $tiers->toJson() }}" data-stock="{{ $v->available }}" data-sku="{{ $v->sku }}" data-label="{{ $v->label }}" data-type="{{ mb_strtolower($v->product_type) }}" data-color="{{ mb_strtolower($v->color) }}" data-size="{{ mb_strtolower($v->size) }}" data-method="{{ $v->fulfillment==='ready_stock'?'Ready stock':($v->fulfillment==='bundle'?'Bundle':'Pre-order') }}" data-estimate="{{ $v->lead_time }}" @disabled($v->available<1) @selected($selectedVariant?->id === $v->id)>{{ $v->label }} — @rupiah($unitPrices[$v->id]) {{ $v->available<1?'(habis)':'' }}</option>
                     @endforeach
                 </select>
                 <div class="variant-info" id="variant-info" aria-live="polite">Pilih varian untuk melihat harga dan ketersediaan.</div>
                 <div class="product-quantity-block"><label for="qty">Jumlah</label><div class="quantity-stepper"><button type="button" data-qty-change="-1" aria-label="Kurangi jumlah">−</button><input class="form-control quantity" type="number" name="quantity" id="qty" min="1" max="100" value="1" required><button type="button" data-qty-change="1" aria-label="Tambah jumlah">+</button></div></div>
-                <div class="product-purchase"><button type="submit" class="btn btn-dark" data-product-submit @disabled(!$selectedVariant)>TAMBAH KE KERANJANG</button><button type="submit" class="btn btn-outline-dark product-buy-now" name="buy_now" value="1" data-product-submit @disabled(!$selectedVariant)>BELI SEKARANG</button></div>
-                <p class="cart-form-error" data-cart-add-error role="alert" hidden></p>
+                <div class="product-purchase"><button type="submit" class="btn btn-dark" data-product-submit @disabled(!$canBuySelected)>TAMBAH KE KERANJANG</button><button type="submit" class="btn btn-outline-dark product-buy-now" name="buy_now" value="1" data-product-submit @disabled(!$canBuySelected)>BELI SEKARANG</button></div>
+                <p class="cart-form-error" data-cart-add-error role="alert" tabindex="-1" hidden></p>
             </form>@endif
             <div class="product-share"><button type="button" id="share-product" class="product-share-link">Bagikan pilihan ↗</button><span id="share-status" class="small ms-2" aria-live="polite"></span></div>
             @foreach($series->variants->where('fulfillment','custom_made') as $v)
@@ -120,22 +144,43 @@
 </section>
 <dialog class="product-lightbox" id="product-lightbox" aria-label="Foto {{ $series->name }} diperbesar"><button type="button" id="close-product-zoom" aria-label="Tutup foto">×</button><img id="product-lightbox-image" src="{{ $mainImage }}" alt="{{ $series->name }} diperbesar" width="1000" height="1250" loading="lazy" decoding="async"></dialog>
 <dialog class="size-guide-dialog" id="size-guide-dialog" aria-labelledby="size-guide-title"><button type="button" class="drawer-close" data-close-size-guide aria-label="Tutup panduan ukuran">×</button><span class="eyebrow">{{ strtoupper($series->name) }}</span><h2 id="size-guide-title">PANDUAN UKURAN</h2>@include('partials.size-chart')<p class="small">Jika berada di antara dua ukuran, pilih ukuran lebih besar atau hubungi Asfara melalui WhatsApp.</p></dialog>
-@if($standardVariants->isNotEmpty())<div class="mobile-purchase-bar"><div><small>{{ strtoupper($series->name) }}</small><strong id="mobile-product-price">@rupiah($minimumPrice)</strong></div><button type="button" class="btn btn-dark" data-mobile-add disabled>ADD TO CART</button></div>@endif
+@if($standardVariants->isNotEmpty())
+    <div class="mobile-purchase-bar">
+        <div>
+            <strong id="mobile-product-price">@rupiah($displayPrice)</strong>
+            <small data-mobile-variant>{{ $selectedVariant?->label ?? 'Stok habis' }}</small>
+        </div>
+        <button type="button" class="btn btn-dark" data-mobile-add aria-controls="product-variant-options" @disabled($availableVariants->isEmpty())>{{ $needsVariantSelection ? 'Pilih varian' : ($canBuySelected ? 'Tambah ke keranjang' : 'Stok habis') }}</button>
+    </div>
+@endif
 @endsection
 @push('scripts')
 <script>
 const select = document.getElementById('variant');
+const productForm = select?.form;
 const qty = document.getElementById('qty');
 const mainImage = document.getElementById('product-main-image');
 const thumbnails = [...document.querySelectorAll('.product-thumbnail')];
+const gridPhotos = [...document.querySelectorAll('[data-gallery-grid]')];
 const variantChoices = [...document.querySelectorAll('.variant-choice')];
 const availableOptions = select ? [...select.options].filter(option => option.value && !option.disabled) : [];
+const submitButtons = productForm ? [...productForm.querySelectorAll('[data-product-submit]')] : [];
+const quantityButtons = [...document.querySelectorAll('[data-qty-change]')];
+const variantInfo = document.getElementById('variant-info');
+const mobileAdd = document.querySelector('[data-mobile-add]');
+const mobilePrice = document.getElementById('mobile-product-price');
+const mobileVariant = document.querySelector('[data-mobile-variant]');
+const variantGroups = @json($variantGroups);
 const displayPrice = document.getElementById('display-product-price');
 const displayCompare = document.getElementById('display-compare-price');
-const compareAtPrice = Number(@json((int)$series->compare_at_price));
+const displaySaving = document.getElementById('display-product-saving');
+const displayStock = document.getElementById('display-product-stock');
+const compareAtPrice = @json($compareAtPrice);
 const rupiah = value => new Intl.NumberFormat('id-ID', {style: 'currency', currency: 'IDR', maximumFractionDigits: 0}).format(value);
-let galleryIndex = 0;
-let lastVariant = null;
+let galleryIndex = @json($mainIndex);
+let lastVariant = select?.value;
+let needsVariantSelection = @json($needsVariantSelection);
+let focusVariantKind;
 function showImage(button) {
     if (!button || !mainImage) return;
     galleryIndex = thumbnails.indexOf(button);
@@ -146,31 +191,46 @@ function showImage(button) {
         item.classList.toggle('active', item === button);
         item.setAttribute('aria-pressed', String(item === button));
     });
-    document.querySelector('[data-product-gallery-current]')?.replaceChildren(document.createTextNode(String(galleryIndex + 1)));
+    gridPhotos.forEach(item => item.hidden = Number(item.dataset.galleryGrid) === galleryIndex);
+    document.querySelector('[data-product-gallery-current]').textContent = String(galleryIndex + 1);
 }
+const choicesFor = (kind, current) => {
+    const precedingGroups = variantGroups.slice(0, variantGroups.indexOf(kind));
+    return availableOptions.filter(candidate => precedingGroups.every(group => candidate.dataset[group] === current?.dataset[group]));
+};
 function updateVariant() {
     const option = select.selectedOptions[0];
-    const purchasable = !!option?.value && !option.disabled;
-    const info = document.getElementById('variant-info');
-    document.querySelectorAll('[data-product-submit], [data-mobile-add]').forEach(button => button.disabled = !purchasable);
+    const hasVariant = Boolean(option?.value);
+    const purchasable = hasVariant && !option.disabled;
+    submitButtons.forEach(button => button.disabled = !purchasable);
     variantChoices.forEach(choice => {
-        const kind = choice.dataset.kind;
-        const possible = availableOptions.some(candidate => candidate.dataset[kind] === choice.dataset.value);
-        const active = purchasable && option.dataset[kind] === choice.dataset.value;
+        const {kind, value} = choice.dataset;
+        const possible = choicesFor(kind, option).some(candidate => candidate.dataset[kind] === value);
+        const active = hasVariant && option.dataset[kind] === value;
         choice.disabled = !possible;
         choice.classList.toggle('is-unavailable', !possible);
         choice.classList.toggle('active', active);
         choice.setAttribute('aria-pressed', String(active));
     });
     qty.disabled = !purchasable;
-    if (!purchasable) {
-        info.textContent = availableOptions.length ? 'Pilih varian yang tersedia.' : 'Stok habis.';
+    const variantChanged = option.value !== lastVariant;
+    qty.max = String(purchasable ? Math.min(100, Number(option.dataset.stock)) : 1);
+    if (variantChanged && Number(qty.value) > Number(qty.max)) qty.value = qty.max;
+    const amount = Math.min(Number(qty.max), Math.max(1, Number.parseInt(qty.value, 10) || 1));
+    quantityButtons.forEach(button => {
+        button.disabled = !purchasable || (Number(button.dataset.qtyChange) < 0 ? amount <= 1 : amount >= Number(qty.max));
+    });
+    mobileAdd.disabled = availableOptions.length === 0;
+    mobileAdd.textContent = mobileAdd.disabled ? 'Stok habis' : (needsVariantSelection || !purchasable ? 'Pilih varian' : 'Tambah ke keranjang');
+    mobileVariant.textContent = hasVariant ? option.dataset.label : 'Stok habis';
+    if (!hasVariant) {
+        variantInfo.textContent = 'Stok habis.';
         return;
     }
-    const variantChanged = option.value !== lastVariant;
-    qty.max = String(Math.min(100, Number(option.dataset.stock)));
-    if (variantChanged && Number(qty.value) > Number(qty.max)) qty.value = qty.max;
-    const amount = Math.min(Number(qty.max), Number(qty.value) || 1);
+    const stockLabel = purchasable
+        ? (option.dataset.method === 'Pre-order' ? 'Pre-order tersedia' : 'Stok tersedia')
+        : 'Varian ini habis';
+    displayStock.textContent = stockLabel;
     let price = Number(option.dataset.price);
     let applied = null;
     for (const tier of JSON.parse(option.dataset.tiers || '[]')) {
@@ -182,16 +242,29 @@ function updateVariant() {
     displayPrice.textContent = rupiah(price);
     displayPrice.classList.toggle('sale-price', compareAtPrice > price);
     displayCompare.hidden = compareAtPrice <= price;
-    document.getElementById('mobile-product-price')?.replaceChildren(document.createTextNode(rupiah(price)));
-    info.textContent = [option.dataset.method, 'SKU ' + option.dataset.sku, option.dataset.estimate, applied ? 'Harga akun tier ' + applied + '+' : ''].filter(Boolean).join(' · ');
+    if (displaySaving) {
+        displaySaving.hidden = compareAtPrice <= price;
+        displaySaving.textContent = 'Hemat ' + rupiah(compareAtPrice - price);
+    }
+    mobilePrice.textContent = rupiah(price);
+    variantInfo.textContent = [
+        option.dataset.label,
+        purchasable ? option.dataset.method : stockLabel,
+        'SKU ' + option.dataset.sku,
+        purchasable ? option.dataset.estimate : '',
+        applied ? 'Harga akun tier ' + applied + '+' : '',
+    ].filter(Boolean).join(' · ');
     if (!variantChanged) return;
     lastVariant = option.value;
-    const photo = thumbnails.find(item => item.dataset.variant === option.value)
-        || thumbnails.find(item => item.dataset.color && item.dataset.color === option.dataset.color);
-    if (photo) showImage(photo);
+    const colorPhotos = thumbnails.filter(item => item.dataset.color && item.dataset.color === option.dataset.color);
+    showImage(thumbnails.find(item => item.dataset.variant === option.value)
+        || colorPhotos.find(item => !item.dataset.variant)
+        || colorPhotos[0]
+        || thumbnails.find(item => !item.dataset.variant && !item.dataset.color)
+        || thumbnails[0]);
     const url = new URL(window.location.href);
     url.searchParams.set('variant', option.value);
-    history.replaceState({}, '', url);
+    history.replaceState(history.state, '', url);
 }
 thumbnails.forEach(button => button.addEventListener('click', () => showImage(button)));
 document.querySelector('[data-product-gallery-prev]')?.addEventListener('click', () => showImage(thumbnails[(galleryIndex - 1 + thumbnails.length) % thumbnails.length]));
@@ -199,10 +272,14 @@ document.querySelector('[data-product-gallery-next]')?.addEventListener('click',
 variantChoices.forEach(button => button.addEventListener('click', () => {
     const {kind, value} = button.dataset;
     const current = select.selectedOptions[0];
-    const score = option => ['type', 'color', 'size'].filter(key => key !== kind && option.dataset[key] === current?.dataset[key]).length;
-    const candidates = availableOptions.filter(option => option.dataset[kind] === value);
+    const score = option => variantGroups.filter(key => key !== kind && option.dataset[key] === current?.dataset[key]).length;
+    const candidates = choicesFor(kind, current).filter(option => option.dataset[kind] === value);
     const match = candidates.sort((a, b) => score(b) - score(a))[0];
     if (!match) return;
+    const sizes = new Set(choicesFor('size', match).map(option => option.dataset.size));
+    needsVariantSelection = kind !== 'size' && sizes.size > 1
+        && (needsVariantSelection || current?.dataset.size !== match.dataset.size);
+    focusVariantKind = needsVariantSelection ? 'size' : undefined;
     select.value = match.value;
     updateVariant();
 }));
@@ -212,20 +289,35 @@ if (select) {
         qty.value = String(Math.min(Number(qty.max), Math.max(1, Number.isFinite(value) ? value : 1)));
         updateVariant();
     };
-    select.addEventListener('change', updateVariant);
+    select.tabIndex = -1;
+    select.addEventListener('change', () => {
+        needsVariantSelection = false;
+        updateVariant();
+    });
     qty.addEventListener('input', updateVariant);
     qty.addEventListener('change', normalizeQuantity);
-    document.getElementById('product-purchase-form').addEventListener('submit', normalizeQuantity);
-    document.querySelectorAll('[data-qty-change]').forEach(button => button.addEventListener('click', () => {
+    productForm.addEventListener('submit', normalizeQuantity);
+    quantityButtons.forEach(button => button.addEventListener('click', () => {
         if (qty.disabled) return;
         qty.value = Number(qty.value) + Number(button.dataset.qtyChange);
         normalizeQuantity();
     }));
+    mobileAdd.addEventListener('click', () => {
+        if (needsVariantSelection || submitButtons[0].disabled) {
+            const choices = variantChoices.filter(choice => !choice.disabled);
+            const group = focusVariantKind ?? variantGroups.find(kind => choices.filter(choice => choice.dataset.kind === kind).length > 1);
+            const target = choices.find(choice => choice.dataset.kind === group) ?? choices[0];
+            target?.focus({preventScroll: true});
+            target?.scrollIntoView({block: 'center'});
+            return;
+        }
+        productForm.requestSubmit(submitButtons[0]);
+    });
     updateVariant();
 }
 const lightbox=document.getElementById('product-lightbox');const lightboxImage=document.getElementById('product-lightbox-image');document.getElementById('open-product-zoom')?.addEventListener('click',()=>{lightboxImage.src=mainImage.src;lightboxImage.alt=mainImage.alt;lightbox.showModal()});document.getElementById('close-product-zoom')?.addEventListener('click',()=>lightbox.close());lightbox?.addEventListener('click',event=>{if(event.target===lightbox)lightbox.close()});
-document.querySelectorAll('[data-gallery-grid]').forEach(button=>button.addEventListener('click',()=>{lightboxImage.src=button.dataset.image;lightboxImage.alt=button.dataset.alt;lightbox.showModal()}));let galleryStartX=0;mainImage?.closest('.product-gallery-stage')?.addEventListener('pointerdown',event=>galleryStartX=event.clientX);mainImage?.closest('.product-gallery-stage')?.addEventListener('pointerup',event=>{const delta=event.clientX-galleryStartX;if(Math.abs(delta)>45&&thumbnails.length)showImage(thumbnails[(galleryIndex+(delta<0?1:-1)+thumbnails.length)%thumbnails.length])});
-const sizeGuide=document.getElementById('size-guide-dialog');document.querySelector('[data-open-size-guide]')?.addEventListener('click',()=>sizeGuide.showModal());document.querySelector('[data-close-size-guide]')?.addEventListener('click',()=>sizeGuide.close());sizeGuide?.addEventListener('click',event=>{if(event.target===sizeGuide)sizeGuide.close()});document.querySelector('[data-mobile-add]')?.addEventListener('click',()=>document.getElementById('product-purchase-form').requestSubmit(document.querySelector('[data-product-submit]:not([name])')));
-document.getElementById('share-product').addEventListener('click',async()=>{const data={title:@json($series->name),text:@json('Lihat '.$series->name.' dari '.($shop['brand_name'] ?? 'Asfara')),url:window.location.href};try{if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(data.url);document.getElementById('share-status').textContent='Tautan disalin.'}}catch(error){if(error.name!=='AbortError')document.getElementById('share-status').textContent='Salin alamat halaman dari browser Anda.'}});
+gridPhotos.forEach(button=>button.addEventListener('click',()=>{lightboxImage.src=button.dataset.image;lightboxImage.alt=button.dataset.alt;lightbox.showModal()}));let galleryStartX=0;mainImage?.closest('.product-gallery-stage')?.addEventListener('pointerdown',event=>galleryStartX=event.clientX);mainImage?.closest('.product-gallery-stage')?.addEventListener('pointerup',event=>{const delta=event.clientX-galleryStartX;if(Math.abs(delta)>45&&thumbnails.length>1)showImage(thumbnails[(galleryIndex+(delta<0?1:-1)+thumbnails.length)%thumbnails.length])});
+const sizeGuide=document.getElementById('size-guide-dialog');document.querySelector('[data-open-size-guide]')?.addEventListener('click',()=>sizeGuide.showModal());document.querySelector('[data-close-size-guide]')?.addEventListener('click',()=>sizeGuide.close());sizeGuide?.addEventListener('click',event=>{if(event.target===sizeGuide)sizeGuide.close()});
+document.getElementById('share-product').addEventListener('click',async()=>{const url=new URL(window.location.href);if(select?.value)url.searchParams.set('variant',select.value);const data={title:@json($series->name),text:@json('Lihat '.$series->name.' dari '.($shop['brand_name'] ?? 'Asfara')),url:url.href};try{if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(data.url);document.getElementById('share-status').textContent='Tautan disalin.'}}catch(error){if(error.name!=='AbortError')document.getElementById('share-status').textContent='Salin alamat halaman dari browser Anda.'}});
 </script>
 @endpush
