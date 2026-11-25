@@ -17,7 +17,22 @@
     </div>
 </section>
 <section class="catalog-page">
-    <div class="catalog-toolbar"><div class="catalog-density" aria-label="Ukuran gambar"><button class="catalog-filter-button" type="button" aria-expanded="false" aria-controls="catalog-filters" data-filter-open><span aria-hidden="true">≡</span> {{ $storeCopy['catalog_filter'] }}@if($activeFilterCount=request()->collect()->only(['q','category','color','size','product_type','min','max','fulfillment','available'])->filter()->count()) <b>{{ $activeFilterCount }}</b>@endif</button><button type="button" data-grid="large" aria-label="Gambar besar">▦</button><button class="is-active" type="button" data-grid="normal" aria-label="Gambar sedang">▦</button><button type="button" data-grid="compact" aria-label="Gambar kecil">☷</button></div><strong>{{ $collections->total() }} {{ $storeCopy['catalog_title'] }}</strong><label for="sort-top">{{ $storeCopy['catalog_sort'] }} <select id="sort-top" data-sort-select>@foreach(['new'=>'Terbaru','featured'=>'Pilihan Asfara','best_selling'=>'Terlaris','price_asc'=>'Harga terendah','price_desc'=>'Harga tertinggi','title_asc'=>'Nama A–Z','title_desc'=>'Nama Z–A','oldest'=>'Terlama'] as $value=>$label)<option value="{{ $value }}" @selected(request('sort','new')===$value)>{{ $label }}</option>@endforeach</select></label></div>
+    <div class="catalog-toolbar">
+        <div class="catalog-density" role="group" aria-label="Ukuran gambar">
+            <button class="catalog-filter-button" type="button" aria-expanded="false" aria-controls="catalog-filters" data-filter-open><span aria-hidden="true">≡</span> {{ $storeCopy['catalog_filter'] }}@if($activeFilterCount=request()->collect()->only(['q','category','color','size','product_type','min','max','fulfillment','available'])->filter()->count()) <b>{{ $activeFilterCount }}</b>@endif</button>
+            <button type="button" data-grid="large" aria-label="Gambar besar" aria-pressed="false"><span aria-hidden="true"></span></button>
+            <button class="is-active" type="button" data-grid="normal" aria-label="Gambar sedang" aria-pressed="true"><span aria-hidden="true"></span></button>
+            <button type="button" data-grid="compact" aria-label="Gambar kecil" aria-pressed="false"><span aria-hidden="true"></span></button>
+        </div>
+        <strong>{{ $collections->total() }} {{ $storeCopy['catalog_title'] }}</strong>
+        <label for="sort-top"><span>{{ $storeCopy['catalog_sort'] }}</span>
+            <select id="sort-top" data-sort-select>
+                @foreach(['new'=>'Terbaru','featured'=>'Pilihan Asfara','best_selling'=>'Terlaris','price_asc'=>'Harga terendah','price_desc'=>'Harga tertinggi','title_asc'=>'Nama A–Z','title_desc'=>'Nama Z–A','oldest'=>'Terlama'] as $value=>$label)
+                    <option value="{{ $value }}" @selected(request('sort','new')===$value)>{{ $label }}</option>
+                @endforeach
+            </select>
+        </label>
+    </div>
     <div class="catalog-content">
         <button type="button" class="catalog-filter-backdrop" aria-label="Tutup panel filter" data-filter-backdrop tabindex="-1" hidden></button>
         <aside class="catalog-sidebar" id="catalog-filters" aria-label="Filter produk" data-filter-panel><button type="button" class="filter-close" data-filter-close aria-label="Tutup filter">×</button>

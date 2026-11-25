@@ -100,7 +100,7 @@ class DemoSeederTest extends TestCase
             ->assertSee('Asfara Signature')
             ->assertSee('Asfara Studio')
             ->assertDontSee('home-merchandise-group', false)
-            ->assertSee('SAVE IDR')
+            ->assertSee('Hemat Rp')
             ->assertSee('4.');
         $this->get(route('media.demo-hero', 'desktop'), ['Range' => 'bytes=0-15'])
             ->assertStatus(206)

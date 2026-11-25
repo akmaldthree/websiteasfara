@@ -55,7 +55,7 @@
         </div>
         <div class="col-lg-5 product-info-column">
             <span class="eyebrow">{{ $series->category->name }}</span>
-            <h1 class="display-4 mt-3">{{ $series->name }}</h1>
+            <h1 class="product-title">{{ $series->name }}</h1>
             @if($reviews->isNotEmpty())
                 <div class="product-heading-meta"><a href="#product-reviews"><span aria-hidden="true">★★★★★</span> {{ number_format($reviews->avg('rating'),1).' ('.$reviews->count().')' }}</a></div>
             @endif
