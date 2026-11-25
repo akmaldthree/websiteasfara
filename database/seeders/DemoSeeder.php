@@ -36,7 +36,6 @@ use App\Models\User;
 use App\Models\Variant;
 use App\Models\VariantPrice;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class DemoSeeder extends Seeder
@@ -49,7 +48,7 @@ class DemoSeeder extends Seeder
         }
 
         $this->call(DatabaseSeeder::class);
-        $this->publishImages();
+        $this->call(DemoMediaSeeder::class);
 
         $categories = collect([
             ['name' => 'Abaya Dewasa', 'slug' => 'abaya-dewasa', 'description' => 'Abaya modern dengan siluet anggun untuk kegiatan harian dan acara istimewa.'],
@@ -476,16 +475,6 @@ class DemoSeeder extends Seeder
         }
     }
 
-    private function publishImages(): void
-    {
-        foreach (glob(database_path('seeders/assets/demo/*.*')) ?: [] as $source) {
-            if (! in_array(strtolower(pathinfo($source, PATHINFO_EXTENSION)), ['png', 'webp'], true)) {
-                continue;
-            }
-            Storage::disk('public')->put('demo/'.basename($source), file_get_contents($source));
-        }
-    }
-
     private function seedShippingRates(): void
     {
         foreach ([
@@ -680,7 +669,9 @@ class DemoSeeder extends Seeder
             'hero_button_label' => 'Belanja koleksi',
             'hero_button_url' => '/koleksi',
             'hero_image' => 'demo/hero-family-2x1.webp',
-            'hero_video_enabled' => false,
+            'hero_video' => DemoMediaSeeder::HERO_DESKTOP,
+            'hero_video_mobile' => DemoMediaSeeder::HERO_MOBILE,
+            'hero_video_enabled' => true,
             'benefit_1' => 'Bahan nyaman pilihan',
             'benefit_2' => 'Pengiriman ke seluruh Indonesia',
             'benefit_3' => 'Retur mudah sesuai ketentuan',

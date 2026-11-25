@@ -8,9 +8,26 @@ use App\Services\Audit;
 use App\Services\DeliveryService;
 use App\Services\OrderWorkflow;
 use App\Services\SystemHealthService;
+use Database\Seeders\DemoMediaSeeder;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Validation\ValidationException;
+
+Artisan::command('asfara:demo-media {--activate-hero : Aktifkan video demo pada hero utama}', function (DemoMediaSeeder $media) {
+    $media->run();
+
+    if ($this->option('activate-hero')) {
+        DB::transaction(function () {
+            Setting::put('hero_video', DemoMediaSeeder::HERO_DESKTOP);
+            Setting::put('hero_video_mobile', DemoMediaSeeder::HERO_MOBILE);
+            Setting::put('hero_video_enabled', true);
+        });
+        $this->info('Video demo aktif pada hero utama.');
+    }
+
+    $this->info('Aset demo diperbarui.');
+})->purpose('Memasang ulang foto dan video demonstrasi Asfara');
 
 Artisan::command('asfara:admin {email} {--name=Administrator}', function () {
     $email = strtolower(trim($this->argument('email')));
