@@ -136,14 +136,14 @@ class StorefrontEditorialTest extends TestCase
         $entry = ContentEntry::create(['type' => 'banner', 'title' => 'Hero', 'slug' => 'hero-options', 'active' => false]);
         $payload = [
             'type' => 'banner', 'title' => 'Hero', 'slug' => 'hero-options', 'summary' => 'Hero yang dapat diatur.', 'body' => '',
-            'template' => 'standard', 'blocks' => json_encode([['type' => 'hero_options', 'align' => 'right', 'tone' => 'dark', 'duration' => 7000, 'mobile_url' => 'https://example.com/mobile.webp']]),
+            'template' => 'standard', 'blocks' => json_encode([['type' => 'hero_options', 'align' => 'right', 'tone' => 'dark', 'duration' => 7000, 'mobile_url' => 'https://example.com/mobile.webp', 'video_url' => 'https://example.com/hero.mp4', 'mobile_video_url' => 'https://example.com/hero-mobile.mp4']]),
             'link_url' => '/koleksi', 'link_label' => 'Belanja', 'seo_title' => '', 'seo_description' => '', 'sort_order' => 1,
             'editorial_status' => 'approved', 'review_note' => '', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
         ];
 
         $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasNoErrors();
         Setting::put('hero_autoplay_seconds', 7);
-        $this->get(route('home'))->assertOk()->assertSee('hero-align-right')->assertSee('data-duration="7000"', false)->assertDontSee('data-hero-prev', false)->assertDontSee('data-hero-next', false);
+        $this->get(route('home'))->assertOk()->assertSee('hero-align-right')->assertSee('data-duration="7000"', false)->assertSee('https://example.com/hero.mp4', false)->assertSee('data-hero-sound', false)->assertDontSee('data-hero-prev', false)->assertDontSee('data-hero-next', false);
 
         $payload['blocks'] = json_encode([['type' => 'hero_options', 'align' => 'outside', 'tone' => 'dark', 'duration' => 7000]]);
         $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasErrors('blocks');
@@ -176,6 +176,42 @@ class StorefrontEditorialTest extends TestCase
             ->assertSee('data-product-gallery-next', false)
             ->assertSee('product-stock-bar', false)
             ->assertSee('S&amp;K PENGEMBALIAN', false);
+    }
+
+    public function test_single_available_variant_can_be_added_directly_from_product_card(): void
+    {
+        $variant = $this->series->variants()->firstOrFail();
+
+        $this->get(route('home'))->assertOk()
+            ->assertSee('id="direct-add-'.$this->series->id.'"', false)
+            ->assertSee('name="variant_id" value="'.$variant->id.'"', false)
+            ->assertSee('form="direct-add-'.$this->series->id.'" class="product-quick">ADD TO CART', false);
+    }
+
+    public function test_scheduled_visual_voucher_popup_renders_from_cms_settings(): void
+    {
+        Setting::put('welcome_voucher_enabled', true);
+        Setting::put('welcome_voucher_title', 'Hadiah Pertama Asfara');
+        Setting::put('welcome_voucher_text', 'Nikmati penawaran editorial pilihan.');
+        Setting::put('welcome_voucher_code', 'ASAFIRST');
+        Setting::put('welcome_voucher_image', 'branding/welcome.webp');
+        Setting::put('welcome_voucher_cta_label', 'Lihat koleksi');
+        Setting::put('welcome_voucher_cta_url', '/koleksi?sort=newest');
+        Setting::put('welcome_voucher_delay_seconds', 3);
+        Setting::put('welcome_voucher_frequency_days', 7);
+        Setting::put('welcome_voucher_start', now()->subMinute()->toDateTimeString());
+        Setting::put('welcome_voucher_end', now()->addMinute()->toDateTimeString());
+
+        $this->get(route('home'))->assertOk()
+            ->assertSee('class="welcome-voucher has-image"', false)
+            ->assertSee('data-delay="3"', false)
+            ->assertSee('data-frequency-days="7"', false)
+            ->assertSee('branding/welcome.webp', false)
+            ->assertSee('/koleksi?sort=newest', false)
+            ->assertSee('LIHAT KOLEKSI');
+
+        Setting::put('welcome_voucher_end', now()->subMinute()->toDateTimeString());
+        $this->get(route('home'))->assertOk()->assertDontSee('id="welcome-voucher"', false);
     }
 
     public function test_empty_cart_summary_has_recommendations_and_shipping_progress(): void

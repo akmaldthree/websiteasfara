@@ -39,6 +39,8 @@
         'url' => $shop['hero_button_url'] ?? route('catalog'),
         'label' => $shop['hero_button_label'] ?? 'Belanja sekarang',
         'align' => 'left', 'tone' => 'light', 'duration' => 6500, 'mobile_image' => null,
+        'video' => ($shop['hero_video_enabled'] ?? false) && !empty($shop['hero_video']) ? asset('storage/'.$shop['hero_video']) : null,
+        'mobile_video' => ($shop['hero_video_enabled'] ?? false) && !empty($shop['hero_video_mobile']) ? asset('storage/'.$shop['hero_video_mobile']) : null,
     ]])->concat($contentEntries->where('type', 'banner')->map(fn ($entry) => [
         'image' => $entry->image_url ?: (!empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg')),
         'eyebrow' => 'ASFARA EDIT',
@@ -50,6 +52,8 @@
         'tone' => collect($entry->blocks)->firstWhere('type','hero_options')['tone'] ?? 'light',
         'duration' => collect($entry->blocks)->firstWhere('type','hero_options')['duration'] ?? 6500,
         'mobile_image' => collect($entry->blocks)->firstWhere('type','hero_options')['mobile_url'] ?? null,
+        'video' => collect($entry->blocks)->firstWhere('type','hero_options')['video_url'] ?? null,
+        'mobile_video' => collect($entry->blocks)->firstWhere('type','hero_options')['mobile_video_url'] ?? null,
     ])->values());
 @endphp
 @push('head')
@@ -59,8 +63,13 @@
 @php($heroAutoplayMs=(int)round((float)($shop['hero_autoplay_seconds'] ?? 5)*1000))
 <section class="commerce-hero hero-content-{{ $shop['hero_content_style'] ?? 'editorial' }}" style="order:{{ $homePosition('hero') }}" data-hero-slider aria-roledescription="carousel">
     @foreach($heroSlides as $slide)
-        <article class="commerce-hero-slide hero-align-{{ $slide['align'] }} hero-tone-{{ $slide['tone'] }} {{ $loop->first?'is-active':'' }}" data-hero-slide data-duration="{{ $heroAutoplayMs }}" aria-hidden="{{ $loop->first?'false':'true' }}">
-            <picture>@if($slide['mobile_image'])<source media="(max-width:767px)" srcset="{{ $slide['mobile_image'] }}">@endif<img src="{{ $slide['image'] }}" alt="{{ $slide['title'] }}" width="1600" height="800" loading="{{ $loop->first ? 'eager' : 'lazy' }}" fetchpriority="{{ $loop->first ? 'high' : 'low' }}" decoding="async"></picture>
+        <article class="commerce-hero-slide hero-align-{{ $slide['align'] }} hero-tone-{{ $slide['tone'] }} {{ $loop->first?'is-active':'' }}" data-hero-slide data-duration="{{ $loop->first ? $heroAutoplayMs : (int) $slide['duration'] }}" aria-hidden="{{ $loop->first?'false':'true' }}">
+            @if($slide['video'])
+                <video class="commerce-hero-video" poster="{{ $slide['image'] }}" autoplay muted loop playsinline preload="metadata" data-hero-video>@if($slide['mobile_video'])<source media="(max-width:767px)" src="{{ $slide['mobile_video'] }}">@endif<source src="{{ $slide['video'] }}">Browser Anda belum mendukung video.</video>
+                <button type="button" class="hero-sound-toggle" data-hero-sound aria-label="Aktifkan suara video" aria-pressed="false"><span aria-hidden="true">⌁</span><em>SUARA</em></button>
+            @else
+                <picture>@if($slide['mobile_image'])<source media="(max-width:767px)" srcset="{{ $slide['mobile_image'] }}">@endif<img src="{{ $slide['image'] }}" alt="{{ $slide['title'] }}" width="1600" height="800" loading="{{ $loop->first ? 'eager' : 'lazy' }}" fetchpriority="{{ $loop->first ? 'high' : 'low' }}" decoding="async"></picture>
+            @endif
             <div class="commerce-hero-overlay"></div>
             <div class="container-xxl commerce-hero-copy"><span>{{ $slide['eyebrow'] }}</span><h1>{{ $slide['title'] }}</h1><p>{{ $slide['text'] }}</p><a class="btn btn-light" href="{{ $slide['url'] }}">{{ strtoupper($slide['label']) }}</a></div>
         </article>

@@ -41,6 +41,7 @@ use App\Services\OrderWorkflow;
 use App\Services\SystemHealthService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -820,6 +821,11 @@ class AdminController extends Controller
                 if (! empty($block['mobile_url']) && ! $this->safeContentUrl($block['mobile_url'])) {
                     throw ValidationException::withMessages(['blocks' => 'Gambar mobile hero harus berupa URL HTTPS atau path internal.']);
                 }
+                foreach (['video_url', 'mobile_video_url'] as $videoUrl) {
+                    if (! empty($block[$videoUrl]) && ! $this->safeContentUrl($block[$videoUrl])) {
+                        throw ValidationException::withMessages(['blocks' => 'Video hero harus berupa URL HTTPS atau path internal.']);
+                    }
+                }
                 $block['align'] = $align;
                 $block['tone'] = $tone;
                 $block['duration'] = $duration;
@@ -832,7 +838,7 @@ class AdminController extends Controller
                     throw ValidationException::withMessages(['blocks' => 'Label atau alt text blok ke-'.($index + 1).' wajib diisi dan maksimal 200 karakter.']);
                 }
             }
-            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label', 'items', 'series_id', 'x', 'y', 'align', 'tone', 'duration', 'mobile_url']));
+            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label', 'items', 'series_id', 'x', 'y', 'align', 'tone', 'duration', 'mobile_url', 'video_url', 'mobile_video_url']));
         }
 
         return array_values($blocks);
@@ -940,6 +946,7 @@ class AdminController extends Controller
             'default_seo_title' => 'nullable|string|max:200', 'default_seo_description' => 'nullable|string|max:300',
             'home_new_slugs' => 'nullable|string|max:2000', 'home_best_slugs' => 'nullable|string|max:2000', 'home_sale_slugs' => 'nullable|string|max:2000',
             'announcement_lines' => 'nullable|string|max:2000', 'announcement_interval_seconds' => 'sometimes|required|numeric|between:2,20', 'welcome_voucher_title' => 'nullable|string|max:150', 'welcome_voucher_text' => 'nullable|string|max:500', 'welcome_voucher_code' => 'nullable|string|max:40',
+            'welcome_voucher_cta_label' => 'nullable|string|max:80', 'welcome_voucher_cta_url' => 'nullable|string|max:500', 'welcome_voucher_start' => 'nullable|date', 'welcome_voucher_end' => 'nullable|date', 'welcome_voucher_delay_seconds' => 'sometimes|required|integer|between:0,60', 'welcome_voucher_frequency_days' => 'sometimes|required|integer|between:0,365',
             'theme_palette_base' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_palette_surface' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_palette_structure' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_palette_accent' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_text_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'theme_sage_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_sand_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_taupe_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_gold_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_cream_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'theme_primary_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_accent_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_background_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_surface_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -959,9 +966,16 @@ class AdminController extends Controller
             'loyalty_spend_per_point' => 'required|integer|min:1', 'loyalty_point_value' => 'required|integer|min:1', 'loyalty_min_redeem' => 'required|integer|min:1', 'loyalty_expiry_days' => 'required|integer|between:1,3650',
             'loyalty_tiers_text' => 'nullable|string|max:5000', 'loyalty_bonus_name' => 'nullable|string|max:100', 'loyalty_bonus_multiplier' => 'required|integer|between:1,20', 'loyalty_bonus_start' => 'nullable|date', 'loyalty_bonus_end' => 'nullable|date|after_or_equal:loyalty_bonus_start',
             'loyalty_bonus_segment' => 'required|in:all,customer,business', 'loyalty_bonus_tier' => 'nullable|string|max:100', 'loyalty_bonus_target_type' => 'required|in:all,category,series,variant', 'loyalty_bonus_target_id' => 'nullable|integer|min:1',
-            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120', 'welcome_voucher_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'hero_video' => 'nullable|file|mimetypes:video/mp4,video/webm|max:51200', 'hero_video_mobile' => 'nullable|file|mimetypes:video/mp4,video/webm|max:51200',
         ];
         $data = $r->validate($rules);
+        if (! empty($data['welcome_voucher_cta_url']) && ! $this->safeContentUrl($data['welcome_voucher_cta_url'])) {
+            throw ValidationException::withMessages(['welcome_voucher_cta_url' => 'URL CTA popup harus berupa URL HTTPS atau path internal.']);
+        }
+        if (! empty($data['welcome_voucher_start']) && ! empty($data['welcome_voucher_end']) && Carbon::parse($data['welcome_voucher_end'])->lt(Carbon::parse($data['welcome_voucher_start']))) {
+            throw ValidationException::withMessages(['welcome_voucher_end' => 'Waktu selesai popup tidak boleh lebih awal dari waktu mulai.']);
+        }
         $copyKeys = collect(config('storefront.copy_groups'))->flatMap(fn (array $fields) => array_keys($fields))->all();
         foreach (['id', 'en'] as $locale) {
             $input = 'storefront_copy_'.$locale;
@@ -1020,10 +1034,16 @@ class AdminController extends Controller
                 throw ValidationException::withMessages(['loyalty_bonus_target_id' => 'Target kampanye loyalty tidak ditemukan.']);
             }
         }
-        foreach (['logo', 'favicon', 'hero_image'] as $image) {
+        foreach (['logo', 'favicon', 'hero_image', 'welcome_voucher_image'] as $image) {
             unset($data[$image]);
             if ($r->hasFile($image)) {
                 $data[$image] = $r->file($image)->store('branding', 'public');
+            }
+        }
+        foreach (['hero_video', 'hero_video_mobile'] as $video) {
+            unset($data[$video]);
+            if ($r->hasFile($video)) {
+                $data[$video] = $r->file($video)->store('branding', 'public');
             }
         }
         foreach (['shipping_api_token', 'whatsapp_api_token'] as $secret) {
@@ -1039,7 +1059,7 @@ class AdminController extends Controller
         $data['analytics_enabled'] = $r->boolean('analytics_enabled');
         $data['checkout_enabled'] = $r->boolean('checkout_enabled');
         $data['staff_two_factor_required'] = $r->boolean('staff_two_factor_required');
-        foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled', 'floating_whatsapp_enabled', 'social_proof_enabled', 'welcome_voucher_enabled', 'home_featured_enabled', 'home_categories_enabled', 'home_collections_enabled', 'home_look_enabled', 'home_sale_enabled', 'product_related_enabled', 'cart_recommendations_enabled', 'home_editorial_sections_enabled', 'home_story_enabled'] as $toggle) {
+        foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled', 'floating_whatsapp_enabled', 'social_proof_enabled', 'welcome_voucher_enabled', 'hero_video_enabled', 'home_featured_enabled', 'home_categories_enabled', 'home_collections_enabled', 'home_look_enabled', 'home_sale_enabled', 'product_related_enabled', 'cart_recommendations_enabled', 'home_editorial_sections_enabled', 'home_story_enabled'] as $toggle) {
             $data[$toggle] = $r->boolean($toggle);
         }
         if ($data['checkout_enabled'] && ! count($banks)) {

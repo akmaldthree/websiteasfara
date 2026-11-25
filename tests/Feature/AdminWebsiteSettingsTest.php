@@ -58,6 +58,15 @@ class AdminWebsiteSettingsTest extends TestCase
             'footer_social_enabled' => '1',
             'floating_whatsapp_enabled' => '1',
             'social_proof_enabled' => '1',
+            'hero_video_enabled' => '1',
+            'welcome_voucher_enabled' => '1',
+            'welcome_voucher_title' => 'Hadiah Asfara',
+            'welcome_voucher_text' => 'Promo khusus pelanggan baru.',
+            'welcome_voucher_code' => 'ASAFIRST',
+            'welcome_voucher_cta_label' => 'Belanja pilihan',
+            'welcome_voucher_cta_url' => '/koleksi?sort=newest',
+            'welcome_voucher_delay_seconds' => 2,
+            'welcome_voucher_frequency_days' => 14,
             'footer_copyright' => 'Hak cipta Asfara.',
             'home_featured_slug' => '',
             'home_category_slugs' => '',
@@ -80,6 +89,9 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame('#C9B59C', Setting::get('theme_palette_accent'));
         $this->assertSame(30, Setting::get('social_proof_interval'));
         $this->assertSame(3.5, (float) Setting::get('announcement_interval_seconds'));
+        $this->assertTrue(Setting::get('hero_video_enabled'));
+        $this->assertSame('/koleksi?sort=newest', Setting::get('welcome_voucher_cta_url'));
+        $this->assertSame(14, Setting::get('welcome_voucher_frequency_days'));
         $this->assertSame('KOLEKSI PILIHAN CMS', Setting::get('storefront_copy_id')['featured_collection']);
         $this->assertSame(['hero', 'collections', 'featured', 'categories', 'look', 'sale', 'editorial', 'story'], Setting::get('home_section_order'));
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
