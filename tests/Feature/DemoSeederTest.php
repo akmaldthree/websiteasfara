@@ -93,8 +93,9 @@ class DemoSeederTest extends TestCase
             ->assertSee('Ruang Raya')
             ->assertSee('Siluet Senja')
             ->assertSee('Langkah Ringan')
-            ->assertSee('ASFARA SIGNATURE')
-            ->assertSee('EXPLORE ASFARA')
+            ->assertSee('Asfara Signature')
+            ->assertSee('Asfara Studio')
+            ->assertDontSee('home-merchandise-group', false)
             ->assertSee('SAVE IDR')
             ->assertSee('4.');
         $this->get(route('media.demo-hero', 'desktop'), ['Range' => 'bytes=0-15'])
@@ -103,10 +104,10 @@ class DemoSeederTest extends TestCase
         $this->get(route('media.demo-hero', 'mobile'))->assertOk()->assertHeader('Content-Type', 'video/webm');
         $this->get('/media/kampanye/lainnya')->assertNotFound();
         $this->get('/koleksi')->assertOk()
-            ->assertSee('Raffah Signature')
-            ->assertSee('Hana Flow Khimar')
             ->assertSee('class="catalog-category-strip"', false)
             ->assertSee('class="catalog-hero-heading"', false);
+        $this->get('/koleksi?category=abaya-dewasa')->assertOk()->assertSee('RAFFAH SIGNATURE');
+        $this->get('/koleksi?category=outer-khimar')->assertOk()->assertSee('HANA FLOW KHIMAR');
         $this->get('/koleksi?q=Zayna')->assertOk()->assertSee('Zayna Essential');
         $this->get('/koleksi?q=Safa')->assertOk()->assertSee('Safa Daily Khimar');
         $this->get('/koleksi/raffah-signature')->assertOk()

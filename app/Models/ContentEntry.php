@@ -31,9 +31,18 @@ class ContentEntry extends Model
             ->map(fn ($id) => (int) $id)->filter()->unique()->values();
     }
 
-    public function campaignProducts(): Collection
+    public function campaignGroup(): string
     {
-        $ids = $this->campaignProductIds();
+        $group = collect($this->blocks)->firstWhere('type', 'campaign_options')['group'] ?? 'main';
+
+        return is_string($group) && array_key_exists($group, config('storefront.campaign_groups')) ? $group : 'main';
+    }
+
+    public function editorialProducts(string $blockType = 'campaign_product'): Collection
+    {
+        $ids = $blockType === 'campaign_product'
+            ? $this->campaignProductIds()
+            : collect($this->blocks)->where('type', $blockType)->pluck('series_id')->map(fn ($id) => (int) $id)->filter()->unique();
         if ($ids->isEmpty()) {
             return collect();
         }

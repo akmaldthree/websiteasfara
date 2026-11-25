@@ -7,11 +7,24 @@
 @section('content')
 @if($preview ?? false)<div class="container-xxl demo-note">Pratinjau admin · konten ini mungkin belum terbit.</div>@endif
 <article class="container-xxl section editorial-detail {{ !empty($campaignProducts) && $campaignProducts->isNotEmpty() ? 'campaign-detail' : ($template==='standard'?'page-narrow':'page-template-'.$template) }}">
-    <nav class="content-breadcrumb" aria-label="Breadcrumb"><a href="{{ route('home') }}">HOME</a><span>/</span>@if($entry->type!=='faq')<a href="{{ route('content.index',$entry->type) }}">{{ strtoupper($entry->type) }}</a><span>/</span>@endif<span>{{ strtoupper(\Illuminate\Support\Str::limit($entry->title,35)) }}</span></nav>
-    <header @class(['text-center py-5'=>$template==='landing'])><span class="eyebrow">{{ strtoupper(str_replace('_',' ',$entry->type)) }}</span><h1>{{ $entry->title }}</h1>@if($entry->summary)<p class="lead">{{ $entry->summary }}</p>@endif</header>
-    @if($entry->image_url)<img class="w-100 mb-4" src="{{ $entry->image_url }}" alt="{{ $entry->title }}" width="1200" height="800" loading="eager" fetchpriority="high" decoding="async">@endif
+    <nav class="content-breadcrumb" aria-label="Breadcrumb"><a href="{{ route('home') }}">HOME</a><span>/</span>@if(in_array($type ?? $entry->type, ['journal', 'lookbook', 'campaign'], true))<a href="{{ route('content.index',$type ?? $entry->type) }}">{{ strtoupper($type ?? $entry->type) }}</a><span>/</span>@endif<span>{{ strtoupper(\Illuminate\Support\Str::limit($entry->title,35)) }}</span></nav>
+    <header @class(['text-center py-5'=>$template==='landing'])><span class="eyebrow">{{ strtoupper(str_replace('_',' ',$type ?? $entry->type)) }}</span><h1>{{ $entry->title }}</h1>@if($entry->summary)<p class="lead">{{ $entry->summary }}</p>@endif</header>
+    @if($entry->image_url)
+        <div class="editorial-cover mb-4">
+            <img class="w-100" src="{{ $entry->image_url }}" alt="{{ $entry->title }}" width="1200" height="800" loading="eager" fetchpriority="high" decoding="async">
+            @if(($type ?? $entry->type) === 'lookbook')
+                @foreach(collect($entry->blocks)->where('type', 'product_hotspot') as $spot)
+                    @if($spotProduct = ($campaignProducts ?? collect())->firstWhere('id', $spot['series_id'] ?? null))
+                        <a class="look-hotspot" style="left:{{ (float) ($spot['x'] ?? 50) }}%;top:{{ (float) ($spot['y'] ?? 50) }}%" href="{{ route('product', $spotProduct->slug) }}" aria-label="Lihat {{ $spotProduct->name }}">
+                            <span class="look-hotspot-marker" aria-hidden="true"></span>
+                        </a>
+                    @endif
+                @endforeach
+            @endif
+        </div>
+    @endif
     <div class="editorial-detail-body">
-        @if($entry->body && (!$entry->blocks || $entry->campaignProductIds()->isNotEmpty()))<div class="preserve-lines">{{ $entry->body }}</div>@endif
+        @if($entry->body && (!$entry->blocks || $entry->campaignProductIds()->isNotEmpty() || $entry->type === 'home_section'))<div class="preserve-lines">{{ $entry->body }}</div>@endif
         @if($entry->blocks)@include('partials.content-blocks',['contentBlocks'=>$entry->blocks])@endif
     </div>
     @if(isset($campaignProducts) && $campaignProducts->isNotEmpty())

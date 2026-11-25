@@ -43,12 +43,12 @@ class StorefrontEditorialTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasNoErrors();
         $this->assertSame($this->series->id, $entry->fresh()->blocks[0]['series_id']);
-        $this->get(route('home'))->assertOk()
-            ->assertSee('SHOP THE LOOK')
-            ->assertSee('data-look-product="look-product-'.$this->series->id.'"', false)
+        $entry->update(['image' => 'demo/look-olive-beige-4x5.webp']);
+        $this->get(route('home'))->assertOk()->assertDontSee('data-look-carousel', false);
+        $this->get(route('content.index', 'lookbook'))->assertOk()->assertSee('Best Combination');
+        $this->get(route('content.show', ['lookbook', $entry->slug]))->assertOk()
             ->assertSee('class="look-hotspot-marker"', false)
-            ->assertSee('<span class="look-hotspot-label">Zayna Series</span>', false)
-            ->assertSee('aria-label="Pilih Zayna Series" aria-pressed="false"', false);
+            ->assertSee('aria-label="Lihat Zayna Series"', false);
 
         $payload['blocks'] = json_encode([['type' => 'product_hotspot', 'series_id' => $this->series->id, 'x' => 120, 'y' => 50]]);
         $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasErrors('blocks');
@@ -75,6 +75,7 @@ class StorefrontEditorialTest extends TestCase
         Variant::create(['series_id' => $second->id, 'sku' => 'ASTER-OLV-M', 'color' => 'Olive', 'size' => 'M', 'price' => 399000, 'stock' => 8, 'weight' => 500, 'active' => true]);
         $entry = ContentEntry::create(['type' => 'campaign', 'title' => 'Kampanye Aster', 'slug' => 'kampanye-aster', 'active' => false]);
         $products = [
+            ['type' => 'campaign_options', 'group' => 'signature'],
             ['type' => 'campaign_product', 'series_id' => $second->id],
             ['type' => 'campaign_product', 'series_id' => $this->series->id],
         ];
@@ -89,11 +90,13 @@ class StorefrontEditorialTest extends TestCase
         $url = route('content.show', ['campaign', $entry->slug]);
         $this->get(route('home'))->assertOk()
             ->assertSee('class="campaign-nav"', false)
+            ->assertSee('data-campaign-tabs="signature"', false)
+            ->assertDontSee('class="campaign-tab-banner"', false)
             ->assertSee($url, false)
             ->assertSee('data-collection-tab="campaign-'.$entry->id.'"', false);
         $this->get($url)->assertOk()->assertSeeInOrder(['ASTER EDITION', 'ZAYNA SERIES']);
 
-        $payload['blocks'] = json_encode([$products[0], $products[0]]);
+        $payload['blocks'] = json_encode([$products[1], $products[1]]);
         $this->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasErrors('blocks');
         $this->assertCount(2, $entry->fresh()->campaignProductIds());
 
@@ -143,7 +146,7 @@ class StorefrontEditorialTest extends TestCase
         $this->assertSame(1, substr_count($html, 'Desktop Only'));
     }
 
-    public function test_reference_language_picker_and_product_activity_popup_can_be_managed(): void
+    public function test_storefront_keeps_language_picker_and_hides_legacy_simulated_activity(): void
     {
         Setting::put('social_proof_enabled', true);
         Setting::put('social_proof_cities', 'Jakarta, Bandung');
@@ -158,8 +161,7 @@ class StorefrontEditorialTest extends TestCase
             ->assertSee('class="mobile-nav-links"', false)
             ->assertSee('id="mobile-open-search"', false)
             ->assertSee('is-catalog-open', false)
-            ->assertSee('id="social-proof"', false)
-            ->assertSee('Zayna Series')
+            ->assertDontSee('id="social-proof"', false)
             ->assertSee('hero-content-compact', false);
 
         Setting::put('social_proof_enabled', false);
@@ -199,13 +201,12 @@ class StorefrontEditorialTest extends TestCase
         $this->get(route('product', $this->series->slug))->assertOk()->assertSee('Lingkar dada')->assertSee('106 cm');
     }
 
-    public function test_first_available_variant_is_selected_on_home_and_product_pages(): void
+    public function test_first_available_variant_is_selected_on_product_page(): void
     {
         $variant = $this->series->variants()->firstOrFail();
 
         $home = $this->get(route('home'))->assertOk();
-        $this->assertMatchesRegularExpression('/<option value="'.$variant->id.'"[^>]*selected>/', $home->getContent());
-        $this->assertMatchesRegularExpression('/<button class="btn btn-dark"\s+data-featured-submit>ADD TO CART<\/button>/', $home->getContent());
+        $home->assertDontSee('data-featured-submit', false);
 
         $product = $this->get(route('product', $this->series->slug))->assertOk();
         $this->assertMatchesRegularExpression('/<option value="'.$variant->id.'"[^>]*selected>/', $product->getContent());
@@ -238,6 +239,9 @@ class StorefrontEditorialTest extends TestCase
         Setting::put('welcome_voucher_frequency_days', 7);
         Setting::put('welcome_voucher_start', now()->subMinute()->toDateTimeString());
         Setting::put('welcome_voucher_end', now()->addMinute()->toDateTimeString());
+        $this->get(route('home'))->assertOk()->assertDontSee('id="welcome-voucher"', false);
+        $campaign = ContentEntry::create(['type' => 'campaign', 'title' => 'Promo Asfara', 'slug' => 'promo-asfara', 'editorial_status' => 'approved', 'active' => true]);
+        Setting::put('welcome_voucher_campaign', $campaign->id);
 
         $this->get(route('home'))->assertOk()
             ->assertSee('class="welcome-voucher has-image"', false)
@@ -246,8 +250,9 @@ class StorefrontEditorialTest extends TestCase
             ->assertSee('branding/welcome.webp', false)
             ->assertSee('/koleksi?sort=newest', false)
             ->assertSee('LIHAT KOLEKSI');
+        $this->get(route('catalog'))->assertOk()->assertDontSee('id="welcome-voucher"', false);
 
-        Setting::put('welcome_voucher_end', now()->subMinute()->toDateTimeString());
+        $campaign->update(['active' => false]);
         $this->get(route('home'))->assertOk()->assertDontSee('id="welcome-voucher"', false);
     }
 

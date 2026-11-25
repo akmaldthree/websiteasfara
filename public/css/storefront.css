@@ -256,19 +256,67 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
     box-shadow: 0 8px 20px #0003;
 }
 
+.campaign-menu-group {
+    display: grid;
+    padding-block: 8px;
+}
+
+.campaign-menu-group > strong {
+    font-size: .7rem;
+    letter-spacing: .08em;
+}
+
+.campaign-nav .campaign-menu-group + .campaign-menu-group {
+    border-top: 1px solid #ffffff35;
+}
+
+.campaign-nav > div {
+    max-height: min(65vh, 480px);
+    overflow-y: auto;
+}
+
+.editorial-cover {
+    position: relative;
+}
+
+.editorial-cover > img {
+    display: block;
+    height: auto;
+}
+
+.editorial-cover .look-hotspot {
+    transform: translate(-50%, -50%);
+}
+
+.home-group-banner a {
+    height: clamp(290px, 35vw, 470px);
+}
+
+.store-body [data-campaign-tabs] {
+    padding-block: 42px 54px;
+}
+
+@media (max-width: 767px) {
+    .store-body [data-campaign-tabs] {
+        padding-block: 24px 36px;
+    }
+    [data-campaign-tabs] .collection-tabs {
+        justify-content: flex-start;
+        gap: 20px;
+        overflow-x: auto;
+    }
+
+    [data-campaign-tabs] .collection-tabs button {
+        flex: 0 0 auto;
+    }
+}
+
 .store-body .desktop-nav .campaign-nav a {
     padding: 9px 0;
     color: #fff;
 }
 
-.campaign-tab-banner {
-    display: block;
-    margin-bottom: clamp(18px, 3vw, 38px);
-    overflow: hidden;
-}
-
-.campaign-tab-banner img,
-.campaign-detail > img {
+.campaign-detail > .editorial-cover > img {
     display: block;
     width: 100%;
     height: auto;

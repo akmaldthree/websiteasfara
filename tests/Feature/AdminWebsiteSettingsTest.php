@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
+use App\Models\ContentEntry;
+use App\Models\Series;
 use App\Models\Setting;
 use App\Models\User;
+use App\Models\Variant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -70,6 +74,7 @@ class AdminWebsiteSettingsTest extends TestCase
             'footer_copyright' => 'Hak cipta Asfara.',
             'home_featured_slug' => '',
             'home_category_slugs' => '',
+            'home_collections_enabled' => '1',
             'home_section_order' => 'hero,campaign,new_in,categories,collections,featured,look,sale,editorial,story',
             'storefront_copy_id' => ['featured_collection' => 'KOLEKSI PILIHAN CMS', 'catalog_title' => 'BUSANA'],
             'storefront_copy_en' => ['featured_collection' => 'CMS CURATED COLLECTION', 'catalog_title' => 'APPAREL'],
@@ -93,10 +98,16 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame('/koleksi?sort=newest', Setting::get('welcome_voucher_cta_url'));
         $this->assertSame(14, Setting::get('welcome_voucher_frequency_days'));
         $this->assertSame('KOLEKSI PILIHAN CMS', Setting::get('storefront_copy_id')['featured_collection']);
-        $this->assertSame(['hero', 'campaign', 'new_in', 'categories', 'collections', 'featured', 'look', 'sale', 'editorial', 'story'], Setting::get('home_section_order'));
+        $this->assertSame(['hero', 'campaign', 'new_in', 'categories', 'collections', 'signature_banner', 'signature', 'studio_banner', 'studio'], Setting::get('home_section_order'));
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertEquals(['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Nilai poin lebih tinggi', 'value_bonus_percent' => 5], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));
+        $category = Category::create(['name' => 'Kampanye', 'slug' => 'kampanye-settings', 'active' => true]);
+        $series = Series::create(['category_id' => $category->id, 'name' => 'Produk kurasi', 'slug' => 'produk-kurasi', 'active' => true]);
+        Variant::create(['series_id' => $series->id, 'sku' => 'KUR-01', 'color' => 'Black', 'size' => 'M', 'price' => 199000, 'stock' => 4, 'weight' => 500]);
+        ContentEntry::create(['type' => 'campaign', 'title' => 'Kurasi CMS', 'slug' => 'kurasi-cms', 'active' => true, 'editorial_status' => 'approved',
+            'blocks' => [['type' => 'campaign_product', 'series_id' => $series->id]],
+        ]);
         $this->get('/')->assertOk()->assertSee('Asfara Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('data-duration="5500"', false)->assertSee('data-announcement-interval="3500"', false)->assertSee('data-notice-prev', false)->assertSee('data-notice-next', false)->assertSee('--palette-sage:#F9F8F6', false)->assertSee('--palette-gold:#C9B59C', false)->assertSee('--text:#202020', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
         $this->get('/koleksi')->assertOk()->assertSee('BUSANA');
         $this->withSession(['locale' => 'en'])->get('/')->assertOk()->assertSee('CMS CURATED COLLECTION');

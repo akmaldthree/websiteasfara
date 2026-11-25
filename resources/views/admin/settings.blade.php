@@ -11,7 +11,7 @@
         $openingSections = $homeSections->take(5);
         $savedHomeOrder = $openingSections->concat($savedHomeOrder->diff($openingSections));
     }
-    $savedHomeOrder = $savedHomeOrder->concat($homeSections->diff($savedHomeOrder))->values();
+    $savedHomeOrder = $savedHomeOrder->intersect($homeSections)->concat($homeSections->diff($savedHomeOrder))->values();
 @endphp
 <div class="admin-heading"><div><span class="eyebrow">KONFIGURASI BISNIS & WEBSITE</span><h1>Pengaturan website</h1><p>Atur identitas, tampilan, pembayaran, pengiriman, dan fitur transaksi dari satu halaman.</p></div><a class="btn btn-outline-dark" href="{{ route('home') }}" target="_blank" rel="noopener">Lihat website ↗</a></div>
 <nav class="settings-jump mb-4" aria-label="Bagian pengaturan"><strong>Lompat ke:</strong><a href="#settings-brand">Brand</a><a href="#settings-theme">Tampilan</a><a href="#settings-home">Beranda & SEO</a><a href="#settings-copy">Teks storefront</a><a href="#settings-preview">Preview</a><a href="#settings-integrations">Integrasi</a><a href="#settings-transactions">Transaksi</a></nav>
@@ -44,8 +44,7 @@
 <div class="panel mt-4 settings-section" id="settings-home"><h2>Beranda & SEO</h2><p class="small">Teks hero adalah pembuka permanen beranda. Untuk promo bergambar yang dapat dijadwalkan, gunakan menu Banner & konten website.</p><div class="form-grid">
 @foreach(['hero_eyebrow'=>'Label hero','hero_title'=>'Judul hero','hero_text'=>'Deskripsi hero','hero_button_label'=>'Label tombol hero','hero_button_url'=>'URL tombol hero','benefit_1'=>'Keunggulan 1','benefit_2'=>'Keunggulan 2','benefit_3'=>'Keunggulan 3','story_eyebrow'=>'Label cerita brand','story_title'=>'Judul cerita brand','story_text'=>'Cerita brand','footer_text'=>'Deskripsi footer','default_seo_title'=>'Judul SEO default','default_seo_description'=>'Deskripsi SEO default'] as $key=>$label)<div class="{{ in_array($key,['hero_text','story_text','footer_text','default_seo_description'])?'span-2':'' }}"><label for="{{ $key }}">{{ $label }}</label>@if(in_array($key,['hero_text','story_text','footer_text','default_seo_description']))<textarea class="form-control" id="{{ $key }}" name="{{ $key }}" rows="3">{{ $get($key) }}</textarea>@else<input class="form-control" id="{{ $key }}" name="{{ $key }}" value="{{ $get($key) }}">@endif</div>@endforeach
 <div class="span-2"><h3 class="h5 mt-3">Kurasi produk beranda</h3><p class="small">Cari dan pilih produk, lalu atur urutannya dengan tombol panah. Jika tidak ada pilihan, sistem memilih produk aktif secara otomatis.</p></div>
-<div><label for="home_featured_slug">Produk unggulan utama</label><select class="form-select" id="home_featured_slug" name="home_featured_slug"><option value="">Pilih otomatis</option>@foreach($storefrontSeries as $series)<option value="{{ $series->slug }}" @selected($get('home_featured_slug')===$series->slug)>{{ $series->name }}</option>@endforeach</select></div>
-@foreach(['home_category_slugs'=>['Kategori visual',3,'Maksimal tiga produk; fotonya mewakili kategori pada beranda.'],'home_new_slugs'=>['New Arrival',12,'Pilih dan urutkan produk terbaru yang ingin ditonjolkan.'],'home_best_slugs'=>['Best Seller',12,'Pilih dan urutkan produk terlaris.'],'home_sale_slugs'=>['Sale',12,'Pilih dan urutkan produk promo.']] as $key=>$curation)
+@foreach(['home_category_slugs'=>['Kategori visual',3,'Maksimal tiga produk; fotonya mewakili kategori pada beranda.'],'home_new_slugs'=>['New Arrival',12,'Pilih dan urutkan produk terbaru yang ingin ditonjolkan.']] as $key=>$curation)
 <div class="series-curator" data-series-curator data-max="{{ $curation[1] }}">
     <label for="{{ $key }}-search">{{ $curation[0] }}</label>
     <textarea hidden id="{{ $key }}" name="{{ $key }}">{{ $get($key) }}</textarea>
@@ -56,10 +55,26 @@
 </div>
 @endforeach
 <div class="span-2"><h3 class="h5 mt-3">Voucher pengunjung baru</h3><label><input type="checkbox" name="welcome_voucher_enabled" value="1" @checked($get('welcome_voucher_enabled',false))> Tampilkan popup voucher sesuai jadwal dan frekuensi di bawah</label></div>
-<div class="span-2"><h3 class="h5 mt-3">Notifikasi aktivitas produk</h3><label><input type="checkbox" name="social_proof_enabled" value="1" @checked($get('social_proof_enabled',true))> Tampilkan popup produk yang sedang diminati</label><p class="small mb-0">Popup memakai produk aktif dan lokasi umum tanpa menampilkan identitas pelanggan.</p></div>
-<div><label for="social_proof_interval">Jeda popup (detik)</label><input class="form-control" id="social_proof_interval" type="number" min="10" max="120" name="social_proof_interval" value="{{ $get('social_proof_interval',24) }}" required></div>
-<div><label for="social_proof_cities">Daftar kota</label><input class="form-control" id="social_proof_cities" name="social_proof_cities" value="{{ $get('social_proof_cities','Jakarta, Bandung, Surabaya, Yogyakarta') }}"><small>Pisahkan dengan koma.</small></div>
-<div class="span-2"><h3 class="h5 mt-3">Urutan isi storefront</h3><p class="small">Aktifkan hanya section yang ingin ditampilkan. Konten dan urutannya tetap dikelola dari kurasi produk, kategori, serta Banner & konten website.</p><div class="d-flex flex-wrap gap-3"><label><input type="checkbox" name="home_featured_enabled" value="1" @checked($get('home_featured_enabled',true))> Featured product</label><label><input type="checkbox" name="home_categories_enabled" value="1" @checked($get('home_categories_enabled',true))> Kategori visual</label><label><input type="checkbox" name="home_collections_enabled" value="1" @checked($get('home_collections_enabled',true))> Featured collection</label><label><input type="checkbox" name="home_look_enabled" value="1" @checked($get('home_look_enabled',true))> Shop the Look</label><label><input type="checkbox" name="home_sale_enabled" value="1" @checked($get('home_sale_enabled',true))> Sale</label><label><input type="checkbox" name="product_related_enabled" value="1" @checked($get('product_related_enabled',true))> Related products</label><label><input type="checkbox" name="cart_recommendations_enabled" value="1" @checked($get('cart_recommendations_enabled',true))> Rekomendasi keranjang</label><label><input type="checkbox" name="home_editorial_sections_enabled" value="1" @checked($get('home_editorial_sections_enabled',false))> Editorial lain</label><label><input type="checkbox" name="home_story_enabled" value="1" @checked($get('home_story_enabled',false))> Cerita brand</label></div></div>
+<div>
+    <label for="welcome_voucher_campaign">Kampanye untuk popup</label>
+    <select class="form-select" name="welcome_voucher_campaign" id="welcome_voucher_campaign">
+        <option value="">Pilih kampanye</option>
+        @foreach(\App\Models\ContentEntry::where('type', 'campaign')->orderBy('title')->get(['id', 'title']) as $voucherCampaign)
+            <option value="{{ $voucherCampaign->id }}" @selected((int) $get('welcome_voucher_campaign') === $voucherCampaign->id)>{{ $voucherCampaign->title }}</option>
+        @endforeach
+    </select>
+    <small>Popup hanya tampil selama kampanye terpilih terbit dan jadwal popup berlaku.</small>
+</div>
+<div class="span-2">
+    <h3 class="h5 mt-3">Urutan isi storefront</h3>
+    <p class="small">Atur urutan banner, kategori, dan grup kampanye. Produk tiap grup dipilih dari Banner &amp; konten website.</p>
+    <div class="d-flex flex-wrap gap-3">
+        <label><input type="checkbox" name="home_categories_enabled" value="1" @checked($get('home_categories_enabled',true))> Kategori visual</label>
+        <label><input type="checkbox" name="home_collections_enabled" value="1" @checked($get('home_collections_enabled',true))> New In dan koleksi kampanye</label>
+        <label><input type="checkbox" name="product_related_enabled" value="1" @checked($get('product_related_enabled',true))> Related products</label>
+        <label><input type="checkbox" name="cart_recommendations_enabled" value="1" @checked($get('cart_recommendations_enabled',true))> Rekomendasi keranjang</label>
+    </div>
+</div>
 <div class="span-2"><label>Urutan section beranda</label><input type="hidden" name="home_section_order" id="home-section-order" value="{{ $savedHomeOrder->implode(',') }}"><ol class="home-order-list" id="home-order-list">@foreach($savedHomeOrder as $section)@if(config('storefront.home_sections.'.$section))<li data-section="{{ $section }}"><span>{{ config('storefront.home_sections.'.$section) }}</span><span><button type="button" class="btn btn-outline-dark btn-sm" data-order-up aria-label="Naikkan">↑</button><button type="button" class="btn btn-outline-dark btn-sm" data-order-down aria-label="Turunkan">↓</button></span></li>@endif @endforeach</ol><small>Gunakan panah untuk menentukan urutan tampil dari atas ke bawah.</small></div>
 @foreach(['welcome_voucher_title'=>'Judul popup','welcome_voucher_code'=>'Kode voucher'] as $key=>$label)<div><label for="{{ $key }}">{{ $label }}</label><input class="form-control" id="{{ $key }}" name="{{ $key }}" value="{{ $get($key) }}"></div>@endforeach
 <div class="span-2"><label for="welcome_voucher_text">Keterangan popup</label><textarea class="form-control" id="welcome_voucher_text" name="welcome_voucher_text" rows="3">{{ $get('welcome_voucher_text') }}</textarea></div>

@@ -6,12 +6,17 @@ return [
         'campaign' => 'Banner kampanye',
         'new_in' => 'New In',
         'categories' => 'Kategori visual',
-        'collections' => 'Latest Collection dan koleksi pilihan',
-        'featured' => 'Produk unggulan',
-        'look' => 'Shop the Look',
-        'sale' => 'Produk sale',
-        'editorial' => 'Konten editorial',
-        'story' => 'Cerita brand',
+        'collections' => 'Latest Collection',
+        'signature_banner' => 'Banner Signature',
+        'signature' => 'Asfara Signature',
+        'studio_banner' => 'Banner Asfara Studio',
+        'studio' => 'Asfara Studio',
+    ],
+
+    'campaign_groups' => [
+        'main' => 'Koleksi Utama',
+        'signature' => 'Asfara Signature',
+        'studio' => 'Asfara Studio',
     ],
 
     'copy_groups' => [
@@ -87,14 +92,14 @@ return [
     'copy_defaults' => [
         'id' => [
             'mega_shop_by_category' => 'SHOP BY CATEGORY', 'mega_view_all' => 'LIHAT SEMUA', 'mega_find_fit' => 'FIND YOUR FIT', 'mega_explore' => 'EXPLORE ASFARA', 'mega_promo_label' => 'ASFARA EDIT', 'mega_promo_cta' => 'SHOP NOW', 'mega_fallback_title' => 'Temukan koleksi untuk setiap cerita.',
-            'featured_product' => 'FEATURED PRODUCT', 'featured_collection' => 'FEATURED COLLECTION', 'new_arrival' => 'NEW ARRIVAL', 'best_seller' => 'BEST SELLER', 'view_all' => 'VIEW ALL', 'look_eyebrow' => 'STEAL THE LOOK!', 'look_title' => 'BEST COMBINATION', 'look_instruction' => 'PILIH TANDA + PADA FOTO', 'look_cta' => 'VIEW PRODUCTS', 'sale_title' => 'SALE', 'story_cta' => 'Jelajahi koleksi →',
+            'featured_product' => 'FEATURED PRODUCT', 'featured_collection' => 'LATEST COLLECTION', 'new_arrival' => 'NEW ARRIVAL', 'best_seller' => 'BEST SELLER', 'view_all' => 'VIEW ALL', 'look_eyebrow' => 'STEAL THE LOOK!', 'look_title' => 'BEST COMBINATION', 'look_instruction' => 'PILIH TANDA + PADA FOTO', 'look_cta' => 'VIEW PRODUCTS', 'sale_title' => 'SALE', 'story_cta' => 'Jelajahi koleksi →',
             'search_title' => 'CARI PRODUK', 'search_placeholder' => 'Ketik nama produk atau SKU', 'search_hint' => 'Produk, warna, ukuran, atau SKU.', 'cart_title' => 'KERANJANG', 'cart_empty' => 'Keranjang Anda masih kosong.', 'cart_start' => 'MULAI BELANJA →', 'cart_recommendations' => 'LENGKAPI PILIHAN ANDA', 'quick_shop' => 'QUICK SHOP', 'quick_view_detail' => 'LIHAT DETAIL PRODUK →', 'welcome_eyebrow' => 'WELCOME TO ASFARA', 'welcome_copy' => 'KLIK UNTUK SALIN', 'welcome_cta' => 'SHOP NOW', 'whatsapp_floating' => 'TANYAKAN APA SAJA', 'social_proof_label' => 'BARU SAJA DITAMBAHKAN KE KERANJANG',
             'catalog_title' => 'PRODUK', 'catalog_filter' => 'FILTER', 'catalog_sort' => 'URUTKAN', 'catalog_empty_title' => 'Produk tidak ditemukan', 'catalog_empty_text' => 'Coba kata kunci atau pilihan filter lain.', 'recently_viewed' => 'RECENTLY VIEWED', 'related_products' => 'RELATED PRODUCTS', 'payment_method' => 'PAYMENT METHOD', 'payment_method_text' => 'Transfer bank manual, COD sesuai wilayah, dan termin untuk akun bisnis yang disetujui. Total akhir serta ongkir ditampilkan sebelum pesanan dibuat.', 'material' => 'MATERIAL', 'feature' => 'FEATURE', 'care' => 'PERAWATAN', 'size_detail' => 'SIZE DETAIL', 'return_terms' => 'S&K PENGEMBALIAN', 'shipping_payment' => 'PENGIRIMAN & PEMBAYARAN',
             'benefit_1_title' => 'Gratis ongkir', 'benefit_1_text' => 'Gratis pengiriman sesuai promo', 'benefit_2_title' => 'Ready stock', 'benefit_2_text' => 'Produk siap dipesan', 'benefit_3_title' => 'Harga terbaik', 'benefit_3_text' => 'Dapatkan harga terbaik', 'benefit_4_title' => 'Pembayaran aman', 'benefit_4_text' => 'Pembayaran aman dan terjamin', 'newsletter_text' => 'Dapatkan kabar koleksi dan penawaran Asfara.', 'footer_trust' => 'Pembayaran aman · Privasi terlindungi',
         ],
         'en' => [
             'mega_shop_by_category' => 'SHOP BY CATEGORY', 'mega_view_all' => 'VIEW ALL', 'mega_find_fit' => 'FIND YOUR FIT', 'mega_explore' => 'EXPLORE ASFARA', 'mega_promo_label' => 'ASFARA EDIT', 'mega_promo_cta' => 'SHOP NOW', 'mega_fallback_title' => 'Discover a collection for every story.',
-            'featured_product' => 'FEATURED PRODUCT', 'featured_collection' => 'FEATURED COLLECTION', 'new_arrival' => 'NEW ARRIVAL', 'best_seller' => 'BEST SELLER', 'view_all' => 'VIEW ALL', 'look_eyebrow' => 'STEAL THE LOOK!', 'look_title' => 'BEST COMBINATION', 'look_instruction' => 'SELECT A + ON THE PHOTO', 'look_cta' => 'VIEW PRODUCTS', 'sale_title' => 'SALE', 'story_cta' => 'Explore the collection →',
+            'featured_product' => 'FEATURED PRODUCT', 'featured_collection' => 'LATEST COLLECTION', 'new_arrival' => 'NEW ARRIVAL', 'best_seller' => 'BEST SELLER', 'view_all' => 'VIEW ALL', 'look_eyebrow' => 'STEAL THE LOOK!', 'look_title' => 'BEST COMBINATION', 'look_instruction' => 'SELECT A + ON THE PHOTO', 'look_cta' => 'VIEW PRODUCTS', 'sale_title' => 'SALE', 'story_cta' => 'Explore the collection →',
             'search_title' => 'SEARCH PRODUCTS', 'search_placeholder' => 'Type a product name or SKU', 'search_hint' => 'Products, colors, sizes, or SKU.', 'cart_title' => 'CART', 'cart_empty' => 'Your cart is empty.', 'cart_start' => 'START SHOPPING →', 'cart_recommendations' => 'COMPLETE YOUR LOOK', 'quick_shop' => 'QUICK SHOP', 'quick_view_detail' => 'VIEW PRODUCT DETAILS →', 'welcome_eyebrow' => 'WELCOME TO ASFARA', 'welcome_copy' => 'CLICK TO COPY', 'welcome_cta' => 'SHOP NOW', 'whatsapp_floating' => 'ASK US ANYTHING', 'social_proof_label' => 'JUST ADDED TO CART',
             'catalog_title' => 'PRODUCTS', 'catalog_filter' => 'FILTER', 'catalog_sort' => 'SORT', 'catalog_empty_title' => 'No products found', 'catalog_empty_text' => 'Try another keyword or filter.', 'recently_viewed' => 'RECENTLY VIEWED', 'related_products' => 'RELATED PRODUCTS', 'payment_method' => 'PAYMENT METHOD', 'payment_method_text' => 'Manual bank transfer, COD in eligible areas, and approved business terms are available. Final shipping and totals appear before ordering.', 'material' => 'MATERIAL', 'feature' => 'FEATURE', 'care' => 'CARE', 'size_detail' => 'SIZE DETAIL', 'return_terms' => 'RETURN TERMS', 'shipping_payment' => 'SHIPPING & PAYMENT',
             'benefit_1_title' => 'Free shipping', 'benefit_1_text' => 'Free delivery on eligible promotions', 'benefit_2_title' => 'Ready stock', 'benefit_2_text' => 'Products ready to order', 'benefit_3_title' => 'Best price', 'benefit_3_text' => 'Enjoy our best available price', 'benefit_4_title' => 'Secure payment', 'benefit_4_text' => 'Safe and protected payments', 'newsletter_text' => 'Receive Asfara collection news and offers.', 'footer_trust' => 'Secure payment · Privacy protected',

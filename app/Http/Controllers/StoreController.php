@@ -45,8 +45,8 @@ class StoreController extends Controller
             'url' => route('product', $series->slug), 'lastmod' => $series->updated_at, 'priority' => '0.8',
         ]))->concat(Page::published()->get()->map(fn (Page $page) => [
             'url' => route('page', $page->slug), 'lastmod' => $page->updated_at, 'priority' => '0.6',
-        ]))->concat(ContentEntry::published()->whereIn('type', ['journal', 'lookbook', 'campaign'])->get()->map(fn (ContentEntry $entry) => [
-            'url' => route('content.show', [$entry->type, $entry->slug]), 'lastmod' => $entry->updated_at, 'priority' => '0.6',
+        ]))->concat(ContentEntry::published()->whereIn('type', ['journal', 'lookbook', 'campaign', 'home_section'])->get()->map(fn (ContentEntry $entry) => [
+            'url' => route('content.show', [$entry->type === 'home_section' ? 'lookbook' : $entry->type, $entry->slug]), 'lastmod' => $entry->updated_at, 'priority' => '0.6',
         ]));
 
         return response()->view('sitemap', compact('urls'))->header('Content-Type', 'application/xml; charset=UTF-8');
@@ -55,29 +55,27 @@ class StoreController extends Controller
     public function home(Request $request, Analytics $analytics)
     {
         $analytics->record($request, 'view_home');
-        $contentEntries = ContentEntry::published()->whereIn('type', ['banner', 'home_section'])->orderBy('sort_order')->get();
+        $contentEntries = ContentEntry::published()->where('type', 'banner')->orderBy('sort_order')->get();
         $collections = Series::published()->withStoreCard()
-            ->withSum(['orderItems as sold_quantity' => fn ($query) => $query->whereHas('order', fn ($order) => $order->whereNotIn('status', ['cancelled']))], 'quantity')
             ->orderByDesc('featured')->latest()->take(24)->get();
-        $lookProductIds = $contentEntries->flatMap(fn ($entry) => collect($entry->blocks)->where('type', 'product_hotspot')->pluck('series_id'))->filter()->unique();
-        $lookProducts = Series::published()->whereIn('id', $lookProductIds)
-            ->with(['media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
-            ->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')->get()->keyBy('id');
-
         $campaigns = ContentEntry::published()->where('type', 'campaign')->orderBy('sort_order')->orderBy('id')
             ->get(['id', 'title', 'slug', 'image', 'blocks'])
-            ->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty())->take(12);
+            ->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty())
+            ->groupBy(fn (ContentEntry $campaign) => $campaign->campaignGroup())
+            ->flatMap(fn ($group) => $group->take(8));
         $campaignProductIds = $campaigns->flatMap(fn (ContentEntry $campaign) => $campaign->campaignProductIds())->unique();
         $campaignProducts = Series::published()->withStoreCard()->whereKey($campaignProductIds->all())
             ->whereHas('variants', fn ($variants) => $variants->where('active', true))->get()->keyBy('id');
         $campaignEdits = $campaigns->mapWithKeys(fn (ContentEntry $campaign) => ['campaign-'.$campaign->id => [
             'label' => $campaign->title,
+            'group' => $campaign->campaignGroup(),
             'image' => $campaign->image_url,
+            'mobile_image' => collect($campaign->blocks)->firstWhere('type', 'hero_options')['mobile_url'] ?? null,
             'items' => $campaign->campaignProductIds()->map(fn (int $id) => $campaignProducts->get($id))->filter()->take(8),
             'url' => route('content.show', ['campaign', $campaign->slug]),
-        ]])->filter(fn (array $campaign) => $campaign['items']->isNotEmpty())->take(8);
+        ]])->filter(fn (array $campaign) => $campaign['items']->isNotEmpty())->groupBy('group', preserveKeys: true);
 
-        return view('store.home', compact('collections', 'contentEntries', 'lookProducts', 'campaignEdits'));
+        return view('store.home', compact('collections', 'contentEntries', 'campaignEdits'));
     }
 
     public function catalog(Request $r, Analytics $analytics)
@@ -581,16 +579,22 @@ class StoreController extends Controller
     {
         abort_unless(in_array($type, ['faq', 'journal', 'lookbook', 'campaign']), 404);
 
-        $entry = ContentEntry::published()->where('type', $type)->where('slug', $slug)->firstOrFail();
-        $campaignProducts = $type === 'campaign' ? $entry->campaignProducts() : collect();
+        $entry = ContentEntry::published()->whereIn('type', $type === 'lookbook' ? ['lookbook', 'home_section'] : [$type])
+            ->where('slug', $slug)->orderByRaw('CASE WHEN type = ? THEN 0 ELSE 1 END', [$type])->firstOrFail();
+        $campaignProducts = match ($type) {
+            'campaign' => $entry->editorialProducts(),
+            'lookbook' => $entry->editorialProducts('product_hotspot'),
+            default => collect(),
+        };
 
-        return view('store.content', compact('entry', 'campaignProducts'));
+        return view('store.content', compact('entry', 'campaignProducts', 'type'));
     }
 
     public function contentIndex(string $type)
     {
         abort_unless(in_array($type, ['journal', 'lookbook', 'campaign']), 404);
-        $entries = ContentEntry::published()->where('type', $type)->orderBy('sort_order')->latest()->paginate(12);
+        $entries = ContentEntry::published()->whereIn('type', $type === 'lookbook' ? ['lookbook', 'home_section'] : [$type])
+            ->orderBy('sort_order')->latest()->paginate(12);
 
         return view('store.content-index', compact('type', 'entries'));
     }

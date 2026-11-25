@@ -8,6 +8,12 @@
     <nav class="content-breadcrumb" aria-label="Breadcrumb"><a href="{{ route('home') }}">HOME</a><span>/</span><span>INFORMASI</span></nav>
     <header @class(['text-center py-5'=>$template==='landing'])><span class="eyebrow">INFORMASI ASFARA</span><h1>{{ $page->title }}</h1>@if($page->seo_description)<p>{{ $page->seo_description }}</p>@endif</header>
     <div class="information-page-body">@if($page->blocks)@include('partials.content-blocks',['contentBlocks'=>$page->blocks])@else<div class="preserve-lines">{{ $page->body }}</div>@endif</div>
+    @if($page->slug === 'tentang' && !empty($shop['story_text']) && trim($shop['story_text']) !== trim((string) $page->body))
+        <section class="information-page-body mt-4">
+            @if(!empty($shop['story_title']))<h2>{{ $shop['story_title'] }}</h2>@endif
+            <p class="preserve-lines">{{ $shop['story_text'] }}</p>
+        </section>
+    @endif
     <aside class="information-help"><span>MASIH MEMBUTUHKAN BANTUAN?</span><p>Tim Asfara siap membantu menjawab pertanyaan tentang produk, pesanan, dan layanan.</p>@if(!empty($shop['whatsapp']))<a href="https://wa.me/{{ $shop['whatsapp'] }}" target="_blank" rel="noopener">HUBUNGI ASFARA</a>@else<a href="{{ route('track') }}">LACAK PESANAN</a>@endif</aside>
 </article>
 @endsection

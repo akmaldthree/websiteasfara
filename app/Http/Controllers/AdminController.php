@@ -112,7 +112,12 @@ class AdminController extends Controller
         return view('store.content', [
             'entry' => $contentEntry,
             'preview' => true,
-            'campaignProducts' => $contentEntry->type === 'campaign' ? $contentEntry->campaignProducts() : collect(),
+            'type' => $contentEntry->type === 'home_section' ? 'lookbook' : $contentEntry->type,
+            'campaignProducts' => match ($contentEntry->type) {
+                'campaign' => $contentEntry->editorialProducts(),
+                'lookbook', 'home_section' => $contentEntry->editorialProducts('product_hotspot'),
+                default => collect(),
+            },
         ]);
     }
 
@@ -782,8 +787,10 @@ class AdminController extends Controller
         $allowed = ['heading', 'paragraph', 'quote', 'button', 'image', 'columns', 'product_hotspot', 'hero_options'];
         if ($contentType === 'campaign') {
             $allowed[] = 'campaign_product';
+            $allowed[] = 'campaign_options';
         }
         $campaignProductIds = [];
+        $campaignOptionsAdded = false;
         foreach ($blocks as $index => &$block) {
             if (! is_array($block) || ! in_array($block['type'] ?? '', $allowed, true)) {
                 throw ValidationException::withMessages(['blocks' => 'Tipe blok ke-'.($index + 1).' tidak didukung.']);
@@ -818,6 +825,14 @@ class AdminController extends Controller
                 $block['series_id'] = $seriesId;
                 $block['x'] = round($x, 2);
                 $block['y'] = round($y, 2);
+            }
+            if ($block['type'] === 'campaign_options') {
+                $group = $block['group'] ?? 'main';
+                if ($campaignOptionsAdded || ! is_string($group) || ! array_key_exists($group, config('storefront.campaign_groups'))) {
+                    throw ValidationException::withMessages(['blocks' => 'Pilih satu grup koleksi yang valid per kampanye.']);
+                }
+                $campaignOptionsAdded = true;
+                $block = ['type' => 'campaign_options', 'group' => $group];
             }
             if ($block['type'] === 'campaign_product') {
                 $seriesId = filter_var($block['series_id'] ?? null, FILTER_VALIDATE_INT);
@@ -854,7 +869,7 @@ class AdminController extends Controller
                     throw ValidationException::withMessages(['blocks' => 'Label atau alt text blok ke-'.($index + 1).' wajib diisi dan maksimal 200 karakter.']);
                 }
             }
-            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label', 'items', 'series_id', 'x', 'y', 'align', 'tone', 'duration', 'mobile_url', 'video_url', 'mobile_video_url']));
+            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label', 'items', 'series_id', 'group', 'x', 'y', 'align', 'tone', 'duration', 'mobile_url', 'video_url', 'mobile_video_url']));
         }
 
         return array_values($blocks);
@@ -963,6 +978,7 @@ class AdminController extends Controller
             'home_new_slugs' => 'nullable|string|max:2000', 'home_best_slugs' => 'nullable|string|max:2000', 'home_sale_slugs' => 'nullable|string|max:2000',
             'announcement_lines' => 'nullable|string|max:2000', 'announcement_interval_seconds' => 'sometimes|required|numeric|between:2,20', 'welcome_voucher_title' => 'nullable|string|max:150', 'welcome_voucher_text' => 'nullable|string|max:500', 'welcome_voucher_code' => 'nullable|string|max:40',
             'welcome_voucher_cta_label' => 'nullable|string|max:80', 'welcome_voucher_cta_url' => 'nullable|string|max:500', 'welcome_voucher_start' => 'nullable|date', 'welcome_voucher_end' => 'nullable|date', 'welcome_voucher_delay_seconds' => 'sometimes|required|integer|between:0,60', 'welcome_voucher_frequency_days' => 'sometimes|required|integer|between:0,365',
+            'welcome_voucher_campaign' => ['nullable', 'integer', Rule::exists('content_entries', 'id')->where('type', 'campaign')],
             'theme_palette_base' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_palette_surface' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_palette_structure' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_palette_accent' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_text_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'theme_sage_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_sand_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_taupe_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_gold_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_cream_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'theme_primary_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_accent_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_background_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_surface_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -1001,7 +1017,8 @@ class AdminController extends Controller
         }
         if (array_key_exists('home_section_order', $data)) {
             $allowedSections = array_keys(config('storefront.home_sections'));
-            $requestedOrder = collect(preg_split('/[,\r\n]+/', $data['home_section_order']))->map(fn ($value) => trim($value))->filter()->unique();
+            $requestedOrder = collect(preg_split('/[,\r\n]+/', $data['home_section_order']))->map(fn ($value) => trim($value))->filter()->unique()
+                ->diff(['featured', 'look', 'sale', 'editorial', 'story'])->values();
             if ($requestedOrder->diff($allowedSections)->isNotEmpty()) {
                 throw ValidationException::withMessages(['home_section_order' => 'Urutan beranda berisi section yang tidak dikenal.']);
             }
@@ -1075,7 +1092,7 @@ class AdminController extends Controller
         $data['analytics_enabled'] = $r->boolean('analytics_enabled');
         $data['checkout_enabled'] = $r->boolean('checkout_enabled');
         $data['staff_two_factor_required'] = $r->boolean('staff_two_factor_required');
-        foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled', 'floating_whatsapp_enabled', 'social_proof_enabled', 'welcome_voucher_enabled', 'hero_video_enabled', 'home_featured_enabled', 'home_categories_enabled', 'home_collections_enabled', 'home_look_enabled', 'home_sale_enabled', 'product_related_enabled', 'cart_recommendations_enabled', 'home_editorial_sections_enabled', 'home_story_enabled'] as $toggle) {
+        foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled', 'floating_whatsapp_enabled', 'welcome_voucher_enabled', 'hero_video_enabled', 'home_categories_enabled', 'home_collections_enabled', 'product_related_enabled', 'cart_recommendations_enabled'] as $toggle) {
             $data[$toggle] = $r->boolean($toggle);
         }
         if ($data['checkout_enabled'] && ! count($banks)) {
