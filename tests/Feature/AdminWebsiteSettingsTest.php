@@ -63,6 +63,8 @@ class AdminWebsiteSettingsTest extends TestCase
             'floating_whatsapp_enabled' => '1',
             'social_proof_enabled' => '1',
             'hero_video_enabled' => '1',
+            'hero_campaign_enabled' => '0',
+            'hero_video_has_audio' => '1',
             'welcome_voucher_enabled' => '1',
             'welcome_voucher_title' => 'Hadiah Asfara',
             'welcome_voucher_text' => 'Promo khusus pelanggan baru.',
@@ -95,6 +97,8 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame(30, Setting::get('social_proof_interval'));
         $this->assertSame(3.5, (float) Setting::get('announcement_interval_seconds'));
         $this->assertTrue(Setting::get('hero_video_enabled'));
+        $this->assertFalse(Setting::get('hero_campaign_enabled'));
+        $this->assertTrue(Setting::get('hero_video_has_audio'));
         $this->assertSame('/koleksi?sort=newest', Setting::get('welcome_voucher_cta_url'));
         $this->assertSame(14, Setting::get('welcome_voucher_frequency_days'));
         $this->assertSame('KOLEKSI PILIHAN CMS', Setting::get('storefront_copy_id')['featured_collection']);

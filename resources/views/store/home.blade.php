@@ -26,13 +26,16 @@
         null, '' => null,
         default => asset('storage/'.$path),
     };
-    $videoHero = ($shop['hero_video_enabled'] ?? false) && !empty($shop['hero_video']);
+    $videoEnabled = $shop['hero_video_enabled'] ?? false;
     $heroContentStyle = $shop['hero_content_style'] ?? 'editorial';
-    $heroContentClass = $videoHero && $heroContentStyle === 'editorial' ? '' : 'hero-content-'.$heroContentStyle;
     $homeBanners = $contentEntries->where('type', 'banner');
     $primaryEdit = $campaignEdits->get('main', collect())->firstWhere('image', '!=', null);
     $campaign = $homeBanners->first();
-    $heroSlides = collect([[
+    $heroCampaign = ($shop['hero_campaign_enabled'] ?? true) && $heroContentStyle === 'editorial'
+        ? $campaignEdits->get('main', collect())->first()
+        : null;
+    $spotlightProducts = $heroCampaign ? $heroCampaign['items']->whereNotIn('id', $newCollections->pluck('id'))->take(4) : collect();
+    $firstSlide = [
         'image' => !empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg'),
         'eyebrow' => $shop['hero_eyebrow'] ?? 'NEW COLLECTION',
         'title' => $shop['hero_title'] ?? '',
@@ -40,9 +43,32 @@
         'url' => $shop['hero_button_url'] ?? route('catalog'),
         'label' => $shop['hero_button_label'] ?? 'Belanja sekarang',
         'align' => 'left', 'tone' => 'light', 'duration' => 6500, 'mobile_image' => null,
-        'video' => $videoHero ? $heroVideoUrl($shop['hero_video']) : null,
-        'mobile_video' => $videoHero ? $heroVideoUrl($shop['hero_video_mobile'] ?? null) : null,
-    ]])->concat(($videoHero ? collect() : $homeBanners)->map(fn ($entry) => [
+        'video' => $videoEnabled ? $heroVideoUrl($shop['hero_video'] ?? null) : null,
+        'mobile_video' => $videoEnabled ? $heroVideoUrl($shop['hero_video_mobile'] ?? null) : null,
+        'has_audio' => ($shop['hero_video_has_audio'] ?? false) && ($shop['hero_video'] ?? null) !== 'demo/hero-desktop.webm',
+    ];
+    if ($heroCampaign) {
+        $options = $heroCampaign['hero_options'];
+        $campaignVideo = $videoEnabled ? (($options['video_url'] ?? null) ?: ($options['mobile_video_url'] ?? null)) : null;
+        $demoVideo = ($shop['hero_video'] ?? null) === 'demo/hero-desktop.webm';
+        if ($campaignVideo) {
+            $firstSlide['video'] = $campaignVideo;
+            $firstSlide['mobile_video'] = $options['mobile_video_url'] ?? null;
+            $firstSlide['has_audio'] = $options['has_audio'] ?? false;
+        } elseif ($demoVideo && $heroCampaign['slug'] !== 'demo-seri-ruang-raya') {
+            $firstSlide['video'] = null;
+            $firstSlide['mobile_video'] = null;
+        }
+        $firstSlide['image'] = $heroCampaign['image'] ?: $firstSlide['image'];
+        $firstSlide['mobile_image'] = $heroCampaign['mobile_image']
+            ?: ($demoVideo && $heroCampaign['slug'] === 'demo-seri-ruang-raya' ? asset('storage/demo/product-family-sage-4x5.webp') : null);
+        $firstSlide['title'] = $heroCampaign['label'];
+        $firstSlide['url'] = $heroCampaign['url'];
+        $firstSlide['label'] = 'Lihat koleksi';
+    }
+    $videoHero = (bool) $firstSlide['video'];
+    $heroContentClass = $videoHero && $heroContentStyle === 'editorial' ? '' : 'hero-content-'.$heroContentStyle;
+    $heroSlides = collect([$firstSlide])->concat(($videoHero || $heroCampaign ? collect() : $homeBanners)->map(fn ($entry) => [
         'image' => $entry->image_url ?: (!empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg')),
         'eyebrow' => 'ASFARA EDIT',
         'title' => $entry->title,
@@ -55,6 +81,7 @@
         'mobile_image' => collect($entry->blocks)->firstWhere('type','hero_options')['mobile_url'] ?? null,
         'video' => collect($entry->blocks)->firstWhere('type','hero_options')['video_url'] ?? null,
         'mobile_video' => collect($entry->blocks)->firstWhere('type','hero_options')['mobile_video_url'] ?? null,
+        'has_audio' => collect($entry->blocks)->firstWhere('type','hero_options')['has_audio'] ?? false,
     ])->values());
 @endphp
 @push('head')
@@ -62,29 +89,29 @@
 @endpush
 @php($heroAutoplayMs=(int)round((float)($shop['hero_autoplay_seconds'] ?? 5)*1000))
 @section('home-hero')
-<section @class(['commerce-hero', 'hero-content-video' => $videoHero, $heroContentClass => $heroContentClass !== '']) data-hero-slider @if($heroSlides->count()>1) aria-roledescription="carousel" @endif>
+<section @class(['commerce-hero', 'hero-content-video' => $videoHero, 'hero-content-campaign' => $heroCampaign, $heroContentClass => $heroContentClass !== '']) data-hero-slider @if($heroSlides->count()>1) aria-roledescription="carousel" @endif>
     @foreach($heroSlides as $slide)
         <article class="commerce-hero-slide hero-align-{{ $slide['align'] }} hero-tone-{{ $slide['tone'] }} {{ $loop->first?'is-active':'' }}" data-hero-slide data-duration="{{ $loop->first ? $heroAutoplayMs : (int) $slide['duration'] }}" aria-hidden="{{ $loop->first?'false':'true' }}">
             @if($slide['video'])
-                <video class="commerce-hero-video" poster="{{ $slide['image'] }}" muted loop playsinline preload="none" data-hero-video>@if($slide['mobile_video'])<source media="(max-width:767px)" src="{{ $slide['mobile_video'] }}">@endif<source src="{{ $slide['video'] }}">Browser Anda belum mendukung video.</video>
+                <video class="commerce-hero-video" poster="{{ $slide['image'] }}" @if($slide['mobile_image']) data-mobile-poster="{{ $slide['mobile_image'] }}" @endif muted loop playsinline preload="none" data-hero-video>@if($slide['mobile_video'])<source media="(max-width:767px)" src="{{ $slide['mobile_video'] }}">@endif<source src="{{ $slide['video'] }}">Browser Anda belum mendukung video.</video>
                 <div class="hero-media-controls">
                     <button type="button" data-hero-play aria-label="Putar video">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path class="hero-icon-play" d="m9 5 11 7-11 7z"/><path class="hero-icon-pause" d="M9 5v14m6-14v14"/></svg>
                     </button>
-                    @unless($loop->first && ($shop['hero_video'] ?? '') === 'demo/hero-desktop.webm')
+                    @if($slide['has_audio'])
                         <button type="button" data-hero-sound aria-label="Suara video" aria-pressed="false">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="hero-icon-muted" d="m16 9 5 6m0-6-5 6"/><path class="hero-icon-sound" d="M16 9a4 4 0 0 1 0 6m3-9a8 8 0 0 1 0 12"/></svg>
                         </button>
-                    @endunless
+                    @endif
                 </div>
             @else
                 <picture>@if($slide['mobile_image'])<source media="(max-width:767px)" srcset="{{ $slide['mobile_image'] }}">@endif<img src="{{ $slide['image'] }}" alt="{{ $slide['title'] }}" width="1600" height="800" loading="{{ $loop->first ? 'eager' : 'lazy' }}" fetchpriority="{{ $loop->first ? 'high' : 'low' }}" decoding="async"></picture>
             @endif
             <div class="commerce-hero-overlay"></div>
             <div class="container-xxl commerce-hero-copy">
-                @unless($videoHero)<span>{{ $slide['eyebrow'] }}</span>@endunless
-                <h1>{{ $videoHero ? (($shop['hero_eyebrow'] ?? '') ?: ($shop['brand_name'] ?? 'Asfara')) : $slide['title'] }}</h1>
-                @unless($videoHero)<p>{{ $slide['text'] }}</p>@endunless
+                @unless($videoHero || $heroCampaign)<span>{{ $slide['eyebrow'] }}</span>@endunless
+                <h1>{{ $videoHero && !$heroCampaign ? (($shop['hero_eyebrow'] ?? '') ?: ($shop['brand_name'] ?? 'Asfara')) : $slide['title'] }}</h1>
+                @unless($videoHero || $heroCampaign)<p>{{ $slide['text'] }}</p>@endunless
                 <a class="btn btn-light" href="{{ $slide['url'] }}">{{ strtoupper($slide['label']) }}</a>
             </div>
         </article>
@@ -95,7 +122,26 @@
     </a>
 </section>
 @endsection
-@if($videoHero && ($primaryEdit || $campaign))
+@if($heroCampaign && ($shop['home_collections_enabled'] ?? true))
+    @section('home-campaign')
+    <section class="container-xxl home-campaign-spotlight" aria-labelledby="home-campaign-title">
+        <div class="home-campaign-spotlight-heading">
+            <div>
+                <h2 id="home-campaign-title">{{ $heroCampaign['label'] }}</h2>
+                @if($heroCampaign['summary'])<p>{{ $heroCampaign['summary'] }}</p>@endif
+            </div>
+            <a class="btn btn-outline-dark" href="{{ $heroCampaign['url'] }}">Belanja kampanye</a>
+        </div>
+        @if($spotlightProducts->isNotEmpty())
+            <div class="campaign-product-grid">
+                @foreach($spotlightProducts as $collection)
+                    @include('partials.product-card', ['cardContext' => 'home-spotlight-'])
+                @endforeach
+            </div>
+        @endif
+    </section>
+    @endsection
+@elseif(!$heroCampaign && $videoHero && ($primaryEdit || $campaign))
     @section('home-campaign')
     @php($campaignTitle = $primaryEdit['label'] ?? $campaign->title)
     <section class="home-campaign-preview home-primary-campaign" aria-labelledby="home-campaign-title">
@@ -130,6 +176,32 @@
 
 @foreach(config('storefront.campaign_groups') as $group => $groupTitle)
     @php($edits = $campaignEdits->get($group, collect()))
+    @if($heroCampaign)
+        @php($edits = $edits->where('slug', '!=', $heroCampaign['slug']))
+        @continue($edits->isEmpty())
+        @section('home-'.($group === 'main' ? 'collections' : $group))
+        <section class="container-xxl home-campaign-directory" aria-labelledby="home-directory-{{ $group }}">
+            <div class="home-campaign-spotlight-heading">
+                <h2 id="home-directory-{{ $group }}">{{ $group === 'main' ? 'Kampanye lainnya' : $groupTitle }}</h2>
+                @if($group === 'main')<a href="{{ route('content.index','campaign') }}">{{ $storeCopy['view_all'] }}</a>@endif
+            </div>
+            <div class="home-campaign-directory-grid">
+                @foreach($edits->take(4) as $edit)
+                    <a class="home-campaign-directory-link" href="{{ $edit['url'] }}">
+                        @if($edit['image'])
+                            <picture>
+                                @if($edit['mobile_image'])<source media="(max-width: 767px)" srcset="{{ $edit['mobile_image'] }}">@endif
+                                <img src="{{ $edit['image'] }}" alt="" width="1200" height="600" loading="lazy" decoding="async">
+                            </picture>
+                        @endif
+                        <h3>{{ $edit['label'] }}</h3>
+                    </a>
+                @endforeach
+            </div>
+        </section>
+        @endsection
+        @continue
+    @endif
     @continue($edits->isEmpty())
     @php($sectionKey = $group === 'main' ? 'collections' : $group)
     @php($banner = $group === 'main' ? null : $edits->firstWhere('image', '!=', null))

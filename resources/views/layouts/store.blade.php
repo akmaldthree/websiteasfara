@@ -224,6 +224,13 @@
         if (!video) return;
         const playButton = slide.querySelector('[data-hero-play]');
         const soundButton = slide.querySelector('[data-hero-sound]');
+        if (video.dataset.mobilePoster) {
+            const mobile = matchMedia('(max-width: 767px)');
+            const desktopPoster = video.poster;
+            const updatePoster = () => { video.poster = mobile.matches ? video.dataset.mobilePoster : desktopPoster; };
+            mobile.addEventListener('change', updatePoster);
+            updatePoster();
+        }
         const updatePlayButton = () => {
             playButton.classList.toggle('is-playing', !video.paused);
             playButton.setAttribute('aria-label', video.paused ? 'Putar video' : 'Jeda video');

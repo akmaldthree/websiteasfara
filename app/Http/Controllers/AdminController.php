@@ -860,6 +860,11 @@ class AdminController extends Controller
                 $block['align'] = $align;
                 $block['tone'] = $tone;
                 $block['duration'] = $duration;
+                $audio = filter_var($block['has_audio'] ?? false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                if ($audio === null) {
+                    throw ValidationException::withMessages(['blocks' => 'Pengaturan suara video tidak valid.']);
+                }
+                $block['has_audio'] = $audio;
             }
             if (in_array($block['type'], ['button', 'image'], true)) {
                 if (empty($block['url']) || ! $this->safeContentUrl($block['url'])) {
@@ -869,7 +874,7 @@ class AdminController extends Controller
                     throw ValidationException::withMessages(['blocks' => 'Label atau alt text blok ke-'.($index + 1).' wajib diisi dan maksimal 200 karakter.']);
                 }
             }
-            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label', 'items', 'series_id', 'group', 'x', 'y', 'align', 'tone', 'duration', 'mobile_url', 'video_url', 'mobile_video_url']));
+            $block = array_intersect_key($block, array_flip(['type', 'text', 'url', 'label', 'items', 'series_id', 'group', 'x', 'y', 'align', 'tone', 'duration', 'mobile_url', 'video_url', 'mobile_video_url', 'has_audio']));
         }
 
         return array_values($blocks);
@@ -1000,6 +1005,7 @@ class AdminController extends Controller
             'loyalty_bonus_segment' => 'required|in:all,customer,business', 'loyalty_bonus_tier' => 'nullable|string|max:100', 'loyalty_bonus_target_type' => 'required|in:all,category,series,variant', 'loyalty_bonus_target_id' => 'nullable|integer|min:1',
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120', 'welcome_voucher_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'hero_video' => 'nullable|file|mimetypes:video/mp4,video/webm|max:51200', 'hero_video_mobile' => 'nullable|file|mimetypes:video/mp4,video/webm|max:51200',
+            'hero_campaign_enabled' => 'sometimes|boolean', 'hero_video_has_audio' => 'sometimes|boolean',
         ];
         $data = $r->validate($rules);
         if (! empty($data['welcome_voucher_cta_url']) && ! $this->safeContentUrl($data['welcome_voucher_cta_url'])) {
@@ -1094,6 +1100,11 @@ class AdminController extends Controller
         $data['staff_two_factor_required'] = $r->boolean('staff_two_factor_required');
         foreach (['header_announcement_enabled', 'header_categories_enabled', 'header_tracking_enabled', 'header_sticky', 'footer_pages_enabled', 'footer_social_enabled', 'floating_whatsapp_enabled', 'welcome_voucher_enabled', 'hero_video_enabled', 'home_categories_enabled', 'home_collections_enabled', 'product_related_enabled', 'cart_recommendations_enabled'] as $toggle) {
             $data[$toggle] = $r->boolean($toggle);
+        }
+        foreach (['hero_campaign_enabled', 'hero_video_has_audio'] as $toggle) {
+            if ($r->has($toggle)) {
+                $data[$toggle] = $r->boolean($toggle);
+            }
         }
         if ($data['checkout_enabled'] && ! count($banks)) {
             throw ValidationException::withMessages(['bank_text' => 'Isi rekening sebelum membuka checkout.']);

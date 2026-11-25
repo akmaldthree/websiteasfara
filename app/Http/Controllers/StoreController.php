@@ -59,7 +59,7 @@ class StoreController extends Controller
         $collections = Series::published()->withStoreCard()
             ->orderByDesc('featured')->latest()->take(24)->get();
         $campaigns = ContentEntry::published()->where('type', 'campaign')->orderBy('sort_order')->orderBy('id')
-            ->get(['id', 'title', 'slug', 'image', 'blocks'])
+            ->get(['id', 'title', 'slug', 'summary', 'image', 'blocks'])
             ->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty())
             ->groupBy(fn (ContentEntry $campaign) => $campaign->campaignGroup())
             ->flatMap(fn ($group) => $group->take(8));
@@ -68,9 +68,12 @@ class StoreController extends Controller
             ->whereHas('variants', fn ($variants) => $variants->where('active', true))->get()->keyBy('id');
         $campaignEdits = $campaigns->mapWithKeys(fn (ContentEntry $campaign) => ['campaign-'.$campaign->id => [
             'label' => $campaign->title,
+            'slug' => $campaign->slug,
+            'summary' => $campaign->summary,
             'group' => $campaign->campaignGroup(),
             'image' => $campaign->image_url ?: $campaign->mobileCoverUrl(),
             'mobile_image' => $campaign->mobileCoverUrl(),
+            'hero_options' => collect($campaign->blocks)->firstWhere('type', 'hero_options') ?? [],
             'items' => $campaign->campaignProductIds()->map(fn (int $id) => $campaignProducts->get($id))->filter()->take(8),
             'url' => route('content.show', ['campaign', $campaign->slug]),
         ]])->filter(fn (array $campaign) => $campaign['items']->isNotEmpty())->groupBy('group', preserveKeys: true);

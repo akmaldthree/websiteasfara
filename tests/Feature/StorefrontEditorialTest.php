@@ -180,17 +180,47 @@ class StorefrontEditorialTest extends TestCase
         $entry = ContentEntry::create(['type' => 'banner', 'title' => 'Hero', 'slug' => 'hero-options', 'active' => false]);
         $payload = [
             'type' => 'banner', 'title' => 'Hero', 'slug' => 'hero-options', 'summary' => 'Hero yang dapat diatur.', 'body' => '',
-            'template' => 'standard', 'blocks' => json_encode([['type' => 'hero_options', 'align' => 'right', 'tone' => 'dark', 'duration' => 7000, 'mobile_url' => 'https://example.com/mobile.webp', 'video_url' => 'https://example.com/hero.mp4', 'mobile_video_url' => 'https://example.com/hero-mobile.mp4']]),
+            'template' => 'standard', 'blocks' => json_encode([['type' => 'hero_options', 'align' => 'right', 'tone' => 'dark', 'duration' => 7000, 'mobile_url' => 'https://example.com/mobile.webp', 'video_url' => 'https://example.com/hero.mp4', 'mobile_video_url' => 'https://example.com/hero-mobile.mp4', 'has_audio' => true]]),
             'link_url' => '/koleksi', 'link_label' => 'Belanja', 'seo_title' => '', 'seo_description' => '', 'sort_order' => 1,
             'editorial_status' => 'approved', 'review_note' => '', 'starts_at' => '', 'ends_at' => '', 'active' => '1',
         ];
 
         $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasNoErrors();
         Setting::put('hero_autoplay_seconds', 7);
-        $this->get(route('home'))->assertOk()->assertSee('hero-align-right')->assertSee('data-duration="7000"', false)->assertSee('https://example.com/hero.mp4', false)->assertSee('data-hero-sound', false)->assertDontSee('data-hero-prev', false)->assertDontSee('data-hero-next', false);
+        $this->get(route('home'))->assertOk()->assertSee('hero-align-right')->assertSee('data-duration="7000"', false)->assertSee('https://example.com/hero.mp4', false)->assertSee('<button type="button" data-hero-sound', false)->assertDontSee('data-hero-prev', false)->assertDontSee('data-hero-next', false);
 
         $payload['blocks'] = json_encode([['type' => 'hero_options', 'align' => 'outside', 'tone' => 'dark', 'duration' => 7000]]);
         $this->actingAs($admin)->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasErrors('blocks');
+    }
+
+    public function test_home_hero_uses_the_published_main_campaign_media_until_disabled_or_unpublished(): void
+    {
+        Setting::put('hero_video_enabled', true);
+        $campaign = ContentEntry::create([
+            'type' => 'campaign',
+            'title' => 'Kampanye Musim',
+            'slug' => 'kampanye-musim',
+            'active' => true,
+            'editorial_status' => 'approved',
+            'blocks' => [
+                ['type' => 'campaign_product', 'series_id' => $this->series->id],
+                ['type' => 'hero_options', 'video_url' => '/media/musim.mp4', 'mobile_video_url' => '/media/musim-hp.mp4', 'has_audio' => true],
+            ],
+        ]);
+
+        $this->get(route('home'))->assertOk()
+            ->assertSee('<h1>Kampanye Musim</h1>', false)
+            ->assertSee('src="/media/musim.mp4"', false)
+            ->assertSee('src="/media/musim-hp.mp4"', false)
+            ->assertSee('<button type="button" data-hero-sound', false)
+            ->assertDontSee('home-spotlight-', false);
+
+        Setting::put('hero_campaign_enabled', false);
+        $this->get(route('home'))->assertOk()->assertDontSee('<h1>Kampanye Musim</h1>', false);
+
+        Setting::put('hero_campaign_enabled', true);
+        $campaign->update(['starts_at' => now()->addDay()]);
+        $this->get(route('home'))->assertOk()->assertDontSee('<h1>Kampanye Musim</h1>', false)->assertDontSee('/media/musim.mp4', false);
     }
 
     public function test_curated_navigation_and_structured_size_chart_render(): void

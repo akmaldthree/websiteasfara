@@ -1511,6 +1511,99 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
     color: #e9ded3;
 }
 
+.commerce-hero.hero-content-campaign {
+    height: calc(100svh - 38px);
+    min-height: 465px;
+}
+
+.hero-content-campaign .commerce-hero-slide .commerce-hero-copy {
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 98px clamp(30px, 7vw, 120px) clamp(112px, 16vh, 158px);
+    text-align: left;
+}
+
+.hero-content-campaign .commerce-hero-copy h1 {
+    max-width: min(15ch, 100%);
+    margin: 0;
+    font-size: clamp(2.25rem, 4.6vw, 4.5rem);
+    line-height: 1.06;
+    letter-spacing: -.03em;
+    text-wrap: balance;
+}
+
+.hero-content-campaign .commerce-hero-copy .btn {
+    margin-top: 22px;
+}
+
+.hero-content-campaign .commerce-hero-overlay {
+    background: linear-gradient(180deg, #221b2a50, transparent 28%, #251e286b 68%, #241d28cb),
+                linear-gradient(90deg, #241d28a6, transparent 68%);
+}
+
+.home-campaign-spotlight,
+.home-campaign-directory {
+    margin-bottom: clamp(32px, 6vw, 78px);
+}
+
+.home-campaign-spotlight {
+    padding-block: clamp(20px, 3.5vw, 44px);
+    border-block: 1px solid var(--palette-taupe);
+}
+
+.home-campaign-spotlight-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 24px;
+}
+
+.home-campaign-spotlight-heading h2 {
+    margin: 0;
+    font-size: clamp(1.5rem, 3vw, 3rem);
+}
+
+.home-campaign-spotlight-heading p {
+    margin: 8px 0 0;
+}
+
+.home-campaign-spotlight .campaign-product-grid,
+.home-campaign-directory-grid {
+    margin-top: clamp(18px, 3vw, 32px);
+}
+
+.home-campaign-directory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+    gap: 16px;
+}
+
+.home-campaign-directory-link {
+    display: grid;
+    align-content: start;
+    border-bottom: 1px solid var(--palette-taupe);
+}
+
+.home-campaign-directory-link img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: cover;
+    object-position: center 35%;
+}
+
+.home-campaign-directory-link h3 {
+    margin: 0;
+    padding: 14px 0;
+    font-size: clamp(1rem, 2vw, 1.25rem);
+}
+
+.home-campaign-directory-link:hover h3 {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
 .campaign-intro-copy h1 {
     margin-block: 10px 14px;
     font-size: clamp(2rem, 5vw, 4.5rem);
@@ -1558,6 +1651,10 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 }
 
 @media (min-width: 768px) {
+    .home-campaign-directory-grid:has(> :only-child) {
+        grid-template-columns: minmax(0, 620px);
+    }
+
     .home-primary-campaign a {
         grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
         place-items: stretch;
@@ -1587,6 +1684,23 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 }
 
 @media (max-width: 767px) {
+    .commerce-hero.hero-content-campaign {
+        height: calc(100svh - 38px) !important;
+        min-height: 430px !important;
+    }
+
+    .hero-content-campaign .commerce-hero-slide .commerce-hero-copy {
+        padding: 85px 24px clamp(92px, 14vh, 118px);
+    }
+
+    .hero-content-campaign .commerce-hero-copy h1 {
+        font-size: clamp(2.125rem, 9vw, 3.125rem);
+    }
+
+    .hero-content-campaign .commerce-hero-overlay {
+        background: linear-gradient(180deg, #241d2866, transparent 26%, #241d2866 62%, #241d28e6);
+    }
+
     .campaign-intro-with-image {
         grid-template-columns: minmax(0, 1fr);
     }
