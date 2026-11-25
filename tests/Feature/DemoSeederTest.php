@@ -83,14 +83,22 @@ class DemoSeederTest extends TestCase
         $this->assertImageRatio('look-olive-beige-4x5.webp', 0.8);
         $this->assertImageRatio('payment-proof-demo-3x4.webp', 0.75);
         $this->get('/')->assertOk()
-            ->assertSee('Tumbuh bersama dalam setiap cerita')
+            ->assertSee('Koleksi terbaru Asfara')
             ->assertSee('Kebersamaan dalam satu warna')
+            ->assertSee(route('media.demo-hero', 'desktop'), false)
+            ->assertSee(route('media.demo-hero', 'mobile'), false)
+            ->assertSee('id="new-in"', false)
             ->assertSee('NEW IN')
             ->assertSee('LATEST COLLECTION')
             ->assertSee('ASFARA SIGNATURE')
             ->assertSee('EXPLORE ASFARA')
             ->assertSee('SAVE IDR')
             ->assertSee('4.');
+        $this->get(route('media.demo-hero', 'desktop'), ['Range' => 'bytes=0-15'])
+            ->assertStatus(206)
+            ->assertHeader('Content-Type', 'video/webm');
+        $this->get(route('media.demo-hero', 'mobile'))->assertOk()->assertHeader('Content-Type', 'video/webm');
+        $this->get('/media/kampanye/lainnya')->assertNotFound();
         $this->get('/koleksi')->assertOk()
             ->assertSee('Raffah Signature')
             ->assertSee('Hana Flow Khimar')

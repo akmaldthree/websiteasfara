@@ -70,7 +70,7 @@ class AdminWebsiteSettingsTest extends TestCase
             'footer_copyright' => 'Hak cipta Asfara.',
             'home_featured_slug' => '',
             'home_category_slugs' => '',
-            'home_section_order' => 'hero,collections,featured,categories,look,sale,editorial,story',
+            'home_section_order' => 'hero,campaign,new_in,categories,collections,featured,look,sale,editorial,story',
             'storefront_copy_id' => ['featured_collection' => 'KOLEKSI PILIHAN CMS', 'catalog_title' => 'BUSANA'],
             'storefront_copy_en' => ['featured_collection' => 'CMS CURATED COLLECTION', 'catalog_title' => 'APPAREL'],
         ];
@@ -93,7 +93,7 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame('/koleksi?sort=newest', Setting::get('welcome_voucher_cta_url'));
         $this->assertSame(14, Setting::get('welcome_voucher_frequency_days'));
         $this->assertSame('KOLEKSI PILIHAN CMS', Setting::get('storefront_copy_id')['featured_collection']);
-        $this->assertSame(['hero', 'collections', 'featured', 'categories', 'look', 'sale', 'editorial', 'story'], Setting::get('home_section_order'));
+        $this->assertSame(['hero', 'campaign', 'new_in', 'categories', 'collections', 'featured', 'look', 'sale', 'editorial', 'story'], Setting::get('home_section_order'));
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertEquals(['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Nilai poin lebih tinggi', 'value_bonus_percent' => 5], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));

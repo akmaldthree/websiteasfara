@@ -10,6 +10,11 @@
     $newCollections = $curated('home_new_slugs', $collections);
     $bestCollections = $curated('home_best_slugs', $collections->sortByDesc(fn($item)=>(int)$item->sold_quantity));
     $saleCollections = $curated('home_sale_slugs', $collections->filter(fn($item)=>(int)$item->compare_at_price>(int)$item->variants->min('price')));
+    $collectionEdits = collect([
+        'new' => ['label' => $storeCopy['new_arrival'], 'items' => $newCollections, 'filters' => ['sort' => 'newest']],
+        'best' => ['label' => $storeCopy['best_seller'], 'items' => $bestCollections, 'filters' => ['sort' => 'best_selling']],
+        'sale' => ['label' => $storeCopy['sale_title'], 'items' => $saleCollections, 'filters' => ['sale' => 1]],
+    ])->filter(fn ($edit) => $edit['items']->isNotEmpty());
     $merchandiseGroups = $collections
         ->groupBy('category_id')
         ->map(fn ($items) => [
@@ -29,8 +34,25 @@
     $featuredCollection = $collections->firstWhere('slug', $shop['home_featured_slug'] ?? '') ?: $collections->first();
     $categorySlugs = collect(preg_split('/[,\r\n]+/', $shop['home_category_slugs'] ?? ''))->map(fn($slug)=>trim($slug))->filter();
     $categoryCollections = $categorySlugs->isEmpty() ? $collections->unique('category_id')->take(3) : $categorySlugs->map(fn($slug)=>$collections->firstWhere('slug',$slug))->filter()->unique('category_id')->take(3);
-    $homeOrder = collect($shop['home_section_order'] ?? array_keys(config('storefront.home_sections')));
+    $defaultOrder = collect(array_keys(config('storefront.home_sections')));
+    $homeOrder = collect($shop['home_section_order'] ?? $defaultOrder->all());
+    if (!$homeOrder->contains('campaign') || !$homeOrder->contains('new_in')) {
+        $openingSections = $defaultOrder->take(5);
+        $homeOrder = $openingSections->concat($homeOrder->diff($openingSections));
+    }
+    $homeOrder = $homeOrder->concat($defaultOrder->diff($homeOrder))->values();
     $homePosition = fn(string $section) => (($position=$homeOrder->search($section)) === false ? 99 : $position) + 1;
+    $heroVideoUrl = fn ($path) => match ($path) {
+        'demo/hero-desktop.webm' => route('media.demo-hero', 'desktop'),
+        'demo/hero-mobile.webm' => route('media.demo-hero', 'mobile'),
+        null, '' => null,
+        default => asset('storage/'.$path),
+    };
+    $videoHero = ($shop['hero_video_enabled'] ?? false) && !empty($shop['hero_video']);
+    $heroContentStyle = $shop['hero_content_style'] ?? 'editorial';
+    $heroContentClass = $videoHero && $heroContentStyle === 'editorial' ? '' : 'hero-content-'.$heroContentStyle;
+    $homeBanners = $contentEntries->where('type', 'banner');
+    $campaign = $homeBanners->first();
     $heroSlides = collect([[
         'image' => !empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg'),
         'eyebrow' => $shop['hero_eyebrow'] ?? 'NEW COLLECTION',
@@ -39,9 +61,9 @@
         'url' => $shop['hero_button_url'] ?? route('catalog'),
         'label' => $shop['hero_button_label'] ?? 'Belanja sekarang',
         'align' => 'left', 'tone' => 'light', 'duration' => 6500, 'mobile_image' => null,
-        'video' => ($shop['hero_video_enabled'] ?? false) && !empty($shop['hero_video']) ? asset('storage/'.$shop['hero_video']) : null,
-        'mobile_video' => ($shop['hero_video_enabled'] ?? false) && !empty($shop['hero_video_mobile']) ? asset('storage/'.$shop['hero_video_mobile']) : null,
-    ]])->concat($contentEntries->where('type', 'banner')->map(fn ($entry) => [
+        'video' => $videoHero ? $heroVideoUrl($shop['hero_video']) : null,
+        'mobile_video' => $videoHero ? $heroVideoUrl($shop['hero_video_mobile'] ?? null) : null,
+    ]])->concat(($videoHero ? collect() : $homeBanners)->map(fn ($entry) => [
         'image' => $entry->image_url ?: (!empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg')),
         'eyebrow' => 'ASFARA EDIT',
         'title' => $entry->title,
@@ -61,24 +83,37 @@
 <style>.home-transparent-header #main{display:flex;flex-direction:column}</style>
 @endpush
 @php($heroAutoplayMs=(int)round((float)($shop['hero_autoplay_seconds'] ?? 5)*1000))
-<section class="commerce-hero hero-content-{{ $shop['hero_content_style'] ?? 'editorial' }}" style="order:{{ $homePosition('hero') }}" data-hero-slider aria-roledescription="carousel">
+<section @class(['commerce-hero', 'hero-content-video' => $videoHero, $heroContentClass => $heroContentClass !== '']) style="order:{{ $homePosition('hero') }}" data-hero-slider @if($heroSlides->count()>1) aria-roledescription="carousel" @endif>
     @foreach($heroSlides as $slide)
         <article class="commerce-hero-slide hero-align-{{ $slide['align'] }} hero-tone-{{ $slide['tone'] }} {{ $loop->first?'is-active':'' }}" data-hero-slide data-duration="{{ $loop->first ? $heroAutoplayMs : (int) $slide['duration'] }}" aria-hidden="{{ $loop->first?'false':'true' }}">
             @if($slide['video'])
                 <video class="commerce-hero-video" poster="{{ $slide['image'] }}" autoplay muted loop playsinline preload="metadata" data-hero-video>@if($slide['mobile_video'])<source media="(max-width:767px)" src="{{ $slide['mobile_video'] }}">@endif<source src="{{ $slide['video'] }}">Browser Anda belum mendukung video.</video>
-                <button type="button" class="hero-sound-toggle" data-hero-sound aria-label="Aktifkan suara video" aria-pressed="false"><span aria-hidden="true">⌁</span><em>SUARA</em></button>
+                @if(!($loop->first && ($shop['hero_video'] ?? '') === 'demo/hero-desktop.webm'))<button type="button" class="hero-sound-toggle" data-hero-sound aria-label="Aktifkan suara video" aria-pressed="false"><span aria-hidden="true">⌁</span><em>SUARA</em></button>@endif
             @else
                 <picture>@if($slide['mobile_image'])<source media="(max-width:767px)" srcset="{{ $slide['mobile_image'] }}">@endif<img src="{{ $slide['image'] }}" alt="{{ $slide['title'] }}" width="1600" height="800" loading="{{ $loop->first ? 'eager' : 'lazy' }}" fetchpriority="{{ $loop->first ? 'high' : 'low' }}" decoding="async"></picture>
             @endif
             <div class="commerce-hero-overlay"></div>
-            <div class="container-xxl commerce-hero-copy"><span>{{ $slide['eyebrow'] }}</span><h1>{{ $slide['title'] }}</h1><p>{{ $slide['text'] }}</p><a class="btn btn-light" href="{{ $slide['url'] }}">{{ strtoupper($slide['label']) }}</a></div>
+            <div class="container-xxl commerce-hero-copy">
+                @unless($videoHero)<span>{{ $slide['eyebrow'] }}</span>@endunless
+                <h1>{{ $videoHero ? (($shop['hero_eyebrow'] ?? '') ?: ($shop['brand_name'] ?? 'Asfara')) : $slide['title'] }}</h1>
+                @unless($videoHero)<p>{{ $slide['text'] }}</p>@endunless
+                <a class="btn btn-light" href="{{ $slide['url'] }}">{{ strtoupper($slide['label']) }}</a>
+            </div>
         </article>
     @endforeach
     @if($heroSlides->count()>1)<div class="hero-dots" aria-label="Posisi banner">@foreach($heroSlides as $slide)<span class="{{ $loop->first?'is-active':'' }}" data-hero-dot="{{ $loop->index }}" aria-hidden="true"></span>@endforeach</div>@endif
-    <a class="hero-next-section" href="#featured" aria-label="Ke produk unggulan">
+    <a class="hero-next-section" href="{{ ($shop['home_collections_enabled'] ?? true) ? '#new-in' : route('catalog') }}" aria-label="Ke koleksi terbaru">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
     </a>
 </section>
+@if($videoHero && $campaign)
+    <section class="home-campaign-preview" style="order:{{ $homePosition('campaign') }}" aria-label="{{ $campaign->title }}">
+        <a href="{{ $campaign->link_url ?: route('catalog') }}">
+            <img src="{{ $campaign->image_url ?: $heroSlides->first()['image'] }}" alt="" width="1600" height="800" loading="lazy" decoding="async">
+            <span>{{ $campaign->link_label ?: 'Lihat koleksi' }}</span>
+        </a>
+    </section>
+@endif
 @if(($shop['home_featured_enabled'] ?? true) && ($featured=$featuredCollection))
 @php($featuredVariants=$featured->variants->where('fulfillment','!=','custom_made')->filter(fn($variant)=>$variant->available>0))
 @php($featuredImages=$featured->media->pluck('image_url')->prepend($featured->image_url)->filter()->unique()->values())
@@ -99,19 +134,19 @@
 </section>@endif
 
 @if($shop['home_collections_enabled'] ?? true)
-<section class="commerce-section home-new-in container-xxl reveal" id="featured" style="order:{{ $homePosition('collections') }}">
+<section class="commerce-section home-new-in container-xxl reveal" id="new-in" style="order:{{ $homePosition('new_in') }}">
     <div class="commerce-heading"><h2>NEW IN</h2><a href="{{ route('catalog',['sort'=>'newest']) }}">{{ $storeCopy['view_all'] }}</a></div>
     <div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@forelse($newCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@empty<div class="empty-state"><h3>Koleksi sedang disiapkan.</h3></div>@endforelse</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div>
 </section>
 
-@if($merchandiseGroups->isNotEmpty())
+@if($collectionEdits->isNotEmpty())
 <section class="commerce-section latest-collection container-xxl reveal" style="order:{{ $homePosition('collections') }}">
     <div class="commerce-heading"><h2>LATEST COLLECTION</h2><a href="{{ route('catalog') }}">{{ $storeCopy['view_all'] }}</a></div>
-    <div class="collection-tabs" role="tablist" aria-label="Kategori koleksi terbaru">
-        @foreach($merchandiseGroups as $group)<button class="{{ $loop->first?'is-active':'' }}" type="button" data-collection-tab="category-{{ $group['category']->id }}">{{ strtoupper($group['category']->name) }}</button>@endforeach
+    <div class="collection-tabs" role="group" aria-label="Pilihan koleksi terbaru">
+        @foreach($collectionEdits as $key => $edit)<button class="{{ $loop->first?'is-active':'' }}" type="button" aria-pressed="{{ $loop->first ? 'true' : 'false' }}" data-collection-tab="{{ $key }}">{{ $edit['label'] }}</button>@endforeach
     </div>
-    @foreach($merchandiseGroups as $group)
-        <div class="collection-pane {{ $loop->first?'is-active':'' }}" data-collection-pane="category-{{ $group['category']->id }}"><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($group['items'] as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div></div>
+    @foreach($collectionEdits as $key => $edit)
+        <div class="collection-pane {{ $loop->first?'is-active':'' }}" data-collection-pane="{{ $key }}"><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($edit['items'] as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div><div class="text-center mt-4"><a class="btn btn-outline-dark" href="{{ route('catalog', $edit['filters']) }}">{{ $storeCopy['view_all'] }}</a></div></div>
     @endforeach
 </section>
 @endif
@@ -164,4 +199,18 @@
 document.addEventListener('DOMContentLoaded',()=>{const look=document.querySelector('[data-look-carousel]');if(!look)return;let startX=0,timer;const restart=()=>{clearInterval(timer);if(!matchMedia('(prefers-reduced-motion: reduce)').matches)timer=setInterval(()=>document.querySelector('[data-look-next]')?.click(),7000)};look.addEventListener('pointerdown',event=>startX=event.clientX);look.addEventListener('pointerup',event=>{const delta=event.clientX-startX;if(Math.abs(delta)>55)document.querySelector(delta<0?'[data-look-next]':'[data-look-prev]')?.click();restart()});look.addEventListener('mouseenter',()=>clearInterval(timer));look.addEventListener('mouseleave',restart);restart()});
 </script>
 @endsection
-@push('scripts')<script>document.querySelectorAll('[data-collection-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-collection-tab]').forEach(item=>item.classList.toggle('is-active',item===button));document.querySelectorAll('[data-collection-pane]').forEach(pane=>pane.classList.toggle('is-active',pane.dataset.collectionPane===button.dataset.collectionTab))}));const featuredSelect=document.querySelector('[data-featured-select]');const featuredSelected={};const featuredOption=featuredSelect?.selectedOptions[0];if(featuredOption?.value){featuredSelected.type=featuredOption.dataset.type;featuredSelected.color=featuredOption.dataset.color;featuredSelected.size=featuredOption.dataset.size}const updateFeatured=()=>{if(!featuredSelect)return;const options=[...featuredSelect.options].filter(option=>option.value);document.querySelectorAll('[data-featured-kind]').forEach(button=>{const kind=button.dataset.featuredKind;const possible=options.some(option=>option.dataset[kind]===button.dataset.value&&Object.entries(featuredSelected).every(([key,value])=>key===kind||!value||option.dataset[key]===value));button.disabled=!possible;button.classList.toggle('is-unavailable',!possible)});const match=options.find(option=>(!featuredSelected.type||option.dataset.type===featuredSelected.type)&&(!featuredSelected.color||option.dataset.color===featuredSelected.color)&&(!featuredSelected.size||option.dataset.size===featuredSelected.size));featuredSelect.value=match?.value||'';document.querySelectorAll('[data-featured-submit]').forEach(item=>item.disabled=!match)};document.querySelectorAll('[data-featured-kind]').forEach(button=>button.addEventListener('click',()=>{featuredSelected[button.dataset.featuredKind]=button.dataset.value;document.querySelectorAll('[data-featured-kind="'+button.dataset.featuredKind+'"]').forEach(item=>item.classList.toggle('is-active',item===button));updateFeatured()}));updateFeatured();const featuredChoices=[...document.querySelectorAll('[data-featured-image-choice]')];let featuredImageIndex=0;const showFeaturedImage=index=>{featuredImageIndex=(index+featuredChoices.length)%featuredChoices.length;const button=featuredChoices[featuredImageIndex];if(!button)return;document.querySelector('[data-featured-image]').src=button.dataset.featuredImageChoice;featuredChoices.forEach(item=>item.classList.toggle('is-active',item===button))};featuredChoices.forEach((button,index)=>button.addEventListener('click',()=>showFeaturedImage(index)));document.querySelector('[data-featured-prev]')?.addEventListener('click',()=>showFeaturedImage(featuredImageIndex-1));document.querySelector('[data-featured-next]')?.addEventListener('click',()=>showFeaturedImage(featuredImageIndex+1));const featuredQuantity=document.querySelector('[data-featured-quantity]');document.querySelectorAll('[data-featured-qty]').forEach(button=>button.addEventListener('click',()=>{featuredQuantity.value=Math.max(1,Math.min(100,Number(featuredQuantity.value)+Number(button.dataset.featuredQty)))}));const lookEsc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));document.querySelectorAll('[data-look-slide]').forEach(slide=>{const buttons=[...slide.querySelectorAll('[data-look-product]')];const selectLookProduct=button=>{const product=JSON.parse(document.getElementById(button.dataset.lookSource).textContent);buttons.forEach(item=>{const selected=item===button;item.classList.toggle('is-active',selected);item.setAttribute('aria-pressed',selected?'true':'false')});slide.querySelector('[data-look-detail]').innerHTML=`<img src="${lookEsc(product.image)}" alt="" width="160" height="200" loading="lazy" decoding="async"><div><small>SHOP THE LOOK</small><h3>${lookEsc(product.name)}</h3><strong>${lookEsc(product.price)}</strong><a href="${lookEsc(product.url)}">LIHAT PRODUK →</a></div>`};buttons.forEach(button=>button.addEventListener('click',()=>selectLookProduct(button)));if(buttons[0])selectLookProduct(buttons[0])});const lookSlides=[...document.querySelectorAll('[data-look-slide]')];let lookActive=0;const showLook=index=>{lookActive=(index+lookSlides.length)%lookSlides.length;lookSlides.forEach((slide,i)=>{slide.classList.toggle('is-active',i===lookActive);slide.setAttribute('aria-hidden',i===lookActive?'false':'true')});document.querySelector('[data-look-current]')?.replaceChildren(document.createTextNode(String(lookActive+1)))};document.querySelector('[data-look-prev]')?.addEventListener('click',()=>showLook(lookActive-1));document.querySelector('[data-look-next]')?.addEventListener('click',()=>showLook(lookActive+1));</script>@endpush
+@push('scripts')
+<script>
+const collectionTabs = document.querySelectorAll('[data-collection-tab]');
+const collectionPanes = document.querySelectorAll('[data-collection-pane]');
+collectionTabs.forEach(button => button.addEventListener('click', () => {
+    collectionTabs.forEach(tab => {
+        const selected = tab === button;
+        tab.classList.toggle('is-active', selected);
+        tab.setAttribute('aria-pressed', String(selected));
+    });
+    collectionPanes.forEach(pane => {
+        pane.classList.toggle('is-active', pane.dataset.collectionPane === button.dataset.collectionTab);
+    });
+}));
+const featuredSelect=document.querySelector('[data-featured-select]');const featuredSelected={};const featuredOption=featuredSelect?.selectedOptions[0];if(featuredOption?.value){featuredSelected.type=featuredOption.dataset.type;featuredSelected.color=featuredOption.dataset.color;featuredSelected.size=featuredOption.dataset.size}const updateFeatured=()=>{if(!featuredSelect)return;const options=[...featuredSelect.options].filter(option=>option.value);document.querySelectorAll('[data-featured-kind]').forEach(button=>{const kind=button.dataset.featuredKind;const possible=options.some(option=>option.dataset[kind]===button.dataset.value&&Object.entries(featuredSelected).every(([key,value])=>key===kind||!value||option.dataset[key]===value));button.disabled=!possible;button.classList.toggle('is-unavailable',!possible)});const match=options.find(option=>(!featuredSelected.type||option.dataset.type===featuredSelected.type)&&(!featuredSelected.color||option.dataset.color===featuredSelected.color)&&(!featuredSelected.size||option.dataset.size===featuredSelected.size));featuredSelect.value=match?.value||'';document.querySelectorAll('[data-featured-submit]').forEach(item=>item.disabled=!match)};document.querySelectorAll('[data-featured-kind]').forEach(button=>button.addEventListener('click',()=>{featuredSelected[button.dataset.featuredKind]=button.dataset.value;document.querySelectorAll('[data-featured-kind="'+button.dataset.featuredKind+'"]').forEach(item=>item.classList.toggle('is-active',item===button));updateFeatured()}));updateFeatured();const featuredChoices=[...document.querySelectorAll('[data-featured-image-choice]')];let featuredImageIndex=0;const showFeaturedImage=index=>{featuredImageIndex=(index+featuredChoices.length)%featuredChoices.length;const button=featuredChoices[featuredImageIndex];if(!button)return;document.querySelector('[data-featured-image]').src=button.dataset.featuredImageChoice;featuredChoices.forEach(item=>item.classList.toggle('is-active',item===button))};featuredChoices.forEach((button,index)=>button.addEventListener('click',()=>showFeaturedImage(index)));document.querySelector('[data-featured-prev]')?.addEventListener('click',()=>showFeaturedImage(featuredImageIndex-1));document.querySelector('[data-featured-next]')?.addEventListener('click',()=>showFeaturedImage(featuredImageIndex+1));const featuredQuantity=document.querySelector('[data-featured-quantity]');document.querySelectorAll('[data-featured-qty]').forEach(button=>button.addEventListener('click',()=>{featuredQuantity.value=Math.max(1,Math.min(100,Number(featuredQuantity.value)+Number(button.dataset.featuredQty)))}));const lookEsc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));document.querySelectorAll('[data-look-slide]').forEach(slide=>{const buttons=[...slide.querySelectorAll('[data-look-product]')];const selectLookProduct=button=>{const product=JSON.parse(document.getElementById(button.dataset.lookSource).textContent);buttons.forEach(item=>{const selected=item===button;item.classList.toggle('is-active',selected);item.setAttribute('aria-pressed',selected?'true':'false')});slide.querySelector('[data-look-detail]').innerHTML=`<img src="${lookEsc(product.image)}" alt="" width="160" height="200" loading="lazy" decoding="async"><div><small>SHOP THE LOOK</small><h3>${lookEsc(product.name)}</h3><strong>${lookEsc(product.price)}</strong><a href="${lookEsc(product.url)}">LIHAT PRODUK →</a></div>`};buttons.forEach(button=>button.addEventListener('click',()=>selectLookProduct(button)));if(buttons[0])selectLookProduct(buttons[0])});const lookSlides=[...document.querySelectorAll('[data-look-slide]')];let lookActive=0;const showLook=index=>{lookActive=(index+lookSlides.length)%lookSlides.length;lookSlides.forEach((slide,i)=>{slide.classList.toggle('is-active',i===lookActive);slide.setAttribute('aria-hidden',i===lookActive?'false':'true')});document.querySelector('[data-look-current]')?.replaceChildren(document.createTextNode(String(lookActive+1)))};document.querySelector('[data-look-prev]')?.addEventListener('click',()=>showLook(lookActive-1));document.querySelector('[data-look-next]')?.addEventListener('click',()=>showLook(lookActive+1));</script>@endpush

@@ -3,9 +3,11 @@
 return [
     'home_sections' => [
         'hero' => 'Hero / banner',
-        'featured' => 'Produk unggulan',
+        'campaign' => 'Banner kampanye',
+        'new_in' => 'New In',
         'categories' => 'Kategori visual',
-        'collections' => 'Koleksi pilihan',
+        'collections' => 'Latest Collection dan koleksi pilihan',
+        'featured' => 'Produk unggulan',
         'look' => 'Shop the Look',
         'sale' => 'Produk sale',
         'editorial' => 'Konten editorial',

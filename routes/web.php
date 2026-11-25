@@ -9,6 +9,12 @@ use App\Http\Controllers\StoreController as Store;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [Store::class, 'home'])->name('home');
+Route::get('/media/kampanye/{format}', function (string $format) {
+    return response()->file(database_path('seeders/assets/demo/hero-'.$format.'.webm'), [
+        'Content-Type' => 'video/webm',
+        'Cache-Control' => 'private, max-age=86400',
+    ]);
+})->whereIn('format', ['desktop', 'mobile'])->name('media.demo-hero');
 Route::get('/sitemap.xml', [Store::class, 'sitemap'])->name('sitemap');
 Route::get('/bahasa/{locale}', function (string $locale) {
     abort_unless(in_array($locale, ['id', 'en'], true), 404);

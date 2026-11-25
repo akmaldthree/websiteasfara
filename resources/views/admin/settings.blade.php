@@ -1,8 +1,18 @@
 @extends('layouts.admin')
 @section('title','Pengaturan website')
 @section('content')
-@php($get=fn($key,$default='')=>old($key,\App\Models\Setting::get($key,$default)))
-@php($paletteFields=config('theme.palette'))
+@php
+    $get = fn ($key, $default = '') => old($key, \App\Models\Setting::get($key, $default));
+    $paletteFields = config('theme.palette');
+    $homeSections = collect(array_keys(config('storefront.home_sections')));
+    $savedHomeOrderRaw = $get('home_section_order', $homeSections->all());
+    $savedHomeOrder = collect(is_array($savedHomeOrderRaw) ? $savedHomeOrderRaw : preg_split('/[,\r\n]+/', (string) $savedHomeOrderRaw))->filter();
+    if (!$savedHomeOrder->contains('campaign') || !$savedHomeOrder->contains('new_in')) {
+        $openingSections = $homeSections->take(5);
+        $savedHomeOrder = $openingSections->concat($savedHomeOrder->diff($openingSections));
+    }
+    $savedHomeOrder = $savedHomeOrder->concat($homeSections->diff($savedHomeOrder))->values();
+@endphp
 <div class="admin-heading"><div><span class="eyebrow">KONFIGURASI BISNIS & WEBSITE</span><h1>Pengaturan website</h1><p>Atur identitas, tampilan, pembayaran, pengiriman, dan fitur transaksi dari satu halaman.</p></div><a class="btn btn-outline-dark" href="{{ route('home') }}" target="_blank" rel="noopener">Lihat website ↗</a></div>
 <nav class="settings-jump mb-4" aria-label="Bagian pengaturan"><strong>Lompat ke:</strong><a href="#settings-brand">Brand</a><a href="#settings-theme">Tampilan</a><a href="#settings-home">Beranda & SEO</a><a href="#settings-copy">Teks storefront</a><a href="#settings-preview">Preview</a><a href="#settings-integrations">Integrasi</a><a href="#settings-transactions">Transaksi</a></nav>
 <form method="post" enctype="multipart/form-data" action="{{ route('admin.settings.save') }}">@csrf
@@ -50,8 +60,6 @@
 <div><label for="social_proof_interval">Jeda popup (detik)</label><input class="form-control" id="social_proof_interval" type="number" min="10" max="120" name="social_proof_interval" value="{{ $get('social_proof_interval',24) }}" required></div>
 <div><label for="social_proof_cities">Daftar kota</label><input class="form-control" id="social_proof_cities" name="social_proof_cities" value="{{ $get('social_proof_cities','Jakarta, Bandung, Surabaya, Yogyakarta') }}"><small>Pisahkan dengan koma.</small></div>
 <div class="span-2"><h3 class="h5 mt-3">Urutan isi storefront</h3><p class="small">Aktifkan hanya section yang ingin ditampilkan. Konten dan urutannya tetap dikelola dari kurasi produk, kategori, serta Banner & konten website.</p><div class="d-flex flex-wrap gap-3"><label><input type="checkbox" name="home_featured_enabled" value="1" @checked($get('home_featured_enabled',true))> Featured product</label><label><input type="checkbox" name="home_categories_enabled" value="1" @checked($get('home_categories_enabled',true))> Kategori visual</label><label><input type="checkbox" name="home_collections_enabled" value="1" @checked($get('home_collections_enabled',true))> Featured collection</label><label><input type="checkbox" name="home_look_enabled" value="1" @checked($get('home_look_enabled',true))> Shop the Look</label><label><input type="checkbox" name="home_sale_enabled" value="1" @checked($get('home_sale_enabled',true))> Sale</label><label><input type="checkbox" name="product_related_enabled" value="1" @checked($get('product_related_enabled',true))> Related products</label><label><input type="checkbox" name="cart_recommendations_enabled" value="1" @checked($get('cart_recommendations_enabled',true))> Rekomendasi keranjang</label><label><input type="checkbox" name="home_editorial_sections_enabled" value="1" @checked($get('home_editorial_sections_enabled',false))> Editorial lain</label><label><input type="checkbox" name="home_story_enabled" value="1" @checked($get('home_story_enabled',false))> Cerita brand</label></div></div>
-@php($savedHomeOrderRaw=$get('home_section_order',array_keys(config('storefront.home_sections'))))
-@php($savedHomeOrder=collect(is_array($savedHomeOrderRaw)?$savedHomeOrderRaw:preg_split('/[,\r\n]+/',(string)$savedHomeOrderRaw))->filter()->values())
 <div class="span-2"><label>Urutan section beranda</label><input type="hidden" name="home_section_order" id="home-section-order" value="{{ $savedHomeOrder->implode(',') }}"><ol class="home-order-list" id="home-order-list">@foreach($savedHomeOrder as $section)@if(config('storefront.home_sections.'.$section))<li data-section="{{ $section }}"><span>{{ config('storefront.home_sections.'.$section) }}</span><span><button type="button" class="btn btn-outline-dark btn-sm" data-order-up aria-label="Naikkan">↑</button><button type="button" class="btn btn-outline-dark btn-sm" data-order-down aria-label="Turunkan">↓</button></span></li>@endif @endforeach</ol><small>Gunakan panah untuk menentukan urutan tampil dari atas ke bawah.</small></div>
 @foreach(['welcome_voucher_title'=>'Judul popup','welcome_voucher_code'=>'Kode voucher'] as $key=>$label)<div><label for="{{ $key }}">{{ $label }}</label><input class="form-control" id="{{ $key }}" name="{{ $key }}" value="{{ $get($key) }}"></div>@endforeach
 <div class="span-2"><label for="welcome_voucher_text">Keterangan popup</label><textarea class="form-control" id="welcome_voucher_text" name="welcome_voucher_text" rows="3">{{ $get('welcome_voucher_text') }}</textarea></div>

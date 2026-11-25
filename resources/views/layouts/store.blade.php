@@ -184,7 +184,50 @@ document.addEventListener('click',event=>document.querySelectorAll('.language-pi
 document.querySelectorAll('[data-product-voucher-copy]').forEach(button=>button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(button.dataset.productVoucherCopy);button.querySelector('small').textContent='KODE TERSALIN'}catch(error){button.querySelector('small').textContent=button.dataset.productVoucherCopy}}));
 const socialProof=document.getElementById('social-proof'),socialProofSource=document.getElementById('social-proof-data');if(socialProof&&socialProofSource&&!sessionStorage.getItem('asfara-social-proof-dismissed')){const products=JSON.parse(socialProofSource.textContent),cities=@json($socialProofCities ?? []),interval=Math.max(10,Number(@json($shop['social_proof_interval'] ?? 24)))*1000;let proofIndex=0,proofTimer,proofHideTimer;const hideProof=()=>socialProof.classList.remove('is-visible');const showProof=()=>{clearTimeout(proofTimer);if(document.querySelector('dialog[open]')){proofTimer=setTimeout(showProof,4000);return}const product=products[proofIndex%products.length],city=cities[proofIndex%Math.max(1,cities.length)]||'Indonesia';proofIndex++;socialProof.querySelector('[data-social-proof-link]').href=product.url;socialProof.querySelector('[data-social-proof-image]').src=product.image;socialProof.querySelector('[data-social-proof-image]').alt=product.name;socialProof.querySelector('[data-social-proof-name]').textContent=product.name;socialProof.querySelector('[data-social-proof-meta]').textContent=`Pelanggan di ${city} · ${4+(proofIndex*7)%43} menit lalu`;socialProof.hidden=false;requestAnimationFrame(()=>socialProof.classList.add('is-visible'));clearTimeout(proofHideTimer);proofHideTimer=setTimeout(()=>{hideProof();proofTimer=setTimeout(showProof,interval)},6500)};proofTimer=setTimeout(showProof,7000);socialProof.querySelector('[data-social-proof-close]')?.addEventListener('click',()=>{clearTimeout(proofTimer);clearTimeout(proofHideTimer);hideProof();sessionStorage.setItem('asfara-social-proof-dismissed','1')})}
 document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;closeCatalog();document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());document.querySelector('[data-filter-panel]')?.classList.remove('is-open')});document.querySelectorAll('.mobile-nav a').forEach(link=>link.addEventListener('click',()=>bootstrap.Collapse.getInstance(document.getElementById('mobile-nav'))?.hide()));
-const welcomeVoucher=document.getElementById('welcome-voucher');if(welcomeVoucher){const storage=Number(welcomeVoucher.dataset.frequencyDays)===0?sessionStorage:localStorage,key='asfara-welcome-voucher',lastShown=Number(storage.getItem(key)||0),frequency=Math.max(0,Number(welcomeVoucher.dataset.frequencyDays))*86400000,canShow=!lastShown||frequency===0||Date.now()-lastShown>=frequency;if(canShow)setTimeout(()=>{if(!document.querySelector('dialog[open]')){welcomeVoucher.showModal();storage.setItem(key,String(Date.now()))}},Math.max(0,Number(welcomeVoucher.dataset.delay)||0)*1000)}document.querySelector('[data-close-welcome]')?.addEventListener('click',()=>welcomeVoucher.close());welcomeVoucher?.addEventListener('click',event=>{if(event.target===welcomeVoucher)welcomeVoucher.close()});document.querySelector('[data-copy-voucher]')?.addEventListener('click',async event=>{try{await navigator.clipboard.writeText(event.currentTarget.dataset.copyVoucher);event.currentTarget.querySelector('small').textContent='KODE TERSALIN'}catch(error){event.currentTarget.querySelector('small').textContent=event.currentTarget.dataset.copyVoucher}});})();
+const welcomeVoucher = document.getElementById('welcome-voucher');
+if (welcomeVoucher) {
+    const days = Number(welcomeVoucher.dataset.frequencyDays);
+    const storage = days === 0 ? sessionStorage : localStorage;
+    const key = 'asfara-welcome-voucher';
+    const lastShown = Number(storage.getItem(key) || 0);
+    const canShow = !lastShown || (days > 0 && Date.now() - lastShown >= days * 86400000);
+    const showVoucher = () => {
+        if (document.querySelector('dialog[open]')) return;
+        welcomeVoucher.showModal();
+        storage.setItem(key, String(Date.now()));
+    };
+    if (canShow) {
+        setTimeout(() => {
+            const hero = document.querySelector('[data-hero-slider]');
+            if (!hero || hero.getBoundingClientRect().bottom <= 0 || !('IntersectionObserver' in window)) {
+                showVoucher();
+                return;
+            }
+            const observer = new IntersectionObserver(([entry]) => {
+                if (!entry.isIntersecting && entry.boundingClientRect.bottom <= 0) {
+                    observer.disconnect();
+                    showVoucher();
+                }
+            });
+            observer.observe(hero);
+        }, Math.max(0, Number(welcomeVoucher.dataset.delay) || 0) * 1000);
+    }
+    welcomeVoucher.querySelector('[data-close-welcome]')?.addEventListener('click', () => welcomeVoucher.close());
+    welcomeVoucher.addEventListener('click', event => {
+        if (event.target === welcomeVoucher) welcomeVoucher.close();
+    });
+    welcomeVoucher.querySelector('[data-copy-voucher]')?.addEventListener('click', async event => {
+        const button = event.currentTarget;
+        const label = button.querySelector('small');
+        try {
+            await navigator.clipboard.writeText(button.dataset.copyVoucher);
+            label.textContent = 'KODE TERSALIN';
+        } catch (error) {
+            label.textContent = button.dataset.copyVoucher;
+        }
+    });
+}
+})();
 </script>
 @stack('scripts')
 <script>
