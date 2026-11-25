@@ -56,18 +56,28 @@ class StoreController extends Controller
     {
         $analytics->record($request, 'view_home');
         $contentEntries = ContentEntry::published()->whereIn('type', ['banner', 'home_section'])->orderBy('sort_order')->get();
-        $collections = Series::published()
-            ->with(['category', 'media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
-            ->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')
+        $collections = Series::published()->withStoreCard()
             ->withSum(['orderItems as sold_quantity' => fn ($query) => $query->whereHas('order', fn ($order) => $order->whereNotIn('status', ['cancelled']))], 'quantity')
-            ->withCount('reviews')->withAvg('reviews', 'rating')
             ->orderByDesc('featured')->latest()->take(24)->get();
         $lookProductIds = $contentEntries->flatMap(fn ($entry) => collect($entry->blocks)->where('type', 'product_hotspot')->pluck('series_id'))->filter()->unique();
         $lookProducts = Series::published()->whereIn('id', $lookProductIds)
             ->with(['media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
             ->withMin(['variants' => fn ($query) => $query->where('active', true)], 'price')->get()->keyBy('id');
 
-        return view('store.home', compact('collections', 'contentEntries', 'lookProducts'));
+        $campaigns = ContentEntry::published()->where('type', 'campaign')->orderBy('sort_order')->orderBy('id')
+            ->get(['id', 'title', 'slug', 'image', 'blocks'])
+            ->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty())->take(12);
+        $campaignProductIds = $campaigns->flatMap(fn (ContentEntry $campaign) => $campaign->campaignProductIds())->unique();
+        $campaignProducts = Series::published()->withStoreCard()->whereKey($campaignProductIds->all())
+            ->whereHas('variants', fn ($variants) => $variants->where('active', true))->get()->keyBy('id');
+        $campaignEdits = $campaigns->mapWithKeys(fn (ContentEntry $campaign) => ['campaign-'.$campaign->id => [
+            'label' => $campaign->title,
+            'image' => $campaign->image_url,
+            'items' => $campaign->campaignProductIds()->map(fn (int $id) => $campaignProducts->get($id))->filter()->take(8),
+            'url' => route('content.show', ['campaign', $campaign->slug]),
+        ]])->filter(fn (array $campaign) => $campaign['items']->isNotEmpty())->take(8);
+
+        return view('store.home', compact('collections', 'contentEntries', 'lookProducts', 'campaignEdits'));
     }
 
     public function catalog(Request $r, Analytics $analytics)
@@ -571,7 +581,10 @@ class StoreController extends Controller
     {
         abort_unless(in_array($type, ['faq', 'journal', 'lookbook', 'campaign']), 404);
 
-        return view('store.content', ['entry' => ContentEntry::published()->where('type', $type)->where('slug', $slug)->firstOrFail()]);
+        $entry = ContentEntry::published()->where('type', $type)->where('slug', $slug)->firstOrFail();
+        $campaignProducts = $type === 'campaign' ? $entry->campaignProducts() : collect();
+
+        return view('store.content', compact('entry', 'campaignProducts'));
     }
 
     public function contentIndex(string $type)

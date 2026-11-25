@@ -9,17 +9,18 @@
     @php($purchasableVariants=$quickVariants->where('available','>',0)->values())
     @php($availableStock=$collection->variants->sum(fn($variant)=>max(0,(int)$variant->stock-(int)$variant->reserved)))
     @php($isSignature=str_contains(mb_strtolower($collection->name),'signature'))
+    @php($cardKey=($cardContext ?? '').$collection->id)
     <a @class(['product-image', 'has-secondary-image' => $secondaryImage]) href="{{ route('product',$collection->slug) }}">
         <img class="product-image-primary" src="{{ $primaryImage }}" style="object-position:{{ $primaryMedia?->focal_x ?? 50 }}% {{ $primaryMedia?->focal_y ?? 50 }}%" alt="{{ $collection->name }}{{ $collection->image ? '' : ' — ilustrasi koleksi' }}" width="800" height="1000" loading="lazy" decoding="async">
         @if($secondaryImage)<img class="product-image-secondary" src="{{ $secondaryImage }}" style="object-position:{{ $secondaryMedia->focal_x }}% {{ $secondaryMedia->focal_y }}%" alt="{{ $collection->name }} — tampilan berikutnya" width="800" height="1000" loading="lazy" decoding="async">@endif
         @if($availableStock<=0)<span class="product-tag product-tag-sold">SOLD OUT</span>@elseif($saving>0)<span class="product-tag product-tag-sale">SAVE IDR {{ number_format($saving,0,',','.') }},00</span>@elseif($isSignature)<span class="product-tag product-tag-signature">SIGNATURE</span>@elseif($collection->featured)<span class="product-tag product-tag-new">NEW IN</span>@endif
     </a>
     @if($purchasableVariants->count()===1)
-        <form id="direct-add-{{ $collection->id }}" method="post" action="{{ route('cart.add') }}" data-submit-once hidden>@csrf<input type="hidden" name="variant_id" value="{{ $purchasableVariants->first()['id'] }}"><input type="hidden" name="quantity" value="1"></form>
-        <button type="submit" form="direct-add-{{ $collection->id }}" class="product-quick">ADD TO CART</button>
+        <form id="direct-add-{{ $cardKey }}" method="post" action="{{ route('cart.add') }}" data-submit-once hidden>@csrf<input type="hidden" name="variant_id" value="{{ $purchasableVariants->first()['id'] }}"><input type="hidden" name="quantity" value="1"></form>
+        <button type="submit" form="direct-add-{{ $cardKey }}" class="product-quick">ADD TO CART</button>
     @elseif($quickVariants->isNotEmpty())
-        <button type="button" class="product-quick" data-quick-open="quick-product-{{ $collection->id }}">PILIH OPSI</button>
-        <script type="application/json" id="quick-product-{{ $collection->id }}">{!! json_encode(['name'=>$collection->name,'url'=>route('product',$collection->slug),'image'=>$primaryImage,'usesType'=>(bool)$collection->uses_product_type,'variants'=>$quickVariants], JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
+        <button type="button" class="product-quick" data-quick-open="quick-product-{{ $cardKey }}">PILIH OPSI</button>
+        <script type="application/json" id="quick-product-{{ $cardKey }}">{!! json_encode(['name'=>$collection->name,'url'=>route('product',$collection->slug),'image'=>$primaryImage,'usesType'=>(bool)$collection->uses_product_type,'variants'=>$quickVariants], JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
     @endif
     <div class="product-meta"><h3><a href="{{ route('product',$collection->slug) }}">{{ strtoupper($collection->name) }}</a></h3><div class="product-card-prices"><span @class(['sale-price'=>$collection->compare_at_price>$sellingPrice])><small>{{ $collection->compare_at_price>$sellingPrice?'HARGA SALE':'HARGA' }}</small>@rupiah($sellingPrice)</span>@if($collection->compare_at_price>$sellingPrice)<del><small>HARGA NORMAL</small>@rupiah($collection->compare_at_price)</del>@endif</div></div>
     @php($cardColors=$collection->variants->pluck('color')->filter()->unique()->values())

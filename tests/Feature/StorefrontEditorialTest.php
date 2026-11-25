@@ -67,6 +67,43 @@ class StorefrontEditorialTest extends TestCase
         $this->actingAs($admin)->get(route('admin.resources', 'newsletter'))->assertOk()->assertSee('customer@example.com');
     }
 
+    public function test_campaign_products_publish_in_editor_order_across_home_navigation_and_landing_page(): void
+    {
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $second = Series::create(['category_id' => $this->series->category_id, 'name' => 'Aster Edition', 'slug' => 'aster-edition', 'active' => true]);
+        Variant::create(['series_id' => $second->id, 'sku' => 'ASTER-OLV-M', 'color' => 'Olive', 'size' => 'M', 'price' => 399000, 'stock' => 8, 'weight' => 500, 'active' => true]);
+        $entry = ContentEntry::create(['type' => 'campaign', 'title' => 'Kampanye Aster', 'slug' => 'kampanye-aster', 'active' => false]);
+        $products = [
+            ['type' => 'campaign_product', 'series_id' => $second->id],
+            ['type' => 'campaign_product', 'series_id' => $this->series->id],
+        ];
+        $payload = [
+            'type' => 'campaign', 'title' => $entry->title, 'slug' => $entry->slug, 'summary' => 'Koleksi pilihan.',
+            'template' => 'standard', 'blocks' => json_encode($products), 'sort_order' => 1,
+            'editorial_status' => 'approved', 'active' => '1',
+        ];
+
+        $this->actingAs($admin)->get(route('admin.edit', ['content', $entry->id]))->assertOk()->assertSee('Produk kampanye');
+        $this->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasNoErrors();
+        $url = route('content.show', ['campaign', $entry->slug]);
+        $this->get(route('home'))->assertOk()
+            ->assertSee('class="campaign-nav"', false)
+            ->assertSee($url, false)
+            ->assertSee('data-collection-tab="campaign-'.$entry->id.'"', false);
+        $this->get($url)->assertOk()->assertSeeInOrder(['ASTER EDITION', 'ZAYNA SERIES']);
+
+        $payload['blocks'] = json_encode([$products[0], $products[0]]);
+        $this->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasErrors('blocks');
+        $this->assertCount(2, $entry->fresh()->campaignProductIds());
+
+        $second->update(['active' => false]);
+        $this->get($url)->assertOk()->assertSee('ZAYNA SERIES')->assertDontSee('ASTER EDITION');
+        $entry->update(['starts_at' => now()->addDay()]);
+        $this->get($url)->assertNotFound();
+        $this->get(route('home'))->assertOk()->assertDontSee('data-collection-tab="campaign-'.$entry->id.'"', false)->assertDontSee($url, false);
+    }
+
     public function test_editorial_indexes_and_catalog_facets_render(): void
     {
         ContentEntry::create(['type' => 'lookbook', 'title' => 'Eid Lookbook', 'slug' => 'eid-lookbook', 'summary' => 'Inspirasi tampilan.', 'active' => true]);

@@ -15,6 +15,7 @@
         'best' => ['label' => $storeCopy['best_seller'], 'items' => $bestCollections, 'filters' => ['sort' => 'best_selling']],
         'sale' => ['label' => $storeCopy['sale_title'], 'items' => $saleCollections, 'filters' => ['sale' => 1]],
     ])->filter(fn ($edit) => $edit['items']->isNotEmpty());
+    $collectionEdits = $campaignEdits->isNotEmpty() ? $campaignEdits : $collectionEdits;
     $merchandiseGroups = $collections
         ->groupBy('category_id')
         ->map(fn ($items) => [
@@ -43,8 +44,8 @@
     $homeOrder = $homeOrder->concat($defaultOrder->diff($homeOrder))->values();
     $homePosition = fn(string $section) => (($position=$homeOrder->search($section)) === false ? 99 : $position) + 1;
     $heroVideoUrl = fn ($path) => match ($path) {
-        'demo/hero-desktop.webm' => route('media.demo-hero', 'desktop'),
-        'demo/hero-mobile.webm' => route('media.demo-hero', 'mobile'),
+        'demo/hero-desktop.webm' => route('media.demo-hero', ['format' => 'desktop', 'v' => filemtime(database_path('seeders/assets/demo/hero-desktop.webm'))]),
+        'demo/hero-mobile.webm' => route('media.demo-hero', ['format' => 'mobile', 'v' => filemtime(database_path('seeders/assets/demo/hero-mobile.webm'))]),
         null, '' => null,
         default => asset('storage/'.$path),
     };
@@ -146,7 +147,13 @@
         @foreach($collectionEdits as $key => $edit)<button class="{{ $loop->first?'is-active':'' }}" type="button" aria-pressed="{{ $loop->first ? 'true' : 'false' }}" data-collection-tab="{{ $key }}">{{ $edit['label'] }}</button>@endforeach
     </div>
     @foreach($collectionEdits as $key => $edit)
-        <div class="collection-pane {{ $loop->first?'is-active':'' }}" data-collection-pane="{{ $key }}"><div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($edit['items'] as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div><div class="text-center mt-4"><a class="btn btn-outline-dark" href="{{ route('catalog', $edit['filters']) }}">{{ $storeCopy['view_all'] }}</a></div></div>
+        <div class="collection-pane {{ $loop->first?'is-active':'' }}" data-collection-pane="{{ $key }}">
+            @if(!empty($edit['image']))
+                <a class="campaign-tab-banner" href="{{ $edit['url'] }}" aria-label="{{ $edit['label'] }}"><img src="{{ $edit['image'] }}" alt="" width="1600" height="800" loading="lazy" decoding="async"></a>
+            @endif
+            <div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@foreach($edit['items'] as $collection)<div class="product-carousel-item">@include('partials.product-card', ['cardContext' => $key.'-'])</div>@endforeach</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div>
+            <div class="text-center mt-4"><a class="btn btn-outline-dark" href="{{ $edit['url'] ?? route('catalog', $edit['filters']) }}">{{ $storeCopy['view_all'] }}</a></div>
+        </div>
     @endforeach
 </section>
 @endif

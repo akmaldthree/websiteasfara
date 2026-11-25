@@ -226,6 +226,80 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
     background: linear-gradient(180deg, #14120f55, #14120f66);
 }
 
+.campaign-nav {
+    position: relative;
+    color: inherit;
+}
+
+.campaign-nav summary {
+    cursor: pointer;
+    list-style: none;
+    white-space: nowrap;
+}
+
+.campaign-nav summary::-webkit-details-marker {
+    display: none;
+}
+
+.campaign-nav > div {
+    position: absolute;
+    z-index: 8;
+    top: calc(100% + 15px);
+    left: 50%;
+    display: grid;
+    width: max-content;
+    min-width: 220px;
+    max-width: 320px;
+    padding: 14px 18px;
+    transform: translateX(-50%);
+    background: #252421;
+    box-shadow: 0 8px 20px #0003;
+}
+
+.store-body .desktop-nav .campaign-nav a {
+    padding: 9px 0;
+    color: #fff;
+}
+
+.campaign-tab-banner {
+    display: block;
+    margin-bottom: clamp(18px, 3vw, 38px);
+    overflow: hidden;
+}
+
+.campaign-tab-banner img,
+.campaign-detail > img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 480px;
+    aspect-ratio: 2 / 1;
+    object-fit: cover;
+    object-position: center top;
+}
+
+.store-body .product-card .product-tag-sale {
+    background-color: #242320 !important;
+    color: #fff !important;
+}
+
+.campaign-product-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(14px, 2vw, 24px);
+}
+
+@media (max-width: 767px) {
+    .campaign-product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .store-body .campaign-product-grid .product-card > .product-quick {
+        display: block !important;
+        min-height: 42px;
+    }
+}
+
 .home-campaign-preview a {
     display: grid;
     position: relative;

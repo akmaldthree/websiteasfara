@@ -109,7 +109,11 @@ class AdminController extends Controller
 
     public function contentPreview(ContentEntry $contentEntry)
     {
-        return view('store.content', ['entry' => $contentEntry, 'preview' => true]);
+        return view('store.content', [
+            'entry' => $contentEntry,
+            'preview' => true,
+            'campaignProducts' => $contentEntry->type === 'campaign' ? $contentEntry->campaignProducts() : collect(),
+        ]);
     }
 
     public function mediaLibrary()
@@ -514,7 +518,7 @@ class AdminController extends Controller
             }
         }
         if (in_array($resource, ['pages', 'content'], true)) {
-            $data['blocks'] = $this->validatedContentBlocks($data['blocks'] ?? null);
+            $data['blocks'] = $this->validatedContentBlocks($data['blocks'] ?? null, $data['type'] ?? null);
             $status = $data['editorial_status'];
             if ($status === 'approved' && ! $r->user()->allowed('content.approve')) {
                 throw ValidationException::withMessages(['editorial_status' => 'Akun Anda dapat menulis dan mengajukan konten, tetapi tidak dapat menyetujuinya.']);
@@ -762,7 +766,7 @@ class AdminController extends Controller
         return in_array($resource, ['curated-links', 'product-media', 'content'], true) && $record->image ? [$record->image] : [];
     }
 
-    private function validatedContentBlocks(?string $json): ?array
+    private function validatedContentBlocks(?string $json, ?string $contentType): ?array
     {
         if (! $json) {
             return null;
@@ -776,6 +780,10 @@ class AdminController extends Controller
             throw ValidationException::withMessages(['blocks' => 'Konten dibatasi maksimal 50 blok.']);
         }
         $allowed = ['heading', 'paragraph', 'quote', 'button', 'image', 'columns', 'product_hotspot', 'hero_options'];
+        if ($contentType === 'campaign') {
+            $allowed[] = 'campaign_product';
+        }
+        $campaignProductIds = [];
         foreach ($blocks as $index => &$block) {
             if (! is_array($block) || ! in_array($block['type'] ?? '', $allowed, true)) {
                 throw ValidationException::withMessages(['blocks' => 'Tipe blok ke-'.($index + 1).' tidak didukung.']);
@@ -810,6 +818,14 @@ class AdminController extends Controller
                 $block['series_id'] = $seriesId;
                 $block['x'] = round($x, 2);
                 $block['y'] = round($y, 2);
+            }
+            if ($block['type'] === 'campaign_product') {
+                $seriesId = filter_var($block['series_id'] ?? null, FILTER_VALIDATE_INT);
+                if (! $seriesId || isset($campaignProductIds[$seriesId]) || ! Series::whereKey($seriesId)->exists()) {
+                    throw ValidationException::withMessages(['blocks' => 'Pilih produk kampanye yang valid dan jangan masukkan produk yang sama dua kali.']);
+                }
+                $campaignProductIds[$seriesId] = true;
+                $block = ['type' => 'campaign_product', 'series_id' => $seriesId];
             }
             if ($block['type'] === 'hero_options') {
                 $align = $block['align'] ?? 'left';

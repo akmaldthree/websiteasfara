@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class ContentEntry extends Model
 {
@@ -21,6 +22,27 @@ class ContentEntry extends Model
     public function getImageUrlAttribute(): ?string
     {
         return $this->image ? asset('storage/'.$this->image) : null;
+    }
+
+    /** @return Collection<int, int> */
+    public function campaignProductIds(): Collection
+    {
+        return collect($this->blocks)->where('type', 'campaign_product')->pluck('series_id')
+            ->map(fn ($id) => (int) $id)->filter()->unique()->values();
+    }
+
+    public function campaignProducts(): Collection
+    {
+        $ids = $this->campaignProductIds();
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        $products = Series::published()->withStoreCard()
+            ->whereHas('variants', fn ($variants) => $variants->where('active', true))
+            ->whereKey($ids->all())->get()->keyBy('id');
+
+        return $ids->map(fn (int $id) => $products->get($id))->filter()->values();
     }
 
     public function revisions()

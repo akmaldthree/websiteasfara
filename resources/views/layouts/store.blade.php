@@ -59,7 +59,19 @@
         <nav class="desktop-nav" aria-label="Utama">
             <a href="{{ route('catalog',['sort'=>'newest']) }}">NEW IN</a>
             <a href="{{ route('catalog') }}" class="catalog-nav-link" aria-haspopup="true" aria-expanded="false" aria-controls="catalog-mega-menu" @if(request()->routeIs('catalog','product')) aria-current="page" @endif>SHOP</a>
-            <a href="{{ route('catalog',['sort'=>'featured']) }}">COLLECTIONS</a>
+            @if($campaignMenu->isNotEmpty())
+                <details class="campaign-nav">
+                    <summary>COLLECTIONS</summary>
+                    <div>
+                        @foreach($campaignMenu as $campaignLink)
+                            <a href="{{ route('content.show', ['campaign', $campaignLink->slug]) }}">{{ $campaignLink->title }}</a>
+                        @endforeach
+                        <a href="{{ route('content.index', 'campaign') }}">{{ $storeCopy['view_all'] }}</a>
+                    </div>
+                </details>
+            @else
+                <a href="{{ route('catalog',['sort'=>'featured']) }}">COLLECTIONS</a>
+            @endif
             @foreach($cmsMenus->whereIn('placement',['both','desktop'])->take(1) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
             <a href="#store-locations">FIND US</a>
             <a href="{{ route('catalog',['sale'=>1]) }}">SPECIAL OFFER</a>
@@ -79,7 +91,13 @@
         <div class="mobile-nav-links">
             <a href="{{ route('catalog',['sort'=>'newest']) }}">NEW IN</a>
             <details><summary>SHOP</summary><div><a href="{{ route('catalog') }}">ALL PRODUCTS</a>@if($shop['header_categories_enabled'] ?? true)@foreach($categories as $category)<a href="{{ route('catalog',['category'=>$category->slug]) }}">{{ strtoupper($category->name) }}</a>@endforeach @endif</div></details>
-            <details><summary>COLLECTIONS</summary><div>@forelse($curatedLinks->get('fit',collect()) as $link)<a href="{{ $link->url }}">{{ strtoupper($link->title) }}</a>@empty<a href="{{ route('catalog',['sort'=>'featured']) }}">FEATURED COLLECTIONS</a>@endforelse</div></details>
+            <details><summary>COLLECTIONS</summary><div>
+                @foreach($campaignMenu as $campaignLink)
+                    <a href="{{ route('content.show', ['campaign', $campaignLink->slug]) }}">{{ $campaignLink->title }}</a>
+                @endforeach
+                @foreach($curatedLinks->get('fit',collect()) as $link)<a href="{{ $link->url }}">{{ strtoupper($link->title) }}</a>@endforeach
+                <a href="{{ $campaignMenu->isNotEmpty() ? route('content.index', 'campaign') : route('catalog', ['sort' => 'featured']) }}">{{ $campaignMenu->isNotEmpty() ? $storeCopy['view_all'] : 'FEATURED COLLECTIONS' }}</a>
+            </div></details>
             <a href="{{ route('catalog',['sale'=>1]) }}">SPECIAL OFFER</a>
             @foreach($cmsMenus->whereIn('placement',['both','mobile']) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
             <a href="#store-locations">FIND US</a>
@@ -184,6 +202,18 @@ document.addEventListener('click',event=>document.querySelectorAll('.language-pi
 document.querySelectorAll('[data-product-voucher-copy]').forEach(button=>button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(button.dataset.productVoucherCopy);button.querySelector('small').textContent='KODE TERSALIN'}catch(error){button.querySelector('small').textContent=button.dataset.productVoucherCopy}}));
 const socialProof=document.getElementById('social-proof'),socialProofSource=document.getElementById('social-proof-data');if(socialProof&&socialProofSource&&!sessionStorage.getItem('asfara-social-proof-dismissed')){const products=JSON.parse(socialProofSource.textContent),cities=@json($socialProofCities ?? []),interval=Math.max(10,Number(@json($shop['social_proof_interval'] ?? 24)))*1000;let proofIndex=0,proofTimer,proofHideTimer;const hideProof=()=>socialProof.classList.remove('is-visible');const showProof=()=>{clearTimeout(proofTimer);if(document.querySelector('dialog[open]')){proofTimer=setTimeout(showProof,4000);return}const product=products[proofIndex%products.length],city=cities[proofIndex%Math.max(1,cities.length)]||'Indonesia';proofIndex++;socialProof.querySelector('[data-social-proof-link]').href=product.url;socialProof.querySelector('[data-social-proof-image]').src=product.image;socialProof.querySelector('[data-social-proof-image]').alt=product.name;socialProof.querySelector('[data-social-proof-name]').textContent=product.name;socialProof.querySelector('[data-social-proof-meta]').textContent=`Pelanggan di ${city} · ${4+(proofIndex*7)%43} menit lalu`;socialProof.hidden=false;requestAnimationFrame(()=>socialProof.classList.add('is-visible'));clearTimeout(proofHideTimer);proofHideTimer=setTimeout(()=>{hideProof();proofTimer=setTimeout(showProof,interval)},6500)};proofTimer=setTimeout(showProof,7000);socialProof.querySelector('[data-social-proof-close]')?.addEventListener('click',()=>{clearTimeout(proofTimer);clearTimeout(proofHideTimer);hideProof();sessionStorage.setItem('asfara-social-proof-dismissed','1')})}
 document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;closeCatalog();document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());document.querySelector('[data-filter-panel]')?.classList.remove('is-open')});document.querySelectorAll('.mobile-nav a').forEach(link=>link.addEventListener('click',()=>bootstrap.Collapse.getInstance(document.getElementById('mobile-nav'))?.hide()));
+const campaignNav = document.querySelector('.campaign-nav');
+if (campaignNav) {
+    document.addEventListener('pointerdown', event => {
+        if (!campaignNav.contains(event.target)) campaignNav.open = false;
+    });
+    campaignNav.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && campaignNav.open) {
+            campaignNav.open = false;
+            campaignNav.querySelector('summary').focus();
+        }
+    });
+}
 const welcomeVoucher = document.getElementById('welcome-voucher');
 if (welcomeVoucher) {
     const days = Number(welcomeVoucher.dataset.frequencyDays);

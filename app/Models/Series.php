@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Series extends Model
@@ -48,6 +49,16 @@ class Series extends Model
     public function scopePublished($q)
     {
         return $q->where('active', true)->whereHas('category', fn ($c) => $c->where('active', true));
+    }
+
+    public function scopeWithStoreCard(Builder $query): Builder
+    {
+        return $query->with([
+            'category',
+            'media' => fn ($media) => $media->where('active', true),
+            'variants' => fn ($variants) => $variants->where('active', true),
+        ])->withMin(['variants' => fn ($variants) => $variants->where('active', true)], 'price')
+            ->withCount('reviews')->withAvg('reviews', 'rating');
     }
 
     public function getImageUrlAttribute(): string

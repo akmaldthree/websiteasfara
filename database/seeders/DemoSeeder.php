@@ -95,6 +95,7 @@ class DemoSeeder extends Seeder
         $this->seedStoreLocations();
         $this->seedCuratedLinks();
         $this->seedContent();
+        $this->call(DemoCampaignSeeder::class);
         $this->seedCoupons();
         $this->seedSettings();
         $this->seedPages();

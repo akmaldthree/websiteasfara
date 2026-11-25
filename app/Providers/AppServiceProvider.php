@@ -29,6 +29,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFive();
+        View::composer('layouts.store', function ($view) {
+            $campaignMenu = ContentEntry::published()->where('type', 'campaign')->orderBy('sort_order')->orderBy('id')
+                ->get(['id', 'title', 'slug', 'blocks'])
+                ->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty())
+                ->take(8);
+            $view->with('campaignMenu', $campaignMenu);
+        });
         View::composer(['layouts.store', 'store.*'], function ($view) {
             if (request()->hasSession()) {
                 app()->setLocale(in_array(session('locale'), ['id', 'en'], true) ? session('locale') : 'id');
