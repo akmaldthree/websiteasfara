@@ -86,9 +86,19 @@
                         <option value="{{ $v->id }}" data-price="{{ $unitPrices[$v->id] }}" data-tiers="{{ $tiers->toJson() }}" data-stock="{{ $v->available }}" data-sku="{{ $v->sku }}" data-label="{{ $v->label }}" data-type="{{ mb_strtolower($v->product_type) }}" data-color="{{ mb_strtolower($v->color) }}" data-size="{{ mb_strtolower($v->size) }}" data-method="{{ $v->fulfillment==='ready_stock'?'Ready stock':($v->fulfillment==='bundle'?'Bundle':'Pre-order') }}" data-estimate="{{ $v->lead_time }}" @disabled($v->available<1) @selected($selectedVariant?->id === $v->id)>{{ $v->label }} — @rupiah($unitPrices[$v->id]) {{ $v->available<1?'(habis)':'' }}</option>
                     @endforeach
                 </select>
+                <div class="product-purchase">
+                    <div class="product-quantity-block">
+                        <label for="qty">Jumlah</label>
+                        <div class="quantity-stepper">
+                            <button type="button" data-qty-change="-1" aria-label="Kurangi jumlah">−</button>
+                            <input class="form-control quantity" type="number" name="quantity" id="qty" min="1" max="100" value="1" required>
+                            <button type="button" data-qty-change="1" aria-label="Tambah jumlah">+</button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-dark" aria-describedby="variant-info" data-product-submit @disabled(!$canBuySelected)>TAMBAH KE KERANJANG</button>
+                    <button type="submit" class="btn btn-outline-dark product-buy-now" name="buy_now" value="1" aria-describedby="variant-info" data-product-submit @disabled(!$canBuySelected)>BELI SEKARANG</button>
+                </div>
                 <div class="variant-info" id="variant-info" aria-live="polite">Pilih varian untuk melihat harga dan ketersediaan.</div>
-                <div class="product-quantity-block"><label for="qty">Jumlah</label><div class="quantity-stepper"><button type="button" data-qty-change="-1" aria-label="Kurangi jumlah">−</button><input class="form-control quantity" type="number" name="quantity" id="qty" min="1" max="100" value="1" required><button type="button" data-qty-change="1" aria-label="Tambah jumlah">+</button></div></div>
-                <div class="product-purchase"><button type="submit" class="btn btn-dark" data-product-submit @disabled(!$canBuySelected)>TAMBAH KE KERANJANG</button><button type="submit" class="btn btn-outline-dark product-buy-now" name="buy_now" value="1" data-product-submit @disabled(!$canBuySelected)>BELI SEKARANG</button></div>
                 <p class="cart-form-error" data-cart-add-error role="alert" tabindex="-1" hidden></p>
             </form>@endif
             <div class="product-share"><button type="button" id="share-product" class="product-share-link">Bagikan pilihan ↗</button><span id="share-status" class="small ms-2" aria-live="polite"></span></div>

@@ -20,7 +20,7 @@
 </section>
 <section class="catalog-page">
     <div class="catalog-toolbar">
-        <div class="catalog-density" role="group" aria-label="Ukuran gambar">
+        <div class="catalog-density" role="group" aria-label="Filter dan tampilan katalog">
             <button class="catalog-filter-button" type="button" aria-expanded="false" aria-controls="catalog-filters" data-filter-open><span aria-hidden="true">≡</span> {{ $storeCopy['catalog_filter'] }}@if($activeFilterCount=request()->collect()->only(['q','category','color','size','product_type','min','max','fulfillment','available'])->filter()->count()) <b>{{ $activeFilterCount }}</b>@endif</button>
             <button type="button" data-grid="large" aria-label="Gambar besar" aria-pressed="false"><span aria-hidden="true"></span></button>
             <button class="is-active" type="button" data-grid="normal" aria-label="Gambar sedang" aria-pressed="true"><span aria-hidden="true"></span></button>
@@ -88,10 +88,13 @@ const resultCount = catalog.querySelector('.catalog-toolbar > strong');
 const catalogStatus = catalog.querySelector('[data-catalog-status]');
 const sort = catalog.querySelector('[data-sort-select]');
 const gridButtons = [...catalog.querySelectorAll('[data-grid]')];
+const mobileGrid = matchMedia('(max-width: 767px)');
+const gridStorageKey = () => mobileGrid.matches ? 'asfara-grid-mobile' : 'asfara-grid';
 let gridDensity = 'normal';
-try { gridDensity = localStorage.getItem('asfara-grid') || gridDensity; } catch {}
 const setGrid = density => {
-    gridDensity = gridButtons.some(button => button.dataset.grid === density) ? density : 'normal';
+    const supported = gridButtons.some(button => button.dataset.grid === density)
+        && (!mobileGrid.matches || density !== 'compact');
+    gridDensity = supported ? density : 'normal';
     catalog.querySelector('[data-catalog-grid]').dataset.catalogGrid = gridDensity;
     gridButtons.forEach(button => {
         const active = button.dataset.grid === gridDensity;
@@ -99,11 +102,17 @@ const setGrid = density => {
         button.setAttribute('aria-pressed', String(active));
     });
 };
+const restoreGrid = () => {
+    let saved = 'normal';
+    try { saved = localStorage.getItem(gridStorageKey()); } catch {}
+    setGrid(saved);
+};
 gridButtons.forEach(button => button.addEventListener('click', () => {
     setGrid(button.dataset.grid);
-    try { localStorage.setItem('asfara-grid', gridDensity); } catch {}
+    try { localStorage.setItem(gridStorageKey(), gridDensity); } catch {}
 }));
-setGrid(gridDensity);
+mobileGrid.addEventListener('change', restoreGrid);
+restoreGrid();
 
 const formUrl = () => {
     const url = new URL(catalogForm.action);

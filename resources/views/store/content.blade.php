@@ -12,8 +12,8 @@
     $filmDesktop = $film['video_url'] ?? null;
     $filmMobile = $film['mobile_video_url'] ?? null;
     if (!$filmDesktop && !$filmMobile && $entry->slug === 'demo-seri-ruang-raya' && ($shop['home_abaya_editorial_enabled'] ?? false)) {
-        $filmDesktop = route('media.demo-hero', 'desktop');
-        $filmMobile = route('media.demo-hero', 'mobile');
+        $filmDesktop = route('media.demo-hero', ['format' => 'desktop', 'v' => filemtime(database_path('seeders/assets/demo/hero-desktop.webm'))]);
+        $filmMobile = route('media.demo-hero', ['format' => 'mobile', 'v' => filemtime(database_path('seeders/assets/demo/hero-mobile.webm'))]);
     }
 @endphp
 @section('content')

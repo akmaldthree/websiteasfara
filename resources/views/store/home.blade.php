@@ -187,7 +187,7 @@
 @if($shop['home_collections_enabled'] ?? true)
 @section('home-new_in')
 <section class="commerce-section home-new-in container-xxl reveal" id="new-in">
-    <div class="commerce-heading"><h2>New In</h2><a href="{{ route('catalog',['sort'=>'newest']) }}">{{ $storeCopy['view_all'] }}</a></div>
+    <div class="commerce-heading"><h2>New In</h2><a href="{{ route('catalog',['sort'=>'new']) }}">{{ $storeCopy['view_all'] }}</a></div>
     <div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@forelse($newCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@empty<div class="empty-state"><h3>Koleksi sedang disiapkan.</h3></div>@endforelse</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div>
 </section>
 @endsection

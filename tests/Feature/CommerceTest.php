@@ -131,6 +131,25 @@ class CommerceTest extends TestCase
             ->assertSee('Total akhir ditampilkan sebelum konfirmasi');
     }
 
+    public function test_catalog_and_suggestions_find_abaya_by_category_and_variant_terms(): void
+    {
+        $series = $this->variant->series;
+        $this->variant->update(['color' => 'Olive', 'sku' => 'RAF-OLIVE-L']);
+        $series->variants()->create(['sku' => 'RAF-SAND-L', 'color' => 'Sand', 'size' => 'L', 'price' => 300000, 'stock' => 3, 'weight' => 600, 'active' => false]);
+
+        foreach (['abaya', 'ABAYA  Olive', 'Olive', 'raf-olive-l'] as $term) {
+            $this->getJson(route('search.suggestions', ['q' => $term]))
+                ->assertOk()->assertJsonCount(1, 'products')->assertJsonPath('products.0.name', $series->name);
+            $this->get(route('catalog', ['q' => $term]))
+                ->assertOk()->assertViewHas('collections', fn ($results) => $results->pluck('id')->all() === [$series->id]);
+        }
+
+        $this->getJson(route('search.suggestions', ['q' => 'raf-sand-l']))
+            ->assertOk()->assertJsonPath('products', []);
+        $this->get(route('catalog', ['q' => 'raf-sand-l']))
+            ->assertOk()->assertViewHas('collections', fn ($results) => $results->isEmpty());
+    }
+
     public function test_checkout_review_totals_follow_cart_quantity_voucher_and_shipping(): void
     {
         $coupon = Coupon::create(['code' => 'UJIHEMAT', 'type' => 'fixed', 'value' => 50000, 'maximum' => 50000, 'minimum' => 200000, 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'usage_limit' => 10]);

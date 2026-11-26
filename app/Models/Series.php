@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Series extends Model
 {
@@ -59,6 +60,30 @@ class Series extends Model
             'variants' => fn ($variants) => $variants->where('active', true),
         ])->withMin(['variants' => fn ($variants) => $variants->where('active', true)], 'price')
             ->withCount('reviews')->withAvg('reviews', 'rating');
+    }
+
+    public function scopeMatchingStorefrontSearch(Builder $query, string $search): Builder
+    {
+        $terms = array_unique(explode(' ', Str::squish(mb_substr($search, 0, 100))));
+
+        foreach ($terms as $term) {
+            if ($term === '') {
+                continue;
+            }
+
+            $pattern = '%'.$term.'%';
+            $query->where(fn (Builder $series) => $series
+                ->whereLike('name', $pattern)
+                ->orWhereLike('slug', $pattern)
+                ->orWhereHas('category', fn (Builder $category) => $category->whereLike('name', $pattern)->orWhereLike('slug', $pattern))
+                ->orWhereHas('variants', fn (Builder $variants) => $variants->where('active', true)
+                    ->where(fn (Builder $variant) => $variant->whereLike('sku', $pattern)
+                        ->orWhereLike('color', $pattern)
+                        ->orWhereLike('size', $pattern)
+                        ->orWhereLike('product_type', $pattern))));
+        }
+
+        return $query;
     }
 
     public function getImageUrlAttribute(): string

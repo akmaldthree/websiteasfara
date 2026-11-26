@@ -129,10 +129,7 @@ class StoreController extends Controller
             ->withCount('reviews')->withAvg('reviews', 'rating');
         $currentCategory = null;
         if ($r->filled('q')) {
-            $q->where(function ($q) use ($r) {
-                $term = '%'.mb_substr($r->string('q'), 0, 100).'%';
-                $q->where('name', 'like', $term)->orWhereHas('variants', fn ($v) => $v->where('sku', 'like', $term)->orWhere('product_type', 'like', $term));
-            });
+            $q->matchingStorefrontSearch($r->string('q')->toString());
         }
         if ($r->filled('category')) {
             $currentCategory = Category::where('active', true)->where('slug', $r->input('category'))->firstOrFail();
@@ -166,7 +163,7 @@ class StoreController extends Controller
             default => $q->latest(),
         };
 
-        $collections = $q->paginate(12)->withQueryString();
+        $collections = $q->orderByDesc('series.id')->paginate(12)->withQueryString();
         if ($r->filled('q')) {
             $analytics->record($r, 'search', ['results' => $collections->total()]);
         } else {
@@ -192,13 +189,10 @@ class StoreController extends Controller
         }
 
         $products = Series::published()
-            ->where(function ($query) use ($term) {
-                $like = '%'.$term.'%';
-                $query->where('name', 'like', $like)
-                    ->orWhereHas('variants', fn ($variant) => $variant->where('active', true)->where(fn ($q) => $q->where('sku', 'like', $like)->orWhere('color', 'like', $like)->orWhere('size', 'like', $like)));
-            })
+            ->matchingStorefrontSearch($term)
+            ->whereHas('variants', fn ($variant) => $variant->where('active', true))
             ->with(['media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
-            ->take(6)->get()->map(fn (Series $series) => [
+            ->latest()->orderByDesc('series.id')->take(6)->get()->map(fn (Series $series) => [
                 'name' => $series->name,
                 'url' => route('product', $series->slug),
                 'image' => $series->media->first()?->image_url ?? $series->image_url,
