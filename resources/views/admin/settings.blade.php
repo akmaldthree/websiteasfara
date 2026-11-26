@@ -22,7 +22,20 @@
 <div class="span-2"><h3 class="h5 mt-3">Hero kampanye</h3>
     <input type="hidden" name="hero_campaign_enabled" value="0">
     <label><input type="checkbox" name="hero_campaign_enabled" value="1" @checked($get('hero_campaign_enabled',true))> Pakai kampanye utama di beranda</label>
-    <small>Mode Editorial memakai kampanye terbit pertama dari grup Koleksi Utama. Atur urutan dan media di Banner &amp; konten website.</small>
+    @php($selectedHeroCampaign = (int) $get('hero_campaign_id'))
+    <div class="mt-2">
+        <label for="hero_campaign_id">Kampanye pembuka</label>
+        <select class="form-select" id="hero_campaign_id" name="hero_campaign_id">
+            <option value="">Otomatis dari Koleksi Utama</option>
+            @if($selectedHeroCampaign && $savedHeroCampaignExists && !$heroCampaigns->contains('id', $selectedHeroCampaign))
+                <option value="{{ $selectedHeroCampaign }}" selected>Kampanye dipilih sedang tidak tersedia</option>
+            @endif
+            @foreach($heroCampaigns as $heroCampaignOption)
+                <option value="{{ $heroCampaignOption->id }}" @selected($selectedHeroCampaign === $heroCampaignOption->id)>{{ $heroCampaignOption->title }}</option>
+            @endforeach
+        </select>
+    </div>
+    <small>Pilihan ini berlaku di mode Editorial. Jika kampanye belum terbit atau tidak memiliki produk aktif, hero kembali ke pilihan otomatis.</small>
 </div>
 <div class="span-2"><h3 class="h5 mt-3">Hero video</h3>
     <label><input type="checkbox" name="hero_video_enabled" value="1" @checked($get('hero_video_enabled',false))> Aktifkan pemutaran video hero</label>

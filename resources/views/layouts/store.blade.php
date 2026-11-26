@@ -93,12 +93,19 @@
     <div class="catalog-mega-menu" id="catalog-mega-menu" aria-label="Menu katalog" aria-hidden="true">
         <div class="container-xxl"><div class="mega-category-list"><small>{{ $storeCopy['mega_shop_by_category'] }}</small>@foreach($categories as $category)<div class="mega-category"><a href="{{ route('catalog',['category'=>$category->slug]) }}">{{ strtoupper($category->name) }} <span>→</span></a><div>@foreach($category->series->take(4) as $menuSeries)<a href="{{ route('product',$menuSeries->slug) }}">{{ $menuSeries->name }}</a>@endforeach</div></div>@endforeach<a href="{{ route('catalog') }}">{{ $storeCopy['mega_view_all'] }} <span>→</span></a></div><div class="mega-fit"><small>{{ $storeCopy['mega_find_fit'] }}</small>@forelse($curatedLinks->get('fit',collect()) as $link)<a href="{{ $link->url }}">{{ strtoupper($link->title) }} <span>→</span></a>@empty<a href="{{ route('catalog') }}">DAILY WEAR <span>→</span></a>@endforelse<small>{{ $storeCopy['mega_explore'] }}</small>@foreach($cmsMenus->whereIn('placement',['both','desktop']) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ strtoupper($menu->title) }} <span>→</span></a>@endforeach</div><div class="mega-promos">@forelse($curatedLinks->get('promo',collect())->take(2) as $link)<a href="{{ $link->url }}" style="--promo-image:url('{{ $link->image_url }}')"><span>{{ strtoupper($link->eyebrow ?: $storeCopy['mega_promo_label']) }}</span><strong>{{ $link->title }}</strong><small>{{ $storeCopy['mega_promo_cta'] }} →</small></a>@empty<div class="mega-menu-feature"><span>{{ $storeCopy['mega_promo_label'] }}</span><h2>{{ $storeCopy['mega_fallback_title'] }}</h2><a class="btn btn-outline-light" href="{{ route('catalog') }}">{{ $storeCopy['mega_promo_cta'] }}</a></div>@endforelse</div></div>
     </div>
+    <button type="button" class="mobile-nav-backdrop" data-mobile-nav-backdrop aria-label="Tutup navigasi" tabindex="-1" hidden></button>
     <nav class="collapse mobile-nav" id="mobile-nav" aria-label="Navigasi mobile">
         <header><a class="wordmark" href="{{ route('home') }}"><strong>{{ strtoupper($shop['brand_name'] ?? 'Asfara') }}</strong><span>{{ $shop['brand_subtitle'] ?? 'MODEST WEAR' }}</span></a><button type="button" class="mobile-nav-close" data-bs-toggle="collapse" data-bs-target="#mobile-nav" aria-label="Tutup menu">×</button></header>
         <div class="mobile-nav-links">
             <a href="{{ route('catalog',['sort'=>'newest']) }}">NEW IN</a>
-            <details><summary>SHOP</summary><div><a href="{{ route('catalog') }}">ALL PRODUCTS</a>@if($shop['header_categories_enabled'] ?? true)@foreach($categories as $category)<a href="{{ route('catalog',['category'=>$category->slug]) }}">{{ strtoupper($category->name) }}</a>@endforeach @endif</div></details>
-            <details><summary>COLLECTIONS</summary><div>
+            <details name="mobile-discovery"><summary>Shop</summary><div class="mobile-discovery-links">
+                <a href="{{ route('catalog') }}">Semua produk</a>
+                @if($shop['header_categories_enabled'] ?? true)
+                    @foreach($categories as $category)<a href="{{ route('catalog',['category'=>$category->slug]) }}" @if(request()->routeIs('catalog') && request('category') === $category->slug) aria-current="page" @endif>{{ $category->name }}</a>@endforeach
+                @endif
+                @foreach($curatedLinks->get('fit',collect()) as $link)<a href="{{ $link->url }}">{{ $link->title }}</a>@endforeach
+            </div></details>
+            <details name="mobile-discovery"><summary>Collections</summary><div class="mobile-discovery-links">
                 @foreach(config('storefront.campaign_groups') as $group => $label)
                     @php($menuEntries = $campaignMenu->get($group, collect())->take(8))
                     @continue($menuEntries->isEmpty())
@@ -109,8 +116,7 @@
                         @endforeach
                     </section>
                 @endforeach
-                @foreach($curatedLinks->get('fit',collect()) as $link)<a href="{{ $link->url }}">{{ strtoupper($link->title) }}</a>@endforeach
-                <a href="{{ $campaignMenu->isNotEmpty() ? route('content.index', 'campaign') : route('catalog', ['sort' => 'featured']) }}">{{ $campaignMenu->isNotEmpty() ? $storeCopy['view_all'] : 'FEATURED COLLECTIONS' }}</a>
+                <a href="{{ route('content.index', 'campaign') }}">Semua kampanye</a>
             </div></details>
             <a href="{{ route('catalog',['sale'=>1]) }}">SPECIAL OFFER</a>
             @foreach($cmsMenus->whereIn('placement',['both','mobile']) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
@@ -133,7 +139,7 @@
         <a class="btn btn-outline-dark" href="{{ route('cart') }}">LIHAT KERANJANG</a>
     </div>
 </dialog>
-<dialog class="quick-product-dialog" id="quick-product-dialog" aria-labelledby="quick-product-name"><button type="button" class="drawer-close" data-quick-close aria-label="Tutup pilihan produk">×</button><div class="quick-product-layout"><img id="quick-product-image" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="900" height="1125" loading="lazy" decoding="async"><div><span class="eyebrow">{{ $storeCopy['quick_shop'] }}</span><h2 id="quick-product-name"></h2><p class="quick-price" id="quick-product-price" aria-live="polite"></p><form method="post" action="{{ route('cart.add') }}" id="quick-product-form" data-cart-add>@csrf<div id="quick-product-options"></div><input type="hidden" name="variant_id" id="quick-variant"><input type="hidden" name="quantity" value="1"><button class="btn btn-dark w-100" id="quick-submit" disabled>ADD TO CART</button><p class="cart-form-error" data-cart-add-error role="alert" hidden></p></form><a id="quick-product-link" href="#">{{ $storeCopy['quick_view_detail'] }}</a></div></div></dialog>
+<dialog class="quick-product-dialog" id="quick-product-dialog" aria-labelledby="quick-product-name"><button type="button" class="drawer-close" data-quick-close aria-label="Tutup pilihan produk">×</button><div class="quick-product-layout"><img id="quick-product-image" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="900" height="1125" loading="lazy" decoding="async"><div><span class="eyebrow">{{ $storeCopy['quick_shop'] }}</span><h2 id="quick-product-name"></h2><p class="quick-price" id="quick-product-price" aria-live="polite"></p><p id="quick-product-stock" class="small" aria-live="polite"></p><form method="post" action="{{ route('cart.add') }}" id="quick-product-form" data-cart-add>@csrf<div id="quick-product-options"></div><input type="hidden" name="variant_id" id="quick-variant"><input type="hidden" name="quantity" value="1"><button class="btn btn-dark w-100" id="quick-submit" disabled>Pilih varian</button><p class="cart-form-error" data-cart-add-error role="alert" hidden></p></form><a id="quick-product-link" href="#">{{ $storeCopy['quick_view_detail'] }}</a></div></div></dialog>
 <main id="main" tabindex="-1">@include('partials.alerts')@yield('content')</main>
 @php($welcomeStartsAt=!empty($shop['welcome_voucher_start'])?\Illuminate\Support\Carbon::parse($shop['welcome_voucher_start']):null)
 @php($welcomeEndsAt=!empty($shop['welcome_voucher_end'])?\Illuminate\Support\Carbon::parse($shop['welcome_voucher_end']):null)
@@ -264,6 +270,23 @@
 })();
 </script>
 <script>
+const storeVariants = (() => {
+    const field = (variant, key) => String((variant?.dataset ?? variant)?.[key] ?? '').toLowerCase();
+    const choices = (variants, groups, kind, current) => {
+        const preceding = groups.slice(0, Math.max(0, groups.indexOf(kind)));
+        return variants.filter(variant => preceding.every(key => field(variant, key) === field(current, key)));
+    };
+    const match = (variants, groups, kind, value, current) => {
+        const score = variant => groups.filter(key => key !== kind && field(variant, key) === field(current, key)).length;
+        return choices(variants, groups, kind, current)
+            .filter(variant => field(variant, kind) === String(value).toLowerCase())
+            .sort((left, right) => score(right) - score(left))[0];
+    };
+    const stock = (available, method) => available
+        ? (method === 'Pre-order' ? 'Pre-order tersedia' : 'Stok tersedia')
+        : 'Varian ini habis';
+    return {field, choices, match, stock};
+})();
 (()=>{const header=document.querySelector('.site-header'),floatingWhatsApp=document.querySelector('[data-floating-whatsapp]');const syncHeader=()=>{header?.classList.toggle('is-scrolled',header.classList.contains('sticky-top')&&scrollY>80);floatingWhatsApp?.classList.toggle('is-compact',scrollY>160)};syncHeader();addEventListener('scroll',syncHeader,{passive:true});
 const catalogTrigger=document.querySelector('.catalog-nav-link'),catalogMenu=document.querySelector('.catalog-mega-menu');let catalogCloseTimer;const setCatalogOpen=open=>{clearTimeout(catalogCloseTimer);header?.classList.toggle('is-catalog-open',open);catalogTrigger?.setAttribute('aria-expanded',open?'true':'false');catalogMenu?.setAttribute('aria-hidden',open?'false':'true')};const openCatalog=()=>setCatalogOpen(true),closeCatalog=()=>setCatalogOpen(false),scheduleCatalogClose=()=>{clearTimeout(catalogCloseTimer);catalogCloseTimer=setTimeout(closeCatalog,90)};catalogTrigger?.addEventListener('pointerenter',openCatalog);catalogTrigger?.addEventListener('pointerleave',scheduleCatalogClose);catalogTrigger?.addEventListener('focus',openCatalog);catalogMenu?.addEventListener('pointerenter',openCatalog);catalogMenu?.addEventListener('pointerleave',scheduleCatalogClose);catalogMenu?.addEventListener('focusin',openCatalog);header?.addEventListener('focusout',()=>setTimeout(()=>{if(!header.contains(document.activeElement))closeCatalog()}));document.querySelectorAll('.desktop-nav a:not(.catalog-nav-link)').forEach(link=>link.addEventListener('pointerenter',closeCatalog));document.addEventListener('pointerdown',event=>{if(!catalogTrigger?.contains(event.target)&&!catalogMenu?.contains(event.target))closeCatalog()});
 const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
@@ -411,7 +434,8 @@ const quickOptions = document.getElementById('quick-product-options');
 const quickVariant = document.getElementById('quick-variant');
 const quickSubmit = document.getElementById('quick-submit');
 let quickData = null;
-let quickSelected = {};
+let quickSelected;
+let quickConfirmed = false;
 let quickTrigger = null;
 const renderQuick = () => {
     const available = quickData.variants.filter(item => item.available > 0);
@@ -420,32 +444,43 @@ const renderQuick = () => {
         ['color', 'Warna'],
         ['size', 'Ukuran'],
     ].filter(([kind]) => available.some(item => item[kind]));
+    if (kinds.length === 0) quickConfirmed = true;
+    const groups = kinds.map(([kind]) => kind);
     quickOptions.innerHTML = kinds.map(([kind, label]) => {
         const values = [...new Set(quickData.variants.map(item => item[kind]).filter(Boolean))];
         const choices = values.map(value => {
-            const possible = available.some(item => item[kind] === value);
-            const selected = quickSelected[kind] === value;
+            const possible = storeVariants.choices(available, groups, kind, quickSelected)
+                .some(item => storeVariants.field(item, kind) === String(value).toLowerCase());
+            const selected = storeVariants.field(quickSelected, kind) === String(value).toLowerCase();
             const swatch = kind === 'color' ? `<i style="--swatch:${quickColor(value)}"></i>` : '';
             return `<button type="button" data-quick-kind="${kind}" data-quick-value="${esc(value)}" class="${selected ? 'is-active' : ''} ${kind === 'color' ? 'color-choice' : ''}" aria-pressed="${selected}" ${possible ? '' : 'disabled'}>${swatch}${esc(value)}</button>`;
         });
         return `<fieldset><legend>${label}</legend><div>${choices.join('')}</div></fieldset>`;
     }).join('');
-    const match = available.find(item => kinds.every(([kind]) => item[kind] === quickSelected[kind]));
-    quickVariant.value = match?.id || '';
-    quickSubmit.disabled = !match;
-    document.getElementById('quick-product-price').textContent = match
-        ? new Intl.NumberFormat('id-ID', {style: 'currency', currency: 'IDR', maximumFractionDigits: 0}).format(match.price)
-        : 'Pilih opsi yang tersedia';
+    quickVariant.value = quickConfirmed ? quickSelected.id : '';
+    quickSubmit.disabled = !quickConfirmed;
+    quickSubmit.textContent = quickConfirmed ? 'Tambah ke keranjang' : 'Pilih varian';
+    document.getElementById('quick-product-price').textContent = new Intl.NumberFormat('id-ID', {
+        style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
+    }).format(quickSelected.price);
+    document.getElementById('quick-product-stock').textContent = [
+        storeVariants.stock(true, quickSelected.method), quickSelected.label, 'SKU ' + quickSelected.sku,
+    ].filter(Boolean).join(' · ');
+    const photo = document.getElementById('quick-product-image');
+    photo.src = quickSelected.image ?? quickData.image;
+    photo.alt = quickData.name;
+    photo.style.objectPosition = quickSelected.focal_x + '% ' + quickSelected.focal_y + '%';
+    const url = new URL(quickData.url, location.href);
+    url.searchParams.set('variant', quickSelected.id);
+    document.getElementById('quick-product-link').href = url.href;
     quickOptions.querySelectorAll('[data-quick-kind]').forEach(button => button.addEventListener('click', () => {
         const {quickKind, quickValue} = button.dataset;
-        const score = candidate => kinds.filter(([kind]) => kind !== quickKind && quickSelected[kind] === candidate[kind]).length;
-        const candidates = available.filter(item => item[quickKind] === quickValue);
-        const closest = candidates.sort((a, b) => score(b) - score(a))[0];
+        const closest = storeVariants.match(available, groups, quickKind, quickValue, quickSelected);
         if (!closest) return;
-        quickSelected[quickKind] = quickValue;
-        kinds.forEach(([kind]) => {
-            if (quickSelected[kind] !== closest[kind]) delete quickSelected[kind];
-        });
+        const sizes = new Set(storeVariants.choices(available, groups, 'size', closest).map(item => storeVariants.field(item, 'size')));
+        quickConfirmed = quickKind === 'size' || sizes.size < 2
+            || (quickConfirmed && storeVariants.field(quickSelected, 'size') === storeVariants.field(closest, 'size'));
+        quickSelected = closest;
         renderQuick();
         [...quickOptions.querySelectorAll('[data-quick-kind]')]
             .find(choice => choice.dataset.quickKind === quickKind && choice.dataset.quickValue === quickValue)?.focus();
@@ -456,13 +491,11 @@ document.addEventListener('click', event => {
     if (!button) return;
     quickTrigger = button;
     quickData = JSON.parse(document.getElementById(button.dataset.quickOpen).textContent);
-    quickSelected = {};
+    quickSelected = quickData.variants.find(variant => variant.available > 0);
+    if (!quickSelected) return;
+    quickConfirmed = false;
     quickDialog.querySelector('[data-cart-add-error]').hidden = true;
     document.getElementById('quick-product-name').textContent = quickData.name;
-    const photo = document.getElementById('quick-product-image');
-    photo.src = quickData.image;
-    photo.alt = quickData.name;
-    document.getElementById('quick-product-link').href = quickData.url;
     renderQuick();
     quickDialog.showModal();
 });
@@ -473,7 +506,30 @@ document.querySelectorAll('[data-drag-scroll]').forEach(track=>{let down=false,s
 document.querySelectorAll('.reference-carousel').forEach(shell=>{const track=shell.querySelector('.product-carousel');const move=direction=>track?.scrollBy({left:direction*(track.querySelector('.product-carousel-item')?.getBoundingClientRect().width||280),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});shell.querySelector('[data-carousel-prev]')?.addEventListener('click',()=>move(-1));shell.querySelector('[data-carousel-next]')?.addEventListener('click',()=>move(1));track?.addEventListener('scroll',()=>{const max=track.scrollWidth-track.clientWidth;shell.querySelector('[data-carousel-prev]')?.toggleAttribute('disabled',track.scrollLeft<4);shell.querySelector('[data-carousel-next]')?.toggleAttribute('disabled',track.scrollLeft>max-4)},{passive:true});shell.querySelector('[data-carousel-prev]')?.toggleAttribute('disabled',true)});
 document.addEventListener('click',event=>document.querySelectorAll('.language-picker[open]').forEach(picker=>{if(!picker.contains(event.target))picker.removeAttribute('open')}));
 document.querySelectorAll('[data-product-voucher-copy]').forEach(button=>button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(button.dataset.productVoucherCopy);button.querySelector('small').textContent='KODE TERSALIN'}catch(error){button.querySelector('small').textContent=button.dataset.productVoucherCopy}}));
-document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;closeCatalog();document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close())});document.querySelectorAll('.mobile-nav a').forEach(link=>link.addEventListener('click',()=>bootstrap.Collapse.getInstance(document.getElementById('mobile-nav'))?.hide()));
+const mobileNav = document.getElementById('mobile-nav');
+const mobileNavToggle = header.querySelector('.menu-toggle');
+const mobileNavBackdrop = header.querySelector('[data-mobile-nav-backdrop]');
+const hideMobileNav = () => bootstrap.Collapse.getInstance(mobileNav)?.hide();
+mobileNav.addEventListener('show.bs.collapse', () => { mobileNavBackdrop.hidden = false; });
+mobileNav.addEventListener('shown.bs.collapse', () => requestAnimationFrame(() => {
+    if (mobileNav.classList.contains('show')) mobileNav.querySelector('.mobile-nav-close').focus({preventScroll: true});
+}));
+mobileNav.addEventListener('hidden.bs.collapse', () => {
+    mobileNavBackdrop.hidden = true;
+    if (!document.querySelector('dialog[open]') && (mobileNav.contains(document.activeElement) || document.activeElement === document.body)) {
+        mobileNavToggle.focus({preventScroll: true});
+    }
+});
+mobileNavBackdrop.addEventListener('click', hideMobileNav);
+mobileNav.querySelectorAll('a').forEach(link => link.addEventListener('click', hideMobileNav));
+matchMedia('(min-width: 992px)').addEventListener('change', event => { if (event.matches) hideMobileNav(); });
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+        closeCatalog();
+        document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
+        hideMobileNav();
+    }
+});
 const campaignNav = document.querySelector('.campaign-nav');
 if (campaignNav) {
     document.addEventListener('pointerdown', event => {

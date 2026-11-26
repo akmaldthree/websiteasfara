@@ -944,7 +944,12 @@ class AdminController extends Controller
 
     public function settings()
     {
-        return view('admin.settings', ['storefrontSeries' => Series::orderBy('name')->get(['id', 'name', 'slug'])]);
+        return view('admin.settings', [
+            'storefrontSeries' => Series::orderBy('name')->get(['id', 'name', 'slug']),
+            'heroCampaigns' => ContentEntry::published()->where('type', 'campaign')->orderBy('sort_order')->orderBy('id')
+                ->get(['id', 'title', 'blocks'])->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty()),
+            'savedHeroCampaignExists' => ContentEntry::where('type', 'campaign')->whereKey(Setting::get('hero_campaign_id'))->exists(),
+        ]);
     }
 
     public function security()
@@ -1006,6 +1011,7 @@ class AdminController extends Controller
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120', 'welcome_voucher_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'hero_video' => 'nullable|file|mimetypes:video/mp4,video/webm|max:51200', 'hero_video_mobile' => 'nullable|file|mimetypes:video/mp4,video/webm|max:51200',
             'hero_campaign_enabled' => 'sometimes|boolean', 'hero_video_has_audio' => 'sometimes|boolean',
+            'hero_campaign_id' => ['sometimes', 'nullable', 'integer', Rule::exists('content_entries', 'id')->where('type', 'campaign')],
         ];
         $data = $r->validate($rules);
         if (! empty($data['welcome_voucher_cta_url']) && ! $this->safeContentUrl($data['welcome_voucher_cta_url'])) {

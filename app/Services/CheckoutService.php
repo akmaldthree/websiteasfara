@@ -166,7 +166,8 @@ class CheckoutService
                 $segmentAllowed = $coupon->segment === 'all' || ($coupon->segment === 'guest' && ! $customer) || ($coupon->segment === 'customer' && $customer && ! $group) || ($coupon->segment === 'business' && $group);
                 $this->check($segmentAllowed && (! $coupon->price_group_id || $group?->id === $coupon->price_group_id), "Voucher {$coupon->code} tidak berlaku untuk akun ini.");
                 if ($coupon->per_user_limit) {
-                    $this->check($customer && CouponRedemption::where('coupon_id', $coupon->id)->where('user_id', $customer->id)->count() < $coupon->per_user_limit, "Batas pemakaian voucher {$coupon->code} sudah tercapai.");
+                    $this->check($customer !== null, "Masuk ke akun untuk menggunakan voucher {$coupon->code}.");
+                    $this->check(CouponRedemption::where('coupon_id', $coupon->id)->where('user_id', $customer->id)->count() < $coupon->per_user_limit, "Batas pemakaian voucher {$coupon->code} sudah tercapai.");
                 }
                 $eligibleLines = array_filter($lines, function ($line) use ($coupon) {
                     $variant = $line['variant'];

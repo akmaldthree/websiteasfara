@@ -111,6 +111,22 @@ class CommerceTest extends TestCase
             ->assertSee('Total akhir ditampilkan sebelum konfirmasi');
     }
 
+    public function test_checkout_review_totals_follow_cart_quantity_voucher_and_shipping(): void
+    {
+        $coupon = Coupon::create(['code' => 'UJIHEMAT', 'type' => 'fixed', 'value' => 50000, 'maximum' => 50000, 'minimum' => 200000, 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'usage_limit' => 10]);
+
+        $this->postJson(route('cart.add'), ['variant_id' => $this->variant->id, 'quantity' => 1])->assertOk();
+        $this->postJson(route('cart.update'), ['variant_id' => $this->variant->id, 'quantity' => 2])
+            ->assertOk()->assertJsonPath('subtotal', 'Rp 600.000');
+        $this->get(route('checkout'))->assertOk();
+        $this->post(route('checkout.review'), $this->input + ['coupon' => 'UJIHEMAT'])
+            ->assertOk()->assertSeeInOrder(['Subtotal produk', 'Rp 600.000', 'Ongkir', 'Rp 25.000', 'Diskon voucher', 'Rp 50.000', 'Total', 'Rp 575.000']);
+        $coupon->update(['per_user_limit' => 1]);
+        $this->from(route('checkout'))->post(route('checkout.review'), $this->input + ['coupon' => 'UJIHEMAT'])
+            ->assertRedirect(route('checkout'))->assertSessionHasErrors(['checkout' => 'Masuk ke akun untuk menggunakan voucher UJIHEMAT.']);
+        $this->assertDatabaseCount('orders', 0);
+    }
+
     public function test_cart_rejects_quantity_above_available_stock_without_corrupting_session(): void
     {
         $this->withSession(['cart' => [$this->variant->id => 1]])

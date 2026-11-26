@@ -219,6 +219,18 @@ class StorefrontEditorialTest extends TestCase
         $this->get(route('home'))->assertOk()->assertDontSee('<h1>Kampanye Musim</h1>', false);
 
         Setting::put('hero_campaign_enabled', true);
+        $pinned = ContentEntry::create([
+            'type' => 'campaign', 'title' => 'Kampanye Pilihan', 'slug' => 'kampanye-pilihan',
+            'active' => true, 'editorial_status' => 'approved', 'sort_order' => 99,
+            'blocks' => [
+                ['type' => 'campaign_options', 'group' => 'signature'],
+                ['type' => 'campaign_product', 'series_id' => $this->series->id],
+            ],
+        ]);
+        Setting::put('hero_campaign_id', $pinned->id);
+        $this->get(route('home'))->assertOk()->assertSee('<h1>Kampanye Pilihan</h1>', false);
+        $pinned->update(['starts_at' => now()->addDay()]);
+        $this->get(route('home'))->assertOk()->assertSee('<h1>Kampanye Musim</h1>', false);
         $campaign->update(['starts_at' => now()->addDay()]);
         $this->get(route('home'))->assertOk()->assertDontSee('<h1>Kampanye Musim</h1>', false)->assertDontSee('/media/musim.mp4', false);
     }

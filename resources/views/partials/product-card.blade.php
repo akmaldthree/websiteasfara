@@ -1,11 +1,33 @@
 <article class="product-card">
-    @php($sellingPrice=(int)($collection->variants_min_price ?? $collection->variants->min('price') ?? 0))
-    @php($primaryMedia=$collection->image ? $collection->media->firstWhere('image',$collection->image) : $collection->media->first())
-    @php($primaryImage=$collection->image ? $collection->image_url : ($primaryMedia?->image_url ?? $collection->image_url))
-    @php($secondaryMedia=$collection->media->first(fn($media)=>$media->id!==$primaryMedia?->id && $media->image_url!==$primaryImage))
-    @php($secondaryImage=$secondaryMedia?->image_url)
-    @php($saving=max(0,(int)$collection->compare_at_price-$sellingPrice))
-    @php($quickVariants=$collection->variants->where('active',true)->where('fulfillment','!=','custom_made')->map(fn($variant)=>['id'=>$variant->id,'type'=>$variant->product_type,'color'=>$variant->color,'size'=>$variant->size,'label'=>$variant->label,'price'=>(int)$variant->price,'available'=>$variant->available])->values())
+    @php
+        $cardUnitPrices = $cardUnitPrices ?? null;
+        $sellingPrice = (int) ($cardUnitPrices?->min() ?? $collection->variants_min_price ?? $collection->variants->min('price') ?? 0);
+        $primaryMedia = $collection->image ? $collection->media->firstWhere('image', $collection->image) : $collection->media->first();
+        $primaryImage = $collection->image ? $collection->image_url : ($primaryMedia?->image_url ?? $collection->image_url);
+        $secondaryMedia = $collection->media->first(fn ($media) => $media->id !== $primaryMedia?->id && $media->image_url !== $primaryImage);
+        $secondaryImage = $secondaryMedia?->image_url;
+        $saving = max(0, (int) $collection->compare_at_price - $sellingPrice);
+        $quickVariants = $collection->variants->where('active', true)->where('fulfillment', '!=', 'custom_made')->sortBy('id')
+            ->map(function ($variant) use ($collection, $cardUnitPrices, $primaryImage, $primaryMedia) {
+                $colorMedia = $collection->media->filter(fn ($media) => $media->color && mb_strtolower($media->color) === mb_strtolower($variant->color ?? ''));
+                $photo = $collection->media->firstWhere('variant_id', $variant->id)
+                    ?? $colorMedia->firstWhere('variant_id', null)
+                    ?? $colorMedia->first()
+                    ?? $collection->media->first(fn ($media) => !$media->variant_id && !$media->color)
+                    ?? $primaryMedia
+                    ?? $collection->media->first();
+
+                return [
+                    'id' => $variant->id, 'type' => $variant->product_type, 'color' => $variant->color, 'size' => $variant->size,
+                    'label' => $variant->label, 'price' => (int) ($cardUnitPrices[$variant->id] ?? $variant->price),
+                    'available' => $variant->available, 'sku' => $variant->sku,
+                    'method' => $variant->fulfillment === 'pre_order' ? 'Pre-order' : ($variant->fulfillment === 'bundle' ? 'Bundle' : 'Ready stock'),
+                    'image' => $photo?->image_url ?? $primaryImage,
+                    'focal_x' => $photo?->focal_x ?? 50,
+                    'focal_y' => $photo?->focal_y ?? 50,
+                ];
+            })->values();
+    @endphp
     @php($purchasableVariants=$quickVariants->where('available','>',0)->values())
     @php($availableStock=$collection->variants->sum(fn($variant)=>$variant->available))
     @php($isSignature=str_contains(mb_strtolower($collection->name),'signature'))

@@ -24,7 +24,7 @@
             <button class="is-active" type="button" data-grid="normal" aria-label="Gambar sedang" aria-pressed="true"><span aria-hidden="true"></span></button>
             <button type="button" data-grid="compact" aria-label="Gambar kecil" aria-pressed="false"><span aria-hidden="true"></span></button>
         </div>
-        <strong>{{ $collections->total() }} {{ $storeCopy['catalog_title'] }}</strong>
+        <strong data-catalog-total="{{ $collections->total() }}">{{ $collections->total() }} {{ $storeCopy['catalog_title'] }}</strong>
         <label for="sort-top"><span>{{ $storeCopy['catalog_sort'] }}</span>
             <select id="sort-top" data-sort-select>
                 @foreach(['new'=>'Terbaru','featured'=>'Pilihan Asfara','best_selling'=>'Terlaris','price_asc'=>'Harga terendah','price_desc'=>'Harga tertinggi','title_asc'=>'Nama A–Z','title_desc'=>'Nama Z–A','oldest'=>'Terlama'] as $value=>$label)
@@ -36,7 +36,9 @@
     <div class="catalog-content">
         <button type="button" class="catalog-filter-backdrop" aria-label="Tutup panel filter" data-filter-backdrop tabindex="-1" hidden></button>
         <aside class="catalog-sidebar" id="catalog-filters" aria-label="Filter produk" data-filter-panel><button type="button" class="filter-close" data-filter-close aria-label="Tutup filter">×</button>
-            <form method="get" action="{{ route('catalog') }}" id="catalog-filter-form"><input type="hidden" name="sale" value="{{ request('sale') ? '1' : '' }}"><input type="hidden" name="sort" value="{{ request('sort','new') }}" data-sort-input>
+            <form method="get" action="{{ route('catalog') }}" id="catalog-filter-form">
+                <div class="catalog-filter-fields">
+                <input type="hidden" name="sale" value="{{ request('sale') ? '1' : '' }}"><input type="hidden" name="sort" value="{{ request('sort','new') }}" data-sort-input>
                 <div class="catalog-search"><input type="search" name="q" value="{{ request('q') }}" aria-label="Cari produk atau SKU" placeholder="Cari produk atau SKU"><button type="submit" aria-label="Cari">⌕</button></div>
                 <details @if($currentCategory) open @endif><summary>Kategori</summary><div class="catalog-filter-list"><label><input type="radio" name="category" value="" data-filter-instant @checked(!request('category'))> Semua produk</label>@foreach($categories as $c)<label><input type="radio" name="category" value="{{ $c->slug }}" data-filter-instant @checked(request('category')===$c->slug)> {{ $c->name }}</label>@endforeach</div></details>
                 <details open><summary>Ketersediaan</summary><label><input type="checkbox" name="available" value="1" data-filter-instant @checked(request('available'))> Hanya stok tersedia</label></details>
@@ -48,7 +50,14 @@
                 @if($filterOptions['types']->isNotEmpty())<details @if(request()->filled('product_type')) open @endif><summary>JENIS PRODUK</summary><div class="catalog-filter-list">@foreach($filterOptions['types'] as $option)<label><input type="radio" name="product_type" value="{{ $option->product_type }}" data-filter-instant @checked(request('product_type')===$option->product_type)> {{ $option->product_type }} <small>({{ $option->total }})</small></label>@endforeach</div></details>@endif
                 <details @if(request()->filled('fulfillment')) open @endif><summary>PEMENUHAN</summary><select name="fulfillment" data-filter-instant aria-label="Pemenuhan"><option value="">Semua</option><option value="ready_stock" @selected(request('fulfillment')==='ready_stock')>Ready stock</option><option value="pre_order" @selected(request('fulfillment')==='pre_order')>Pre-order</option></select></details>
                 </details>
-                <button type="submit" class="btn btn-dark w-100" data-filter-submit>TERAPKAN FILTER</button><a class="catalog-reset" href="{{ route('catalog',request('sale')?['sale'=>1]:[]) }}" data-catalog-url @if(!$activeFilterCount) hidden @endif>HAPUS FILTER</a>
+                </div>
+                <div class="catalog-filter-actions">
+                    <button type="submit" class="btn btn-dark w-100" data-filter-submit>
+                        <span class="catalog-filter-label-desktop">TERAPKAN FILTER</span>
+                        <span class="catalog-filter-label-mobile" data-filter-result-label>Lihat {{ $collections->total() }} produk</span>
+                    </button>
+                    <a class="catalog-reset" href="{{ route('catalog',request('sale')?['sale'=>1]:[]) }}" data-catalog-url @if(!$activeFilterCount) hidden @endif>HAPUS FILTER</a>
+                </div>
             </form>
         </aside>
         @php($activeFilters=collect([
@@ -105,11 +114,15 @@ const filterPanel = document.querySelector('[data-filter-panel]');
 const filterTrigger = document.querySelector('[data-filter-open]');
 const filterClose = document.querySelector('[data-filter-close]');
 const filterBackdrop = document.querySelector('[data-filter-backdrop]');
+const filterResultLabel = catalogForm.querySelector('[data-filter-result-label]');
+let filterReturnScroll = 0;
 const setFilterOpen = open => {
+    if (open) filterReturnScroll = scrollY;
     filterPanel.classList.toggle('is-open', open);
     filterTrigger.setAttribute('aria-expanded', String(open));
     filterBackdrop.hidden = !open;
-    (open ? filterClose : filterTrigger).focus();
+    (open ? filterClose : filterTrigger).focus({preventScroll: true});
+    if (!open && matchMedia('(max-width: 767px)').matches) scrollTo({top: filterReturnScroll, behavior: 'instant'});
 };
 filterTrigger.addEventListener('click', () => setFilterOpen(filterTrigger.getAttribute('aria-expanded') !== 'true'));
 filterClose.addEventListener('click', () => setFilterOpen(false));
@@ -137,6 +150,7 @@ const updateCatalog = async (url, {fromHistory = false, closeFilter = false, scr
     const results = catalog.querySelector('[data-catalog-results]');
     results.setAttribute('aria-busy', 'true');
     catalogStatus.textContent = 'Memuat produk…';
+    filterResultLabel.textContent = 'Memuat hasil…';
     try {
         const response = await fetch(url, {signal: request.signal});
         if (!response.ok) throw new Error('Catalog response failed');
@@ -150,6 +164,7 @@ const updateCatalog = async (url, {fromHistory = false, closeFilter = false, scr
         heading.replaceWith(nextHeading);
         results.replaceWith(nextResults);
         resultCount.textContent = nextCount.textContent;
+        resultCount.dataset.catalogTotal = nextCount.dataset.catalogTotal;
         const badge = filterTrigger.querySelector('b');
         const nextBadge = next.querySelector('[data-filter-open] b');
         badge?.remove();
@@ -184,6 +199,7 @@ const updateCatalog = async (url, {fromHistory = false, closeFilter = false, scr
         if (pendingRequest === request) {
             pendingRequest = null;
             results.removeAttribute('aria-busy');
+            filterResultLabel.textContent = 'Lihat ' + resultCount.dataset.catalogTotal + ' produk';
         }
     }
 };

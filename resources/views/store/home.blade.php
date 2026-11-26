@@ -32,7 +32,8 @@
     $primaryEdit = $campaignEdits->get('main', collect())->firstWhere('image', '!=', null);
     $campaign = $homeBanners->first();
     $heroCampaign = ($shop['hero_campaign_enabled'] ?? true) && $heroContentStyle === 'editorial'
-        ? $campaignEdits->get('main', collect())->first()
+        ? ($campaignEdits->flatMap(fn ($edits) => $edits->values())->firstWhere('id', $heroCampaignId)
+            ?? $campaignEdits->get('main', collect())->first())
         : null;
     $spotlightProducts = $heroCampaign ? $heroCampaign['items']->whereNotIn('id', $newCollections->pluck('id'))->take(4) : collect();
     $firstSlide = [

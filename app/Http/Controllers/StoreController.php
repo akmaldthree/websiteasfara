@@ -58,15 +58,17 @@ class StoreController extends Controller
         $contentEntries = ContentEntry::published()->where('type', 'banner')->orderBy('sort_order')->get();
         $collections = Series::published()->withStoreCard()
             ->orderByDesc('featured')->latest()->take(24)->get();
+        $heroCampaignId = (int) Setting::get('hero_campaign_id');
         $campaigns = ContentEntry::published()->where('type', 'campaign')->orderBy('sort_order')->orderBy('id')
             ->get(['id', 'title', 'slug', 'summary', 'image', 'blocks'])
             ->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty())
             ->groupBy(fn (ContentEntry $campaign) => $campaign->campaignGroup())
-            ->flatMap(fn ($group) => $group->take(8));
+            ->flatMap(fn ($group) => $group->take(8)->concat($group->where('id', $heroCampaignId))->unique('id'));
         $campaignProductIds = $campaigns->flatMap(fn (ContentEntry $campaign) => $campaign->campaignProductIds())->unique();
         $campaignProducts = Series::published()->withStoreCard()->whereKey($campaignProductIds->all())
             ->whereHas('variants', fn ($variants) => $variants->where('active', true))->get()->keyBy('id');
         $campaignEdits = $campaigns->mapWithKeys(fn (ContentEntry $campaign) => ['campaign-'.$campaign->id => [
+            'id' => $campaign->id,
             'label' => $campaign->title,
             'slug' => $campaign->slug,
             'summary' => $campaign->summary,
@@ -78,7 +80,7 @@ class StoreController extends Controller
             'url' => route('content.show', ['campaign', $campaign->slug]),
         ]])->filter(fn (array $campaign) => $campaign['items']->isNotEmpty())->groupBy('group', preserveKeys: true);
 
-        return view('store.home', compact('collections', 'contentEntries', 'campaignEdits'));
+        return view('store.home', compact('collections', 'contentEntries', 'campaignEdits', 'heroCampaignId'));
     }
 
     public function catalog(Request $r, Analytics $analytics)

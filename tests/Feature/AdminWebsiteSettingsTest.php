@@ -109,11 +109,17 @@ class AdminWebsiteSettingsTest extends TestCase
         $category = Category::create(['name' => 'Kampanye', 'slug' => 'kampanye-settings', 'active' => true]);
         $series = Series::create(['category_id' => $category->id, 'name' => 'Produk kurasi', 'slug' => 'produk-kurasi', 'active' => true]);
         Variant::create(['series_id' => $series->id, 'sku' => 'KUR-01', 'color' => 'Black', 'size' => 'M', 'price' => 199000, 'stock' => 4, 'weight' => 500]);
-        ContentEntry::create(['type' => 'campaign', 'title' => 'Kurasi CMS', 'slug' => 'kurasi-cms', 'active' => true, 'editorial_status' => 'approved',
+        $campaign = ContentEntry::create(['type' => 'campaign', 'title' => 'Kurasi CMS', 'slug' => 'kurasi-cms', 'active' => true, 'editorial_status' => 'approved',
             'blocks' => [['type' => 'campaign_product', 'series_id' => $series->id]],
         ]);
         $this->get('/')->assertOk()->assertSee('Asfara Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('data-duration="5500"', false)->assertSee('data-announcement-interval="3500"', false)->assertSee('data-notice-prev', false)->assertSee('data-notice-next', false)->assertSee('--palette-sage:#F9F8F6', false)->assertSee('--palette-gold:#C9B59C', false)->assertSee('--text:#202020', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
         $this->get('/koleksi')->assertOk()->assertSee('BUSANA');
         $this->withSession(['locale' => 'en'])->get('/')->assertOk()->assertSee('CMS CURATED COLLECTION');
+        $this->get(route('admin.settings'))->assertOk()->assertSee('Kampanye pembuka')->assertSee($campaign->title);
+        $this->post(route('admin.settings.save'), array_replace($payload, [
+            'hero_campaign_id' => $campaign->id, 'hero_campaign_enabled' => '1', 'hero_content_style' => 'editorial',
+        ]))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertEquals($campaign->id, Setting::get('hero_campaign_id'));
+        $this->get('/')->assertOk()->assertSee('<h1>Kurasi CMS</h1>', false);
     }
 }

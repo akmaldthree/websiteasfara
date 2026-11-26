@@ -194,10 +194,7 @@ function showImage(button) {
     gridPhotos.forEach(item => item.hidden = Number(item.dataset.galleryGrid) === galleryIndex);
     document.querySelector('[data-product-gallery-current]').textContent = String(galleryIndex + 1);
 }
-const choicesFor = (kind, current) => {
-    const precedingGroups = variantGroups.slice(0, variantGroups.indexOf(kind));
-    return availableOptions.filter(candidate => precedingGroups.every(group => candidate.dataset[group] === current?.dataset[group]));
-};
+const choicesFor = (kind, current) => storeVariants.choices(availableOptions, variantGroups, kind, current);
 function updateVariant() {
     const option = select.selectedOptions[0];
     const hasVariant = Boolean(option?.value);
@@ -227,9 +224,7 @@ function updateVariant() {
         variantInfo.textContent = 'Stok habis.';
         return;
     }
-    const stockLabel = purchasable
-        ? (option.dataset.method === 'Pre-order' ? 'Pre-order tersedia' : 'Stok tersedia')
-        : 'Varian ini habis';
+    const stockLabel = storeVariants.stock(purchasable, option.dataset.method);
     displayStock.textContent = stockLabel;
     let price = Number(option.dataset.price);
     let applied = null;
@@ -272,9 +267,7 @@ document.querySelector('[data-product-gallery-next]')?.addEventListener('click',
 variantChoices.forEach(button => button.addEventListener('click', () => {
     const {kind, value} = button.dataset;
     const current = select.selectedOptions[0];
-    const score = option => variantGroups.filter(key => key !== kind && option.dataset[key] === current?.dataset[key]).length;
-    const candidates = choicesFor(kind, current).filter(option => option.dataset[kind] === value);
-    const match = candidates.sort((a, b) => score(b) - score(a))[0];
+    const match = storeVariants.match(availableOptions, variantGroups, kind, value, current);
     if (!match) return;
     const sizes = new Set(choicesFor('size', match).map(option => option.dataset.size));
     needsVariantSelection = kind !== 'size' && sizes.size > 1

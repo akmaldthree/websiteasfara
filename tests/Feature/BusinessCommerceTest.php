@@ -121,6 +121,11 @@ class BusinessCommerceTest extends TestCase
     public function test_private_tier_price_is_not_exposed_to_guests_and_is_snapshotted_for_approved_customer(): void
     {
         $this->group->update(['discount_percent' => 10]);
+        Variant::create([
+            'series_id' => $this->variant->series_id, 'sku' => 'B2B-MITRA-OLIVE-L', 'color' => 'Olive', 'size' => 'L',
+            'price' => 320000, 'stock' => 30, 'weight' => 500,
+        ]);
+        $this->get(route('catalog'))->assertOk()->assertSee('"price":300000', false)->assertDontSee('"price":270000', false);
         $this->get(route('product', 'mitra'))->assertOk()->assertDontSee('Harga privat')->assertDontSee('250.000')
             ->assertSee('id="display-product-price">Rp 300.000', false);
 
@@ -128,6 +133,7 @@ class BusinessCommerceTest extends TestCase
         BusinessAccount::factory()->approved($this->group)->create(['user_id' => $customer->id, 'business_type' => 'reseller']);
         $this->actingAs($customer)->get(route('product', 'mitra'))->assertOk()->assertSee('Harga privat')->assertSee('250.000')
             ->assertSee('id="display-product-price">Rp 270.000', false);
+        $this->get(route('catalog'))->assertOk()->assertSee('"price":270000', false)->assertSee('"price":288000', false);
 
         $service = app(CheckoutService::class);
         $quote = $service->quote([$this->variant->id => 3], $this->checkoutInput(), false, $customer);

@@ -7,6 +7,8 @@ use App\Models\ContentEntry;
 use App\Models\CuratedLink;
 use App\Models\Setting;
 use App\Models\StoreLocation;
+use App\Models\Variant;
+use App\Services\PricingService;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\View;
@@ -51,6 +53,23 @@ class AppServiceProvider extends ServiceProvider
             $view->with('cmsMenus', ContentEntry::published()->where('type', 'menu')->orderBy('sort_order')->get());
             $view->with('curatedLinks', CuratedLink::where('active', true)->orderBy('sort_order')->get()->groupBy('section'));
             $view->with('storeLocations', StoreLocation::where('active', true)->orderBy('sort_order')->get());
+        });
+        View::composer('partials.product-card', function ($view) {
+            $pricing = app(PricingService::class);
+            $attributes = request()->attributes;
+            if (! $attributes->has('asfara_card_price_group')) {
+                $attributes->set('asfara_card_price_group', $pricing->groupFor(request()->user()));
+            }
+            $priceGroup = $attributes->get('asfara_card_price_group');
+            if (! $priceGroup) {
+                return;
+            }
+
+            $variants = $view->getData()['collection']->variants;
+            $variants->loadMissing(['prices' => fn ($prices) => $prices->where('price_group_id', $priceGroup->id)->where('active', true)]);
+            $view->with('cardUnitPrices', $variants->mapWithKeys(fn (Variant $variant) => [
+                $variant->id => $pricing->resolveForGroup($variant, 1, $priceGroup)['price'],
+            ]));
         });
         Blade::directive('rupiah', fn ($expression) => "<?php echo 'Rp '.number_format((float)($expression),0,',','.'); ?>");
     }
