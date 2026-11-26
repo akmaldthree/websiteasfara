@@ -118,10 +118,15 @@ const filterClose = document.querySelector('[data-filter-close]');
 const filterBackdrop = document.querySelector('[data-filter-backdrop]');
 const filterResultLabel = catalogForm.querySelector('[data-filter-result-label]');
 const filterDrawer = matchMedia('(max-width: 991px)');
+const syncFilterInert = () => {
+    filterPanel.inert = filterDrawer.matches && !filterPanel.classList.contains('is-open');
+};
+syncFilterInert();
 let filterReturnScroll = 0;
 const setFilterOpen = open => {
     if (open) filterReturnScroll = scrollY;
     filterPanel.classList.toggle('is-open', open);
+    syncFilterInert();
     filterTrigger.setAttribute('aria-expanded', String(open));
     if (open) {
         filterPanel.setAttribute('role', 'dialog');
@@ -149,6 +154,7 @@ document.addEventListener('keydown', event => {
 });
 filterDrawer.addEventListener('change', event => {
     if (!event.matches && filterPanel.classList.contains('is-open')) setFilterOpen(false);
+    else syncFilterInert();
 });
 
 const catalogPositionKey = 'asfara-catalog-position';

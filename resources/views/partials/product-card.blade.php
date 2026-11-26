@@ -4,7 +4,9 @@
         $sellingPrice = (int) ($cardUnitPrices?->min() ?? $collection->variants_min_price ?? $collection->variants->min('price') ?? 0);
         $primaryMedia = $collection->image ? $collection->media->firstWhere('image', $collection->image) : $collection->media->first();
         $primaryImage = $collection->image ? $collection->image_url : ($primaryMedia?->image_url ?? $collection->image_url);
-        $secondaryMedia = $collection->media->first(fn ($media) => $media->id !== $primaryMedia?->id && $media->image_url !== $primaryImage);
+        $otherPhotos = $collection->media->reject(fn ($media) => $media->image_url === $primaryImage);
+        $secondaryMedia = $otherPhotos->first(fn ($media) => $primaryMedia && !$media->variant_id && $media->color === $primaryMedia->color)
+            ?? $otherPhotos->first();
         $secondaryImage = $secondaryMedia?->image_url;
         $saving = max(0, (int) $collection->compare_at_price - $sellingPrice);
         $quickVariants = $collection->variants->where('active', true)->where('fulfillment', '!=', 'custom_made')->sortBy('id')
@@ -28,7 +30,7 @@
     @php($cardKey=($cardContext ?? '').$collection->id)
     <a @class(['product-image', 'has-secondary-image' => $secondaryImage]) href="{{ route('product',$collection->slug) }}">
         <img class="product-image-primary" src="{{ $primaryImage }}" style="object-position:{{ $primaryMedia?->focal_x ?? 50 }}% {{ $primaryMedia?->focal_y ?? 50 }}%" alt="{{ $collection->name }}{{ $collection->image ? '' : ' — ilustrasi koleksi' }}" width="800" height="800" loading="lazy" decoding="async">
-        @if($secondaryImage)<img class="product-image-secondary" src="{{ $secondaryImage }}" style="object-position:{{ $secondaryMedia->focal_x }}% {{ $secondaryMedia->focal_y }}%" alt="{{ $collection->name }} — tampilan berikutnya" width="800" height="800" loading="lazy" decoding="async">@endif
+        @if($secondaryImage)<img class="product-image-secondary" src="{{ $secondaryImage }}" style="object-position:{{ $secondaryMedia->focal_x }}% {{ $secondaryMedia->focal_y }}%" alt="" aria-hidden="true" width="800" height="800" loading="lazy" decoding="async">@endif
         @if($availableStock<=0)<span class="product-tag product-tag-sold">SOLD OUT</span>@elseif($saving>0)<span class="product-tag product-tag-sale">Hemat @rupiah($saving)</span>@elseif($isSignature)<span class="product-tag product-tag-signature">SIGNATURE</span>@elseif($collection->featured)<span class="product-tag product-tag-new">NEW IN</span>@endif
     </a>
     @if($purchasableVariants->count()===1)

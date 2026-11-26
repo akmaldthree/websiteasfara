@@ -61,8 +61,8 @@
             <a href="{{ route('catalog') }}" class="catalog-nav-link" aria-haspopup="true" aria-expanded="false" aria-controls="catalog-mega-menu" @if(request()->routeIs('catalog','product')) aria-current="page" @endif>Shop</a>
             @if($campaignMenu->isNotEmpty())
                 <details class="campaign-nav">
-                    <summary>Collections</summary>
-                    <div>
+                    <summary aria-controls="campaign-desktop-menu" aria-expanded="false">Collections</summary>
+                    <div id="campaign-desktop-menu">
                         @foreach(config('storefront.campaign_groups') as $group => $label)
                             @php($menuEntries = $campaignMenu->get($group, collect())->take(8))
                             @continue($menuEntries->isEmpty())
@@ -90,7 +90,7 @@
             <a href="{{ route('cart') }}" data-open-cart aria-label="Keranjang"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l2 14H3L5 8zM8 8V5a4 4 0 0 1 8 0v3"/></svg>@if(array_sum(session('cart',[]))>0)<span>{{ array_sum(session('cart',[])) }}</span>@endif</a>
         </div>
     </div>
-    <div class="catalog-mega-menu" id="catalog-mega-menu" aria-label="Menu katalog" aria-hidden="true">
+    <div class="catalog-mega-menu" id="catalog-mega-menu" aria-label="Menu katalog" aria-hidden="true" inert>
         <div class="container-xxl"><div class="mega-category-list"><small>{{ $storeCopy['mega_shop_by_category'] }}</small>@foreach($categories as $category)<div class="mega-category"><a href="{{ route('catalog',['category'=>$category->slug]) }}">{{ strtoupper($category->name) }} <span>→</span></a><div>@foreach($category->series->take(4) as $menuSeries)<a href="{{ route('product',$menuSeries->slug) }}">{{ $menuSeries->name }}</a>@endforeach</div></div>@endforeach<a href="{{ route('catalog') }}">{{ $storeCopy['mega_view_all'] }} <span>→</span></a></div><div class="mega-fit"><small>{{ $storeCopy['mega_find_fit'] }}</small>@forelse($curatedLinks->get('fit',collect()) as $link)<a href="{{ $link->url }}">{{ strtoupper($link->title) }} <span>→</span></a>@empty<a href="{{ route('catalog') }}">DAILY WEAR <span>→</span></a>@endforelse<small>{{ $storeCopy['mega_explore'] }}</small>@foreach($cmsMenus->whereIn('placement',['both','desktop']) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ strtoupper($menu->title) }} <span>→</span></a>@endforeach</div><div class="mega-promos">@forelse($curatedLinks->get('promo',collect())->take(2) as $link)<a href="{{ $link->url }}" style="--promo-image:url('{{ $link->image_url }}')"><span>{{ strtoupper($link->eyebrow ?: $storeCopy['mega_promo_label']) }}</span><strong>{{ $link->title }}</strong><small>{{ $storeCopy['mega_promo_cta'] }} →</small></a>@empty<div class="mega-menu-feature"><span>{{ $storeCopy['mega_promo_label'] }}</span><h2>{{ $storeCopy['mega_fallback_title'] }}</h2><a class="btn btn-outline-light" href="{{ route('catalog') }}">{{ $storeCopy['mega_promo_cta'] }}</a></div>@endforelse</div></div>
     </div>
     <button type="button" class="mobile-nav-backdrop" data-mobile-nav-backdrop aria-label="Tutup navigasi" tabindex="-1" hidden></button>
@@ -288,10 +288,133 @@ const storeVariants = (() => {
     return {field, choices, match, stock};
 })();
 (()=>{const header=document.querySelector('.site-header'),floatingWhatsApp=document.querySelector('[data-floating-whatsapp]');const syncHeader=()=>{header?.classList.toggle('is-scrolled',header.classList.contains('sticky-top')&&scrollY>80);floatingWhatsApp?.classList.toggle('is-compact',scrollY>160)};syncHeader();addEventListener('scroll',syncHeader,{passive:true});
-const catalogTrigger=document.querySelector('.catalog-nav-link'),catalogMenu=document.querySelector('.catalog-mega-menu');let catalogCloseTimer;const setCatalogOpen=open=>{clearTimeout(catalogCloseTimer);header?.classList.toggle('is-catalog-open',open);catalogTrigger?.setAttribute('aria-expanded',open?'true':'false');catalogMenu?.setAttribute('aria-hidden',open?'false':'true')};const openCatalog=()=>setCatalogOpen(true),closeCatalog=()=>setCatalogOpen(false),scheduleCatalogClose=()=>{clearTimeout(catalogCloseTimer);catalogCloseTimer=setTimeout(closeCatalog,90)};catalogTrigger?.addEventListener('pointerenter',openCatalog);catalogTrigger?.addEventListener('pointerleave',scheduleCatalogClose);catalogTrigger?.addEventListener('focus',openCatalog);catalogMenu?.addEventListener('pointerenter',openCatalog);catalogMenu?.addEventListener('pointerleave',scheduleCatalogClose);catalogMenu?.addEventListener('focusin',openCatalog);header?.addEventListener('focusout',()=>setTimeout(()=>{if(!header.contains(document.activeElement))closeCatalog()}));document.querySelectorAll('.desktop-nav a:not(.catalog-nav-link)').forEach(link=>link.addEventListener('pointerenter',closeCatalog));document.addEventListener('pointerdown',event=>{if(!catalogTrigger?.contains(event.target)&&!catalogMenu?.contains(event.target))closeCatalog()});
+const catalogTrigger = document.querySelector('.catalog-nav-link');
+const catalogMenu = document.querySelector('.catalog-mega-menu');
+const campaignNav = document.querySelector('.campaign-nav');
+const campaignTrigger = campaignNav?.querySelector('summary');
+const campaignMenu = campaignNav?.querySelector('#campaign-desktop-menu');
+const desktopNav = matchMedia('(min-width: 992px)');
+const hoverPointer = matchMedia('(hover: hover) and (pointer: fine)');
+const disclosures = [
+    {trigger: catalogTrigger, panel: catalogMenu, isCatalog: true},
+    {trigger: campaignTrigger, panel: campaignMenu, isCatalog: false},
+].filter(item => item.trigger && item.panel);
+let activeMenu;
+let pinnedMenu;
+let navCloseTimer;
+
+function setMenu(next, returnFocus = false) {
+    clearTimeout(navCloseTimer);
+    const previous = activeMenu;
+    if (next !== previous) pinnedMenu = undefined;
+    activeMenu = next;
+    disclosures.forEach(menu => {
+        const open = menu === activeMenu;
+        menu.trigger.setAttribute('aria-expanded', String(open));
+        if (menu.isCatalog) {
+            header.classList.toggle('is-catalog-open', open);
+            menu.panel.setAttribute('aria-hidden', String(!open));
+            menu.panel.inert = !open;
+        } else {
+            campaignNav.open = open;
+        }
+    });
+    if (returnFocus) previous?.trigger.focus({preventScroll: true});
+}
+const containsMenu = (menu, target) => Boolean(menu?.trigger.contains(target) || menu?.panel.contains(target));
+const scheduleMenuClose = menu => {
+    clearTimeout(navCloseTimer);
+    navCloseTimer = setTimeout(() => {
+        if (activeMenu === menu && !menu.panel.contains(document.activeElement)) setMenu();
+    }, 180);
+};
+disclosures.forEach(menu => {
+    [menu.trigger, menu.panel].forEach(element => {
+        element.addEventListener('pointerenter', event => {
+            if (event.pointerType === 'mouse' && hoverPointer.matches && desktopNav.matches) setMenu(menu);
+        });
+        element.addEventListener('pointerleave', event => {
+            if (event.pointerType === 'mouse') scheduleMenuClose(menu);
+        });
+    });
+    menu.trigger.addEventListener('keydown', event => {
+        if (event.key !== 'ArrowDown' || !desktopNav.matches) return;
+        event.preventDefault();
+        setMenu(menu);
+        menu.panel.querySelector('a')?.focus();
+    });
+    if (!menu.isCatalog) menu.trigger.addEventListener('click', event => {
+        event.preventDefault();
+        if (activeMenu === menu && (event.detail === 0 || pinnedMenu === menu)) {
+            setMenu();
+        } else {
+            setMenu(menu);
+            pinnedMenu = menu;
+        }
+    });
+});
+header.querySelectorAll('.desktop-nav > a:not(.catalog-nav-link)').forEach(link => link.addEventListener('pointerenter', () => {
+    if (!activeMenu?.panel.contains(document.activeElement)) setMenu();
+}));
+document.addEventListener('pointerdown', event => { if (activeMenu && !containsMenu(activeMenu, event.target)) setMenu(); });
+document.addEventListener('focusin', event => { if (activeMenu && !containsMenu(activeMenu, event.target)) setMenu(); });
+desktopNav.addEventListener('change', () => setMenu());
 const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
 const storefrontCopy=@json($storeCopy);
-const searchDrawer=document.getElementById('search-drawer'),searchInput=document.getElementById('global-search'),searchResults=document.getElementById('predictive-search');const openSearch=()=>{searchDrawer.showModal();setTimeout(()=>searchInput?.focus(),50)};document.getElementById('open-search')?.addEventListener('click',openSearch);document.getElementById('mobile-open-search')?.addEventListener('click',()=>{bootstrap.Collapse.getOrCreateInstance(document.getElementById('mobile-nav')).hide();openSearch()});document.getElementById('close-search')?.addEventListener('click',()=>searchDrawer.close());searchDrawer?.addEventListener('click',event=>{if(event.target===searchDrawer)searchDrawer.close()});let searchTimer;searchInput?.addEventListener('input',()=>{clearTimeout(searchTimer);const query=searchInput.value.trim();if(query.length<2){searchResults.innerHTML='';return}searchResults.innerHTML='<p>Mencari…</p>';searchTimer=setTimeout(async()=>{try{const response=await fetch(@json(route('search.suggestions'))+'?q='+encodeURIComponent(query),{headers:{Accept:'application/json'}});const data=await response.json();searchResults.innerHTML=data.products.length?data.products.map(item=>`<a href="${esc(item.url)}"><img src="${esc(item.image)}" alt="${esc(item.name)}" width="128" height="160" loading="lazy" decoding="async"><span><b>${esc(item.name)}</b><small>${esc(item.price)}</small></span><i aria-hidden="true">→</i></a>`).join(''):'<p>Produk tidak ditemukan.</p>'}catch(error){searchResults.innerHTML='<p>Pencarian belum dapat dimuat.</p>'}},250)});
+const searchDrawer = document.getElementById('search-drawer');
+const searchInput = document.getElementById('global-search');
+const searchResults = document.getElementById('predictive-search');
+let searchTimer;
+let searchRequest;
+const openSearch = () => {
+    if (searchDrawer.open) return;
+    searchDrawer.showModal();
+    searchInput.focus({preventScroll: true});
+    if (searchInput.value.trim().length >= 2 && !searchResults.hasChildNodes()) searchInput.dispatchEvent(new Event('input'));
+};
+document.getElementById('open-search')?.addEventListener('click', openSearch);
+document.getElementById('mobile-open-search')?.addEventListener('click', () => {
+    mobileNav.addEventListener('hidden.bs.collapse', openSearch, {once: true});
+    mobileNavToggle.focus({preventScroll: true});
+    hideMobileNav();
+});
+document.getElementById('close-search')?.addEventListener('click', () => searchDrawer.close());
+searchDrawer.addEventListener('click', event => { if (event.target === searchDrawer) searchDrawer.close(); });
+searchDrawer.addEventListener('close', () => {
+    clearTimeout(searchTimer);
+    searchRequest?.abort();
+    if (searchResults.getAttribute('aria-busy') === 'true') searchResults.replaceChildren();
+    searchResults.removeAttribute('aria-busy');
+});
+searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchRequest?.abort();
+    const query = searchInput.value.trim();
+    if (query.length < 2) {
+        searchResults.replaceChildren();
+        searchResults.removeAttribute('aria-busy');
+        return;
+    }
+    searchResults.setAttribute('aria-busy', 'true');
+    searchResults.innerHTML = '<p>Mencari…</p>';
+    searchTimer = setTimeout(async () => {
+        const request = new AbortController();
+        searchRequest = request;
+        try {
+            const url = new URL(@json(route('search.suggestions')), location.href);
+            url.searchParams.set('q', query);
+            const response = await fetch(url, {headers: {Accept: 'application/json'}, signal: request.signal});
+            if (!response.ok) throw new Error('Search request failed');
+            const data = await response.json();
+            if (request.signal.aborted) return;
+            searchResults.innerHTML = data.products.length ? data.products.map(item => `<a href="${esc(item.url)}"><img src="${esc(item.image)}" alt="" width="128" height="160" loading="lazy" decoding="async"><span><b>${esc(item.name)}</b><small>${esc(item.price)}</small></span><i aria-hidden="true">→</i></a>`).join('') : '<p>Produk tidak ditemukan.</p>';
+        } catch (error) {
+            if (!request.signal.aborted) searchResults.innerHTML = '<p>Pencarian belum dapat dimuat.</p>';
+        } finally {
+            if (!request.signal.aborted) searchResults.removeAttribute('aria-busy');
+        }
+    }, 220);
+});
 const cartDrawer = document.getElementById('cart-drawer');
 const cartLines = document.getElementById('cart-drawer-lines');
 const cartFooter = document.getElementById('cart-drawer-footer');
@@ -502,8 +625,73 @@ document.addEventListener('click', event => {
 document.querySelector('[data-quick-close]')?.addEventListener('click', () => quickDialog.close());
 quickDialog.addEventListener('click', event => { if (event.target === quickDialog) quickDialog.close(); });
 const observer='IntersectionObserver'in window?new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target)}}),{threshold:.12}):null;document.querySelectorAll('.reveal').forEach(element=>observer?observer.observe(element):element.classList.add('is-visible'));
-document.querySelectorAll('[data-drag-scroll]').forEach(track=>{let down=false,startX=0,startLeft=0;track.addEventListener('pointerdown',event=>{if(event.pointerType==='mouse'){down=true;startX=event.clientX;startLeft=track.scrollLeft;track.classList.add('is-dragging')}});addEventListener('pointerup',()=>{down=false;track.classList.remove('is-dragging')});track.addEventListener('pointermove',event=>{if(down)track.scrollLeft=startLeft-(event.clientX-startX)})});
-document.querySelectorAll('.reference-carousel').forEach(shell=>{const track=shell.querySelector('.product-carousel');const move=direction=>track?.scrollBy({left:direction*(track.querySelector('.product-carousel-item')?.getBoundingClientRect().width||280),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});shell.querySelector('[data-carousel-prev]')?.addEventListener('click',()=>move(-1));shell.querySelector('[data-carousel-next]')?.addEventListener('click',()=>move(1));track?.addEventListener('scroll',()=>{const max=track.scrollWidth-track.clientWidth;shell.querySelector('[data-carousel-prev]')?.toggleAttribute('disabled',track.scrollLeft<4);shell.querySelector('[data-carousel-next]')?.toggleAttribute('disabled',track.scrollLeft>max-4)},{passive:true});shell.querySelector('[data-carousel-prev]')?.toggleAttribute('disabled',true)});
+const markSecondaryReady = image => {
+    if (image.matches?.('.product-image-secondary') && image.complete && image.naturalWidth) {
+        image.closest('.product-image').classList.add('is-secondary-ready');
+    }
+};
+document.addEventListener('load', event => markSecondaryReady(event.target), true);
+document.querySelectorAll('.product-image-secondary').forEach(markSecondaryReady);
+document.addEventListener('pointerover', event => {
+    if (event.pointerType !== 'mouse') return;
+    const image = event.target.closest('.product-card')?.querySelector('.product-image-secondary');
+    if (image && !image.complete) image.loading = 'eager';
+});
+
+document.querySelectorAll('[data-drag-scroll]').forEach(track => {
+    let gesture;
+    let dragged = false;
+    track.addEventListener('pointerdown', event => {
+        dragged = false;
+        if (event.pointerType !== 'mouse' || event.button !== 0 || event.target.closest('button, input, select, textarea')) return;
+        gesture = {id: event.pointerId, x: event.clientX, left: track.scrollLeft};
+    });
+    track.addEventListener('dragstart', event => event.preventDefault());
+    track.addEventListener('pointermove', event => {
+        if (gesture?.id !== event.pointerId || !(event.buttons & 1)) return;
+        const delta = event.clientX - gesture.x;
+        if (!dragged && Math.abs(delta) < 8) return;
+        if (!dragged) {
+            dragged = true;
+            track.setPointerCapture(event.pointerId);
+            track.classList.add('is-dragging');
+        }
+        track.scrollLeft = gesture.left - delta;
+    });
+    const stop = event => {
+        if (gesture?.id !== event.pointerId) return;
+        gesture = undefined;
+        track.classList.remove('is-dragging');
+    };
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(name => track.addEventListener(name, stop));
+    track.addEventListener('click', event => {
+        if (!dragged || event.detail === 0) return;
+        dragged = false;
+        event.preventDefault();
+        event.stopPropagation();
+    }, true);
+});
+document.querySelectorAll('.reference-carousel').forEach(shell => {
+    const track = shell.querySelector('.product-carousel');
+    if (!track) return;
+    const previous = shell.querySelector('[data-carousel-prev]');
+    const next = shell.querySelector('[data-carousel-next]');
+    const sync = () => {
+        previous?.toggleAttribute('disabled', track.scrollLeft < 4);
+        next?.toggleAttribute('disabled', track.scrollLeft >= track.scrollWidth - track.clientWidth - 4);
+    };
+    const move = direction => {
+        const item = track.querySelector('.product-carousel-item');
+        if (!item) return;
+        const gap = Number.parseFloat(getComputedStyle(track).columnGap) || 0;
+        track.scrollBy({left: direction * (item.getBoundingClientRect().width + gap), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'});
+    };
+    previous?.addEventListener('click', () => move(-1));
+    next?.addEventListener('click', () => move(1));
+    track.addEventListener('scroll', sync, {passive: true});
+    if ('ResizeObserver' in window) new ResizeObserver(sync).observe(track);
+    sync();
+});
 document.addEventListener('click',event=>document.querySelectorAll('.language-picker[open]').forEach(picker=>{if(!picker.contains(event.target))picker.removeAttribute('open')}));
 document.querySelectorAll('[data-product-voucher-copy]').forEach(button=>button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(button.dataset.productVoucherCopy);button.querySelector('small').textContent='KODE TERSALIN'}catch(error){button.querySelector('small').textContent=button.dataset.productVoucherCopy}}));
 const footerMobile = matchMedia('(max-width: 767px)');
@@ -532,24 +720,15 @@ mobileNavBackdrop.addEventListener('click', hideMobileNav);
 mobileNav.querySelectorAll('a').forEach(link => link.addEventListener('click', hideMobileNav));
 matchMedia('(min-width: 992px)').addEventListener('change', event => { if (event.matches) hideMobileNav(); });
 document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') {
-        closeCatalog();
-        document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
+    if (event.key !== 'Escape' || document.querySelector('dialog[open]')) return;
+    if (activeMenu) {
+        event.preventDefault();
+        setMenu(undefined, activeMenu.panel.contains(document.activeElement));
+    } else if (mobileNav.classList.contains('show')) {
+        event.preventDefault();
         hideMobileNav();
     }
 });
-const campaignNav = document.querySelector('.campaign-nav');
-if (campaignNav) {
-    document.addEventListener('pointerdown', event => {
-        if (!campaignNav.contains(event.target)) campaignNav.open = false;
-    });
-    campaignNav.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && campaignNav.open) {
-            campaignNav.open = false;
-            campaignNav.querySelector('summary').focus();
-        }
-    });
-}
 const welcomeVoucher = document.getElementById('welcome-voucher');
 if (welcomeVoucher) {
     const days = Number(welcomeVoucher.dataset.frequencyDays);
@@ -612,15 +791,6 @@ document.querySelectorAll('form[data-submit-once]').forEach(form=>form.addEventL
 }));
 const pageAlert=document.querySelector('[data-focus-alert]');
 if(pageAlert)requestAnimationFrame(()=>pageAlert.focus());
-let dialogReturnFocus=null;
-document.addEventListener('click',event=>{
-    const trigger=event.target.closest('#open-search,[data-open-cart],[data-quick-open],[data-open-size-guide],#open-product-zoom');
-    if(trigger)dialogReturnFocus=trigger;
-},{capture:true});
-document.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('close',()=>{
-    if(dialogReturnFocus?.isConnected)dialogReturnFocus.focus({preventScroll: true});
-    dialogReturnFocus=null;
-}));
 </script>
 </body>
 </html>
