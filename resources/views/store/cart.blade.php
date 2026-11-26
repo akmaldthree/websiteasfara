@@ -22,9 +22,9 @@
                 @foreach($lines as $line)
                     @php($v=$line['variant'])
                     <div class="cart-item">
-                        <img src="{{ $v->series->image_url }}" alt="{{ $v->series->name }}" width="240" height="300" loading="lazy" decoding="async">
+                        <img src="{{ $v->storefront_image_url }}" alt="{{ $v->series->name }} · {{ $v->label }}" width="240" height="300" loading="lazy" decoding="async">
                         <div class="flex-grow-1">
-                            <h2><a href="{{ route('product', $v->series->slug) }}">{{ $v->series->name }}</a></h2>
+                            <h2><a href="{{ route('product', ['slug' => $v->series->slug, 'variant' => $v->id]) }}">{{ $v->series->name }}</a></h2>
                             <p class="cart-line-meta">{{ $v->label }} · {{ $v->sku }}<br>@rupiah($line['unit_price']) / item @if($line['price_tier_minimum'])· Tier {{ $line['price_tier_minimum'] }}+@endif</p>
                             <span class="cart-stock-status">{{ match($v->fulfillment) {'pre_order' => 'PRE-ORDER', 'custom_made' => 'CUSTOM', 'bundle' => 'BUNDLE', default => 'READY STOCK'} }} · {{ $v->available }} TERSEDIA</span>
                             @if($line['customization'])<p class="small"><strong>Ukuran custom:</strong> @foreach($line['customization']['measurements'] as $key=>$value){{ $line['customization']['template']['fields'][$loop->index]['label'] ?? $key }} {{ $value }}{{ $line['customization']['template']['fields'][$loop->index]['unit'] ?? '' }}{{ !$loop->last?' · ':'' }}@endforeach<br>Biaya custom @rupiah($line['custom_cost']) · {{ $line['customization']['lead_time'] }}</p>@endif

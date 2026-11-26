@@ -65,6 +65,26 @@ class CommerceTest extends TestCase
         $this->get('/pesanan/'.$order->id)->assertForbidden();
     }
 
+    public function test_cart_and_checkout_display_the_selected_variant_photo(): void
+    {
+        $variant = $this->variant;
+        $series = $variant->series;
+        $series->update(['image' => 'demo/cover.webp']);
+        $series->media()->create(['image' => 'demo/black.webp', 'alt_text' => 'Raffah hitam', 'color' => 'black', 'active' => true]);
+        $exact = $series->media()->create(['image' => 'demo/black-large.webp', 'alt_text' => 'Raffah hitam ukuran L', 'variant_id' => $variant->id, 'active' => true]);
+        $productUrl = route('product', ['slug' => $series->slug, 'variant' => $variant->id]);
+
+        $this->postJson(route('cart.add'), ['variant_id' => $variant->id, 'quantity' => 1])->assertOk()
+            ->assertJsonPath('lines.0.image', $exact->image_url)->assertJsonPath('lines.0.url', $productUrl);
+        $this->get(route('cart'))->assertOk()->assertSee($exact->image_url, false)->assertSee($productUrl, false);
+        $this->get(route('checkout'))->assertOk()->assertSee($exact->image_url, false);
+
+        $exact->update(['active' => false]);
+        $this->getJson(route('cart.summary'))->assertOk()->assertJsonPath('lines.0.image', asset('storage/demo/black.webp'));
+        $series->media()->where('color', 'black')->update(['active' => false]);
+        $this->getJson(route('cart.summary'))->assertOk()->assertJsonPath('lines.0.image', $series->image_url);
+    }
+
     public function test_compact_cart_add_returns_totals_and_refuses_quantities_above_stock(): void
     {
         $endpoint = route('cart.add', ['compact' => 1]);

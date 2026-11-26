@@ -25,7 +25,9 @@ class CheckoutService
         $this->check(count($cart) > 0 && count($cart) <= 50, 'Keranjang kosong atau terlalu banyak varian.');
         $group = $this->pricing->groupFor($customer);
         $query = Variant::with([
-            'series.category', 'measurementTemplate', 'bundleComponents.componentVariant.series',
+            'series.category',
+            'series.media' => fn ($query) => $query->where('active', true),
+            'measurementTemplate', 'bundleComponents.componentVariant.series',
             'prices' => fn ($query) => $query->when($group, fn ($query) => $query->where('price_group_id', $group->id))->where('active', true),
         ])->whereIn('id', array_keys($cart))->orderBy('id');
         if ($lock) {

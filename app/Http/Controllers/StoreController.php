@@ -265,8 +265,8 @@ class StoreController extends Controller
                 'variant' => $line['variant']->label,
                 'quantity' => $line['quantity'],
                 'total' => 'Rp '.number_format($line['total'], 0, ',', '.'),
-                'image' => $line['variant']->series->image_url,
-                'url' => route('product', $line['variant']->series->slug),
+                'image' => $line['variant']->storefront_image_url,
+                'url' => route('product', ['slug' => $line['variant']->series->slug, 'variant' => $line['variant']->id]),
             ])->values(),
             'recommendations' => $recommendations,
         ]);

@@ -57,6 +57,25 @@ class Variant extends Model
         return $this->hasMany(Review::class);
     }
 
+    public function storefrontMedia(?Series $series = null): ?ProductMedia
+    {
+        $series ??= $this->series;
+        $media = $series->relationLoaded('media')
+            ? $series->media->where('active', true)
+            : $series->media()->where('active', true)->get();
+        $color = mb_strtolower((string) $this->color);
+
+        return $media->firstWhere('variant_id', $this->id)
+            ?? $media->first(fn (ProductMedia $photo) => ! $photo->variant_id && $color !== '' && mb_strtolower($photo->color ?? '') === $color)
+            ?? $media->first(fn (ProductMedia $photo) => ! $photo->variant_id && ! $photo->color)
+            ?? ($series->image ? $media->firstWhere('image', $series->image) : $media->first());
+    }
+
+    public function getStorefrontImageUrlAttribute(): string
+    {
+        return $this->storefrontMedia()?->image_url ?? $this->series->image_url;
+    }
+
     public function getAvailableAttribute(): int
     {
         if ($this->fulfillment === 'bundle') {

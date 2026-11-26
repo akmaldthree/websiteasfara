@@ -8,14 +8,8 @@
         $secondaryImage = $secondaryMedia?->image_url;
         $saving = max(0, (int) $collection->compare_at_price - $sellingPrice);
         $quickVariants = $collection->variants->where('active', true)->where('fulfillment', '!=', 'custom_made')->sortBy('id')
-            ->map(function ($variant) use ($collection, $cardUnitPrices, $primaryImage, $primaryMedia) {
-                $colorMedia = $collection->media->filter(fn ($media) => $media->color && mb_strtolower($media->color) === mb_strtolower($variant->color ?? ''));
-                $photo = $collection->media->firstWhere('variant_id', $variant->id)
-                    ?? $colorMedia->firstWhere('variant_id', null)
-                    ?? $colorMedia->first()
-                    ?? $collection->media->first(fn ($media) => !$media->variant_id && !$media->color)
-                    ?? $primaryMedia
-                    ?? $collection->media->first();
+            ->map(function ($variant) use ($collection, $cardUnitPrices, $primaryImage) {
+                $photo = $variant->storefrontMedia($collection);
 
                 return [
                     'id' => $variant->id, 'type' => $variant->product_type, 'color' => $variant->color, 'size' => $variant->size,
