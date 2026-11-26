@@ -117,14 +117,22 @@ const filterTrigger = document.querySelector('[data-filter-open]');
 const filterClose = document.querySelector('[data-filter-close]');
 const filterBackdrop = document.querySelector('[data-filter-backdrop]');
 const filterResultLabel = catalogForm.querySelector('[data-filter-result-label]');
+const filterDrawer = matchMedia('(max-width: 991px)');
 let filterReturnScroll = 0;
 const setFilterOpen = open => {
     if (open) filterReturnScroll = scrollY;
     filterPanel.classList.toggle('is-open', open);
     filterTrigger.setAttribute('aria-expanded', String(open));
+    if (open) {
+        filterPanel.setAttribute('role', 'dialog');
+        filterPanel.setAttribute('aria-modal', 'true');
+    } else {
+        filterPanel.removeAttribute('role');
+        filterPanel.removeAttribute('aria-modal');
+    }
     filterBackdrop.hidden = !open;
-    (open ? filterClose : filterTrigger).focus({preventScroll: true});
-    if (!open && matchMedia('(max-width: 767px)').matches) scrollTo({top: filterReturnScroll, behavior: 'instant'});
+    (open ? filterClose : filterDrawer.matches ? filterTrigger : catalogForm.querySelector('input[name="q"]'))?.focus({preventScroll: true});
+    if (!open && filterDrawer.matches) scrollTo({top: filterReturnScroll, behavior: 'instant'});
 };
 filterTrigger.addEventListener('click', () => setFilterOpen(filterTrigger.getAttribute('aria-expanded') !== 'true'));
 filterClose.addEventListener('click', () => setFilterOpen(false));
@@ -139,8 +147,8 @@ document.addEventListener('keydown', event => {
     event.preventDefault();
     (event.shiftKey ? lastControl : filterClose).focus();
 });
-matchMedia('(min-width: 768px)').addEventListener('change', event => {
-    if (event.matches && filterPanel.classList.contains('is-open')) setFilterOpen(false);
+filterDrawer.addEventListener('change', event => {
+    if (!event.matches && filterPanel.classList.contains('is-open')) setFilterOpen(false);
 });
 
 const catalogPositionKey = 'asfara-catalog-position';
