@@ -1,5 +1,4 @@
 @extends('layouts.store')
-@section('body_class','home-transparent-header')
 @section('content')
 @php
     $curated = function (string $key, $fallback) use ($shop, $collections) {
@@ -11,15 +10,8 @@
     $categorySlugs = collect(preg_split('/[,\r\n]+/', $shop['home_category_slugs'] ?? ''))->map(fn($slug)=>trim($slug))->filter();
     $categoryCollections = $categorySlugs->isEmpty() ? $collections->unique('category_id')->take(3) : $categorySlugs->map(fn($slug)=>$collections->firstWhere('slug',$slug))->filter()->unique('category_id')->take(3);
     $defaultOrder = collect(array_keys(config('storefront.home_sections')));
-    $homeOrder = collect($shop['home_section_order'] ?? $defaultOrder->all())->intersect($defaultOrder)->values();
-    if ($homeOrder->all() === ['hero', 'campaign', 'new_in', 'categories', 'collections', 'signature_banner', 'signature', 'studio_banner', 'studio']) {
-        $homeOrder = $defaultOrder;
-    }
-    if (!$homeOrder->contains('campaign') || !$homeOrder->contains('new_in')) {
-        $openingSections = $defaultOrder->take(5);
-        $homeOrder = $openingSections->concat($homeOrder->diff($openingSections));
-    }
-    $homeOrder = $homeOrder->intersect($defaultOrder)->concat($defaultOrder->diff($homeOrder))->values();
+    $homeOrder = collect($shop['home_section_order'] ?? [])->intersect($defaultOrder)->unique();
+    $homeOrder = $homeOrder->concat($defaultOrder->diff($homeOrder))->values();
     $heroVideoUrl = fn ($path) => match ($path) {
         'demo/hero-desktop.webm' => route('media.demo-hero', ['format' => 'desktop', 'v' => filemtime(database_path('seeders/assets/demo/hero-desktop.webm'))]),
         'demo/hero-mobile.webm' => route('media.demo-hero', ['format' => 'mobile', 'v' => filemtime(database_path('seeders/assets/demo/hero-mobile.webm'))]),
@@ -43,7 +35,8 @@
         'text' => $shop['hero_text'] ?? '',
         'url' => $shop['hero_button_url'] ?? route('catalog'),
         'label' => $shop['hero_button_label'] ?? 'Belanja sekarang',
-        'align' => 'left', 'tone' => 'light', 'duration' => 6500, 'mobile_image' => null,
+        'align' => 'left', 'tone' => 'light', 'duration' => 6500,
+        'mobile_image' => !empty($shop['hero_image_mobile']) ? asset('storage/'.$shop['hero_image_mobile']) : null,
         'video' => $videoEnabled ? $heroVideoUrl($shop['hero_video'] ?? null) : null,
         'mobile_video' => $videoEnabled ? $heroVideoUrl($shop['hero_video_mobile'] ?? null) : null,
         'has_audio' => ($shop['hero_video_has_audio'] ?? false) && ($shop['hero_video'] ?? null) !== 'demo/hero-desktop.webm',
@@ -62,13 +55,14 @@
         }
         $firstSlide['image'] = $heroCampaign['image'] ?: $firstSlide['image'];
         $firstSlide['mobile_image'] = $heroCampaign['mobile_image']
-            ?: ($demoVideo && $heroCampaign['slug'] === 'demo-seri-ruang-raya' ? asset('storage/demo/product-family-sage-4x5.webp') : null);
+            ?: $firstSlide['mobile_image'];
         $firstSlide['title'] = $heroCampaign['label'];
         $firstSlide['url'] = $heroCampaign['url'];
         $firstSlide['label'] = 'Lihat koleksi';
     }
     $videoHero = (bool) $firstSlide['video'];
     $heroContentClass = $videoHero && $heroContentStyle === 'editorial' ? '' : 'hero-content-'.$heroContentStyle;
+    $nextSection = ($shop['home_collections_enabled'] ?? true) ? '#new-in' : route('catalog');
     $heroSlides = collect([$firstSlide])->concat(($videoHero || $heroCampaign ? collect() : $homeBanners)->map(fn ($entry) => [
         'image' => $entry->image_url ?: (!empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg')),
         'eyebrow' => 'ASFARA EDIT',
@@ -85,6 +79,7 @@
         'has_audio' => collect($entry->blocks)->firstWhere('type','hero_options')['has_audio'] ?? false,
     ])->values());
 @endphp
+@section('body_class', $homeOrder->first() === 'hero' ? 'home-transparent-header' : '')
 @push('head')
 <link rel="preload" as="image" href="{{ $heroSlides->first()['image'] }}" fetchpriority="high"@if($heroSlides->first()['mobile_image']) imagesrcset="{{ $heroSlides->first()['mobile_image'] }} 767w, {{ $heroSlides->first()['image'] }} 1600w" imagesizes="100vw"@endif>
 @endpush
@@ -118,7 +113,7 @@
         </article>
     @endforeach
     @if($heroSlides->count()>1)<div class="hero-dots" aria-label="Posisi banner">@foreach($heroSlides as $slide)<span class="{{ $loop->first?'is-active':'' }}" data-hero-dot="{{ $loop->index }}" aria-hidden="true"></span>@endforeach</div>@endif
-    <a class="hero-next-section" href="{{ ($shop['home_collections_enabled'] ?? true) ? '#new-in' : route('catalog') }}" aria-label="Ke koleksi terbaru">
+    <a class="hero-next-section" href="{{ $nextSection }}" aria-label="Ke koleksi terbaru">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
     </a>
 </section>
@@ -177,35 +172,9 @@
 
 @foreach(config('storefront.campaign_groups') as $group => $groupTitle)
     @php($edits = $campaignEdits->get($group, collect()))
-    @if($heroCampaign)
-        @php($edits = $edits->where('slug', '!=', $heroCampaign['slug']))
-        @continue($edits->isEmpty())
-        @section('home-'.($group === 'main' ? 'collections' : $group))
-        <section class="container-xxl home-campaign-directory" aria-labelledby="home-directory-{{ $group }}">
-            <div class="home-campaign-spotlight-heading">
-                <h2 id="home-directory-{{ $group }}">{{ $group === 'main' ? 'Kampanye lainnya' : $groupTitle }}</h2>
-                @if($group === 'main')<a href="{{ route('content.index','campaign') }}">{{ $storeCopy['view_all'] }}</a>@endif
-            </div>
-            <div class="home-campaign-directory-grid">
-                @foreach($edits->take(4) as $edit)
-                    <a class="home-campaign-directory-link" href="{{ $edit['url'] }}">
-                        @if($edit['image'])
-                            <picture>
-                                @if($edit['mobile_image'])<source media="(max-width: 767px)" srcset="{{ $edit['mobile_image'] }}">@endif
-                                <img src="{{ $edit['image'] }}" alt="" width="1200" height="600" loading="lazy" decoding="async">
-                            </picture>
-                        @endif
-                        <h3>{{ $edit['label'] }}</h3>
-                    </a>
-                @endforeach
-            </div>
-        </section>
-        @endsection
-        @continue
-    @endif
     @continue($edits->isEmpty())
     @php($sectionKey = $group === 'main' ? 'collections' : $group)
-    @php($banner = $group === 'main' ? null : $edits->firstWhere('image', '!=', null))
+    @php($banner = $group === 'main' || $heroCampaign ? null : $edits->firstWhere('image', '!=', null))
     @if($banner)
         @section('home-'.$group.'_banner')
         <section class="home-campaign-preview home-group-banner" aria-label="{{ $banner['label'] }}">
@@ -224,18 +193,18 @@
         <div class="commerce-heading">
             <h2 id="campaign-title-{{ $group }}">{{ $group === 'main' ? $storeCopy['featured_collection'] : $groupTitle }}</h2>
         </div>
-        <div class="collection-tabs" role="group" aria-label="{{ $groupTitle }}">
+        <div class="collection-tabs" role="tablist" aria-label="{{ $groupTitle }}">
             @foreach($edits as $key => $edit)
-                <button @class(['is-active' => $loop->first]) type="button" aria-pressed="{{ $loop->first ? 'true' : 'false' }}" aria-controls="pane-{{ $key }}" data-collection-tab="{{ $key }}">{{ $edit['label'] }}</button>
+                <button @class(['is-active' => $loop->first]) type="button" role="tab" id="tab-{{ $group }}-{{ $key }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}" tabindex="{{ $loop->first ? 0 : -1 }}" aria-controls="pane-{{ $group }}-{{ $key }}" data-collection-tab="{{ $key }}">{{ $edit['label'] }}</button>
             @endforeach
         </div>
         @foreach($edits as $key => $edit)
-            <div @class(['collection-pane', 'is-active' => $loop->first]) id="pane-{{ $key }}" data-collection-pane="{{ $key }}">
+            <div @class(['collection-pane', 'is-active' => $loop->first]) id="pane-{{ $group }}-{{ $key }}" role="tabpanel" aria-labelledby="tab-{{ $group }}-{{ $key }}" @if(!$loop->first) hidden @endif>
                 <div class="reference-carousel">
                     <button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button>
                     <div class="product-carousel" data-drag-scroll>
                         @foreach($edit['items'] as $collection)
-                            <div class="product-carousel-item">@include('partials.product-card', ['cardContext' => $key.'-'])</div>
+                            <div class="product-carousel-item">@include('partials.product-card', ['cardContext' => $group.'-'.$key.'-'])</div>
                         @endforeach
                     </div>
                     <button type="button" data-carousel-next aria-label="Produk berikutnya">›</button>
@@ -255,18 +224,29 @@
 @push('scripts')
 <script>
 document.querySelectorAll('[data-campaign-tabs]').forEach(group => {
-    const tabs = group.querySelectorAll('[data-collection-tab]');
-    const panes = group.querySelectorAll('[data-collection-pane]');
-    tabs.forEach(button => button.addEventListener('click', () => {
+    const tabs = [...group.querySelectorAll('[data-collection-tab]')];
+    const selectTab = selected => {
         tabs.forEach(tab => {
-            const selected = tab === button;
-            tab.classList.toggle('is-active', selected);
-            tab.setAttribute('aria-pressed', String(selected));
+            const active = tab === selected;
+            tab.classList.toggle('is-active', active);
+            tab.setAttribute('aria-selected', String(active));
+            tab.tabIndex = active ? 0 : -1;
+            const panel = document.getElementById(tab.getAttribute('aria-controls'));
+            panel.hidden = !active;
+            panel.classList.toggle('is-active', active);
         });
-        panes.forEach(pane => {
-            pane.classList.toggle('is-active', pane.dataset.collectionPane === button.dataset.collectionTab);
+    };
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => selectTab(tab));
+        tab.addEventListener('keydown', event => {
+            const destinations = {ArrowLeft: (index - 1 + tabs.length) % tabs.length, ArrowRight: (index + 1) % tabs.length, Home: 0, End: tabs.length - 1};
+            if (!Object.hasOwn(destinations, event.key)) return;
+            event.preventDefault();
+            const target = tabs[destinations[event.key]];
+            selectTab(target);
+            target.focus();
         });
-    }));
+    });
 });
 </script>
 @endpush

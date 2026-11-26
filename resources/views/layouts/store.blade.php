@@ -98,14 +98,14 @@
         <header><a class="wordmark" href="{{ route('home') }}"><strong>{{ strtoupper($shop['brand_name'] ?? 'Asfara') }}</strong><span>{{ $shop['brand_subtitle'] ?? 'MODEST WEAR' }}</span></a><button type="button" class="mobile-nav-close" data-bs-toggle="collapse" data-bs-target="#mobile-nav" aria-label="Tutup menu">×</button></header>
         <div class="mobile-nav-links">
             <a href="{{ route('catalog',['sort'=>'newest']) }}">NEW IN</a>
-            <details name="mobile-discovery"><summary>Shop</summary><div class="mobile-discovery-links">
+            <details name="mobile-discovery" @if(request()->routeIs('catalog', 'product')) open @endif><summary>Shop</summary><div class="mobile-discovery-links">
                 <a href="{{ route('catalog') }}">Semua produk</a>
                 @if($shop['header_categories_enabled'] ?? true)
                     @foreach($categories as $category)<a href="{{ route('catalog',['category'=>$category->slug]) }}" @if(request()->routeIs('catalog') && request('category') === $category->slug) aria-current="page" @endif>{{ $category->name }}</a>@endforeach
                 @endif
                 @foreach($curatedLinks->get('fit',collect()) as $link)<a href="{{ $link->url }}">{{ $link->title }}</a>@endforeach
             </div></details>
-            <details name="mobile-discovery"><summary>Collections</summary><div class="mobile-discovery-links">
+            <details name="mobile-discovery" @if(request()->routeIs('content.*') && request()->route('type') === 'campaign') open @endif><summary>Collections</summary><div class="mobile-discovery-links">
                 @foreach(config('storefront.campaign_groups') as $group => $label)
                     @php($menuEntries = $campaignMenu->get($group, collect())->take(8))
                     @continue($menuEntries->isEmpty())
@@ -426,7 +426,7 @@ cartDrawer?.addEventListener('click', event => { if (event.target === cartDrawer
 cartDrawer.addEventListener('close', () => {
     const target = cartReturnFocus;
     cartReturnFocus = null;
-    if (target?.isConnected) requestAnimationFrame(() => target.focus());
+    if (target?.isConnected) requestAnimationFrame(() => target.focus({preventScroll: true}));
 });
 const quickColor=value=>{const color=String(value).toLowerCase();if(color.includes('black'))return'#202020';if(color.includes('navy'))return'#26344c';if(color.includes('olive'))return'#747452';if(color.includes('sage'))return'#a8b19a';if(color.includes('rose')||color.includes('pink'))return'#d8a7ad';if(color.includes('plum'))return'#70445d';if(color.includes('mauve'))return'#b58b96';if(color.includes('taupe'))return'#a18d7d';if(color.includes('sand')||color.includes('beige'))return'#d5c2a5';if(color.includes('ivory'))return'#f1ebdd';return'#b6aca1'};
 const quickDialog = document.getElementById('quick-product-dialog');
@@ -610,7 +610,7 @@ document.addEventListener('click',event=>{
     if(trigger)dialogReturnFocus=trigger;
 },{capture:true});
 document.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('close',()=>{
-    if(dialogReturnFocus?.isConnected)dialogReturnFocus.focus();
+    if(dialogReturnFocus?.isConnected)dialogReturnFocus.focus({preventScroll: true});
     dialogReturnFocus=null;
 }));
 </script>

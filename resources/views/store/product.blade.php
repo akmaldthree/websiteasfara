@@ -22,15 +22,18 @@
     };
 
     $gallery = $series->media->sortByDesc(fn ($media) => $series->image === $media->image)->values();
-    $mainMedia = null;
+    $visibleGallery = $gallery;
     if ($selectedVariant) {
-        $color = mb_strtolower($selectedVariant->color);
-        $colorMedia = $gallery->filter(fn ($media) => $color !== '' && mb_strtolower($media->color ?? '') === $color);
-        $mainMedia = $gallery->firstWhere('variant_id', $selectedVariant->id)
-            ?? $colorMedia->firstWhere('variant_id', null)
-            ?? $colorMedia->first();
+        $color = mb_strtolower((string) $selectedVariant->color);
+        $exactPhotos = $gallery->where('variant_id', $selectedVariant->id);
+        $colorPhotos = $gallery->filter(fn ($media) => ! $media->variant_id && $color !== '' && mb_strtolower($media->color ?? '') === $color);
+        $generalPhotos = $gallery->filter(fn ($media) => ! $media->variant_id && ! $media->color);
+        $matchingPhotos = $exactPhotos->concat($colorPhotos)->concat($generalPhotos);
+        if ($matchingPhotos->isNotEmpty()) {
+            $visibleGallery = $matchingPhotos;
+        }
     }
-    $mainMedia ??= $gallery->first(fn ($media) => !$media->variant_id && !$media->color) ?? $gallery->first();
+    $mainMedia = $visibleGallery->first();
     $mainIndex = $mainMedia ? (int) $gallery->search($mainMedia) : 0;
 @endphp
 @php($mainImage=$mainMedia?->image_url ?? $series->image_url)
@@ -45,12 +48,12 @@
     <nav class="breadcrumb"><a href="{{ route('catalog') }}">Koleksi</a> / {{ $series->category->name }} / {{ $series->name }}</nav>
     <div class="row g-5 product-layout">
         <div class="col-lg-7 product-gallery-column">
-            <div class="detail-image product-gallery-main product-gallery-stage"><img id="product-main-image" src="{{ $mainImage }}" alt="{{ $mainMedia?->alt_text ?? $series->name }}" style="object-position:{{ $mainMedia?->focal_x ?? 50 }}% {{ $mainMedia?->focal_y ?? 50 }}%" width="1000" height="1250" loading="eager" fetchpriority="high" decoding="async"><button type="button" class="product-gallery-arrow is-prev" data-product-gallery-prev aria-label="Foto sebelumnya" @disabled($gallery->count() < 2)>‹</button><button type="button" class="product-gallery-arrow is-next" data-product-gallery-next aria-label="Foto berikutnya" @disabled($gallery->count() < 2)>›</button><button type="button" class="product-zoom-button" id="open-product-zoom" aria-label="Perbesar foto">⌕</button><span class="product-gallery-count" @if($gallery->count() < 2) hidden @endif><b data-product-gallery-current>{{ $mainIndex + 1 }}</b> / {{ max(1,$gallery->count()) }}</span></div>
+            <div class="detail-image product-gallery-main product-gallery-stage"><img id="product-main-image" src="{{ $mainImage }}" draggable="false" alt="{{ $mainMedia?->alt_text ?? $series->name }}" style="object-position:{{ $mainMedia?->focal_x ?? 50 }}% {{ $mainMedia?->focal_y ?? 50 }}%" width="800" height="800" loading="eager" fetchpriority="high" decoding="async"><button type="button" class="product-gallery-arrow is-prev" data-product-gallery-prev aria-label="Foto sebelumnya" @disabled($visibleGallery->count() < 2)>‹</button><button type="button" class="product-gallery-arrow is-next" data-product-gallery-next aria-label="Foto berikutnya" @disabled($visibleGallery->count() < 2)>›</button><button type="button" class="product-zoom-button" id="open-product-zoom" aria-label="Perbesar foto">⌕</button><span class="product-gallery-count" @if($visibleGallery->count() < 2) hidden @endif><b data-product-gallery-current>1</b> / <span data-product-gallery-total>{{ $visibleGallery->count() }}</span></span></div>
             @if($gallery->isNotEmpty())
                 <div class="product-gallery-pager" aria-label="Galeri foto produk">
-                    @foreach($gallery as $media)<button type="button" class="product-thumbnail {{ $loop->index === $mainIndex ? 'active' : '' }}" data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text ?: $series->name }}" data-focal-x="{{ $media->focal_x }}" data-focal-y="{{ $media->focal_y }}" data-variant="{{ $media->variant_id }}" data-color="{{ mb_strtolower($media->color ?? '') }}" aria-label="Tampilkan foto {{ $loop->iteration }}" aria-pressed="{{ $loop->index === $mainIndex ? 'true' : 'false' }}"><img src="{{ $media->image_url }}" alt="" width="64" height="80" loading="lazy" decoding="async"></button>@endforeach
+                    @foreach($gallery as $media)<button type="button" class="product-thumbnail {{ $loop->index === $mainIndex ? 'active' : '' }}" data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text ?: $series->name }}" data-focal-x="{{ $media->focal_x }}" data-focal-y="{{ $media->focal_y }}" data-variant="{{ $media->variant_id }}" data-color="{{ mb_strtolower($media->color ?? '') }}" @if(!$visibleGallery->contains($media)) hidden @endif aria-label="Tampilkan foto {{ $loop->iteration }}" aria-pressed="{{ $loop->index === $mainIndex ? 'true' : 'false' }}"><img src="{{ $media->image_url }}" alt="" width="64" height="64" loading="lazy" decoding="async"></button>@endforeach
                 </div>
-                @if($gallery->count()>1)<div class="product-gallery-grid">@foreach($gallery as $media)<button type="button" data-gallery-grid="{{ $loop->index }}" data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text ?: $series->name }}" aria-label="Perbesar {{ $media->alt_text ?: $series->name }}" @if($loop->index === $mainIndex) hidden @endif><img src="{{ $media->image_url }}" alt="{{ $media->alt_text }}" style="object-position:{{ $media->focal_x }}% {{ $media->focal_y }}%" width="320" height="400" loading="lazy" decoding="async"></button>@endforeach</div>@endif
+                @if($gallery->count()>1)<div class="product-gallery-grid">@foreach($gallery as $media)<button type="button" data-gallery-grid="{{ $loop->index }}" data-image="{{ $media->image_url }}" data-alt="{{ $media->alt_text ?: $series->name }}" aria-label="Perbesar {{ $media->alt_text ?: $series->name }}" @if($loop->index === $mainIndex || !$visibleGallery->contains($media)) hidden @endif><img src="{{ $media->image_url }}" alt="{{ $media->alt_text }}" style="object-position:{{ $media->focal_x }}% {{ $media->focal_y }}%" width="320" height="320" loading="lazy" decoding="async"></button>@endforeach</div>@endif
             @elseif(!$series->image)<small class="text-muted">Ilustrasi koleksi. Foto produk dapat ditambahkan melalui dashboard admin.</small>@endif
         </div>
         <div class="col-lg-5 product-info-column">
@@ -142,7 +145,7 @@
 @forelse($questions as $question)<article class="panel mb-3"><p class="mb-2"><strong>{{ $question->user->name }}</strong> bertanya:</p><p>{{ $question->question }}</p><div class="border-top pt-3"><strong>Jawaban Asfara</strong><p class="mb-0 mt-2">{{ $question->answer }}</p></div></article>@empty<p>Belum ada pertanyaan yang dijawab untuk series ini.</p>@endforelse
 @auth<form class="panel mt-4" method="post" action="{{ route('product.question',$series) }}">@csrf<label for="product-question"><strong>Ajukan pertanyaan</strong></label><textarea id="product-question" class="form-control mt-2" name="question" rows="3" minlength="10" maxlength="1000" required>{{ old('question') }}</textarea><button class="btn btn-dark mt-3">Kirim pertanyaan</button></form>@else<p><a href="{{ route('login') }}">Masuk</a> untuk mengajukan pertanyaan produk.</p>@endauth
 </section>
-<dialog class="product-lightbox" id="product-lightbox" aria-label="Foto {{ $series->name }} diperbesar"><button type="button" id="close-product-zoom" aria-label="Tutup foto">×</button><img id="product-lightbox-image" src="{{ $mainImage }}" alt="{{ $series->name }} diperbesar" width="1000" height="1250" loading="lazy" decoding="async"></dialog>
+<dialog class="product-lightbox" id="product-lightbox" aria-label="Foto {{ $series->name }} diperbesar"><div class="product-lightbox-controls"><button type="button" id="close-product-zoom" aria-label="Tutup foto">×</button><button type="button" class="product-zoom-toggle" aria-label="Perbesar gambar" aria-pressed="false">+</button></div><img id="product-lightbox-image" src="{{ $mainImage }}" alt="{{ $series->name }} diperbesar" width="800" height="800" loading="lazy" decoding="async"></dialog>
 <dialog class="size-guide-dialog" id="size-guide-dialog" aria-labelledby="size-guide-title"><button type="button" class="drawer-close" data-close-size-guide aria-label="Tutup panduan ukuran">×</button><span class="eyebrow">{{ strtoupper($series->name) }}</span><h2 id="size-guide-title">PANDUAN UKURAN</h2>@include('partials.size-chart')<p class="small">Jika berada di antara dua ukuran, pilih ukuran lebih besar atau hubungi Asfara melalui WhatsApp.</p></dialog>
 @if($standardVariants->isNotEmpty())
     <div class="mobile-purchase-bar">
@@ -178,6 +181,10 @@ const displayStock = document.getElementById('display-product-stock');
 const compareAtPrice = @json($compareAtPrice);
 const rupiah = value => new Intl.NumberFormat('id-ID', {style: 'currency', currency: 'IDR', maximumFractionDigits: 0}).format(value);
 let galleryIndex = @json($mainIndex);
+let visiblePhotos = @json($visibleGallery->map(fn ($media) => $gallery->search($media))->values()).map(index => thumbnails[index]);
+const galleryPrevious = document.querySelector('[data-product-gallery-prev]');
+const galleryNext = document.querySelector('[data-product-gallery-next]');
+const galleryTotal = document.querySelector('[data-product-gallery-total]');
 let lastVariant = select?.value;
 let needsVariantSelection = @json($needsVariantSelection);
 let focusVariantKind;
@@ -191,8 +198,11 @@ function showImage(button) {
         item.classList.toggle('active', item === button);
         item.setAttribute('aria-pressed', String(item === button));
     });
-    gridPhotos.forEach(item => item.hidden = Number(item.dataset.galleryGrid) === galleryIndex);
-    document.querySelector('[data-product-gallery-current]').textContent = String(galleryIndex + 1);
+    gridPhotos.forEach(item => {
+        const photo = thumbnails[Number(item.dataset.galleryGrid)];
+        item.hidden = photo === button || !visiblePhotos.includes(photo);
+    });
+    document.querySelector('[data-product-gallery-current]').textContent = String(visiblePhotos.indexOf(button) + 1);
 }
 const choicesFor = (kind, current) => storeVariants.choices(availableOptions, variantGroups, kind, current);
 function updateVariant() {
@@ -251,19 +261,31 @@ function updateVariant() {
     ].filter(Boolean).join(' · ');
     if (!variantChanged) return;
     lastVariant = option.value;
-    const colorPhotos = thumbnails.filter(item => item.dataset.color && item.dataset.color === option.dataset.color);
-    showImage(thumbnails.find(item => item.dataset.variant === option.value)
-        || colorPhotos.find(item => !item.dataset.variant)
-        || colorPhotos[0]
-        || thumbnails.find(item => !item.dataset.variant && !item.dataset.color)
-        || thumbnails[0]);
+    const exactPhotos = thumbnails.filter(photo => photo.dataset.variant === option.value);
+    const colorPhotos = thumbnails.filter(photo => !photo.dataset.variant && photo.dataset.color && photo.dataset.color === option.dataset.color);
+    const generalPhotos = thumbnails.filter(photo => !photo.dataset.variant && !photo.dataset.color);
+    const matchingPhotos = [...exactPhotos, ...colorPhotos, ...generalPhotos];
+    const nextPhotos = matchingPhotos.length ? matchingPhotos : thumbnails;
+    if (nextPhotos.length !== visiblePhotos.length || nextPhotos.some((photo, index) => photo !== visiblePhotos[index])) {
+        visiblePhotos = nextPhotos;
+        thumbnails.forEach(photo => photo.hidden = !visiblePhotos.includes(photo));
+        galleryPrevious.disabled = galleryNext.disabled = visiblePhotos.length < 2;
+        galleryTotal.textContent = String(visiblePhotos.length);
+        galleryTotal.parentElement.hidden = visiblePhotos.length < 2;
+        showImage(visiblePhotos[0]);
+    }
     const url = new URL(window.location.href);
     url.searchParams.set('variant', option.value);
     history.replaceState(history.state, '', url);
 }
 thumbnails.forEach(button => button.addEventListener('click', () => showImage(button)));
-document.querySelector('[data-product-gallery-prev]')?.addEventListener('click', () => showImage(thumbnails[(galleryIndex - 1 + thumbnails.length) % thumbnails.length]));
-document.querySelector('[data-product-gallery-next]')?.addEventListener('click', () => showImage(thumbnails[(galleryIndex + 1) % thumbnails.length]));
+const stepGallery = direction => {
+    if (visiblePhotos.length < 2) return;
+    const index = visiblePhotos.indexOf(thumbnails[galleryIndex]);
+    showImage(visiblePhotos[(index + direction + visiblePhotos.length) % visiblePhotos.length]);
+};
+galleryPrevious.addEventListener('click', () => stepGallery(-1));
+galleryNext.addEventListener('click', () => stepGallery(1));
 variantChoices.forEach(button => button.addEventListener('click', () => {
     const {kind, value} = button.dataset;
     const current = select.selectedOptions[0];
@@ -308,8 +330,40 @@ if (select) {
     });
     updateVariant();
 }
-const lightbox=document.getElementById('product-lightbox');const lightboxImage=document.getElementById('product-lightbox-image');document.getElementById('open-product-zoom')?.addEventListener('click',()=>{lightboxImage.src=mainImage.src;lightboxImage.alt=mainImage.alt;lightbox.showModal()});document.getElementById('close-product-zoom')?.addEventListener('click',()=>lightbox.close());lightbox?.addEventListener('click',event=>{if(event.target===lightbox)lightbox.close()});
-gridPhotos.forEach(button=>button.addEventListener('click',()=>{lightboxImage.src=button.dataset.image;lightboxImage.alt=button.dataset.alt;lightbox.showModal()}));let galleryStartX=0;mainImage?.closest('.product-gallery-stage')?.addEventListener('pointerdown',event=>galleryStartX=event.clientX);mainImage?.closest('.product-gallery-stage')?.addEventListener('pointerup',event=>{const delta=event.clientX-galleryStartX;if(Math.abs(delta)>45&&thumbnails.length>1)showImage(thumbnails[(galleryIndex+(delta<0?1:-1)+thumbnails.length)%thumbnails.length])});
+const lightbox = document.getElementById('product-lightbox');
+const lightboxImage = document.getElementById('product-lightbox-image');
+const zoomToggle = lightbox.querySelector('.product-zoom-toggle');
+const setZoom = magnified => {
+    lightboxImage.classList.toggle('is-magnified', magnified);
+    zoomToggle.setAttribute('aria-pressed', String(magnified));
+    zoomToggle.setAttribute('aria-label', magnified ? 'Perkecil gambar' : 'Perbesar gambar');
+    zoomToggle.textContent = magnified ? '−' : '+';
+};
+const openZoom = (src, alt) => {
+    lightboxImage.src = src;
+    lightboxImage.alt = alt;
+    setZoom(false);
+    lightbox.showModal();
+};
+document.getElementById('open-product-zoom').addEventListener('click', () => openZoom(mainImage.src, mainImage.alt));
+document.getElementById('close-product-zoom').addEventListener('click', () => lightbox.close());
+lightbox.addEventListener('click', event => { if (event.target === lightbox) lightbox.close(); });
+zoomToggle.addEventListener('click', () => setZoom(zoomToggle.getAttribute('aria-pressed') !== 'true'));
+gridPhotos.forEach(button => button.addEventListener('click', () => openZoom(button.dataset.image, button.dataset.alt)));
+const galleryStage = mainImage.closest('.product-gallery-stage');
+let swipe;
+galleryStage.addEventListener('pointerdown', event => {
+    if (event.target !== mainImage || !event.isPrimary || event.button !== 0) return;
+    swipe = {id: event.pointerId, x: event.clientX, y: event.clientY};
+    galleryStage.setPointerCapture(event.pointerId);
+});
+galleryStage.addEventListener('pointerup', event => {
+    if (swipe?.id !== event.pointerId) return;
+    const delta = event.clientX - swipe.x;
+    if (Math.abs(delta) > 45 && Math.abs(delta) > Math.abs(event.clientY - swipe.y)) stepGallery(delta < 0 ? 1 : -1);
+    swipe = undefined;
+});
+galleryStage.addEventListener('lostpointercapture', () => swipe = undefined);
 const sizeGuide=document.getElementById('size-guide-dialog');document.querySelector('[data-open-size-guide]')?.addEventListener('click',()=>sizeGuide.showModal());document.querySelector('[data-close-size-guide]')?.addEventListener('click',()=>sizeGuide.close());sizeGuide?.addEventListener('click',event=>{if(event.target===sizeGuide)sizeGuide.close()});
 document.getElementById('share-product').addEventListener('click',async()=>{const url=new URL(window.location.href);if(select?.value)url.searchParams.set('variant',select.value);const data={title:@json($series->name),text:@json('Lihat '.$series->name.' dari '.($shop['brand_name'] ?? 'Asfara')),url:url.href};try{if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(data.url);document.getElementById('share-status').textContent='Tautan disalin.'}}catch(error){if(error.name!=='AbortError')document.getElementById('share-status').textContent='Salin alamat halaman dari browser Anda.'}});
 </script>

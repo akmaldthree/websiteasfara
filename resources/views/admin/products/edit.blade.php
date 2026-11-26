@@ -83,12 +83,15 @@ $hasPhoto=(bool)$product->image || $product->media->isNotEmpty();$hasVariant=$pr
 </div></section>
 
 <section class="panel workspace-section" id="media">
-<div class="section-top"><div><span class="eyebrow">LANGKAH 3</span><h2>Foto produk</h2><p class="small mb-0">Unggah banyak foto lalu atur seluruh galeri series ini tanpa pindah halaman.</p></div><span class="badge">{{ $product->media->count() }} foto</span></div>
+<div class="section-top"><div><span class="eyebrow">LANGKAH 3</span><h2>Foto produk</h2><p class="small mb-0">Pilih warna untuk semua ukuran dalam warna itu, atau pilih SKU untuk satu kombinasi tertentu. Foto tanpa warna dan SKU tampil untuk semua varian.</p></div><span class="badge">{{ $product->media->count() }} foto</span></div>
 <form method="post" enctype="multipart/form-data" action="{{ route('admin.products.media.upload',$product) }}" class="workspace-media-upload">@csrf
     <label class="workspace-media-drop" for="images"><strong>+ Pilih banyak foto sekaligus</strong><span>JPG, PNG, atau WebP · maksimal 10 foto dan 5 MB per foto</span>@include('admin.partials.image-guideline',['preset'=>'product'])<input id="images" type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple required></label>
+    <datalist id="product-media-colors">
+        @foreach($product->variants->pluck('color')->filter()->unique() as $color)<option value="{{ $color }}"></option>@endforeach
+    </datalist>
     <div id="media-upload-preview" class="workspace-upload-preview" hidden></div>
     <div class="workspace-media-defaults">
-        <div><label for="media-color">Warna untuk semua foto baru</label><input id="media-color" class="form-control" name="color" placeholder="Opsional, contoh: Sage"></div>
+        <div><label for="media-color">Warna untuk semua foto baru</label><input id="media-color" class="form-control" list="product-media-colors" name="color" placeholder="Opsional, contoh: Sage"></div>
         <div><label for="media-variant">Varian / SKU untuk semua foto baru</label><select id="media-variant" class="form-select" name="variant_id"><option value="">Semua varian</option>@foreach($product->variants as $variant)<option value="{{ $variant->id }}">{{ $variant->sku }} · {{ $variant->color }} / {{ $variant->size }}</option>@endforeach</select></div>
         <div><label for="alt_text">Deskripsi umum</label><input id="alt_text" class="form-control" name="alt_text" placeholder="Otomatis dari nama file jika kosong"></div>
         <label class="checkbox-card media-main-check"><input type="checkbox" name="set_first_as_main" value="1" @checked(!$product->image)><span>Jadikan foto pertama sebagai foto utama</span></label>
@@ -105,7 +108,7 @@ $hasPhoto=(bool)$product->image || $product->media->isNotEmpty();$hasVariant=$pr
             <div class="workspace-media-thumb"><img src="{{ $media->image_url }}" alt="" style="object-position:{{ $media->focal_x }}% {{ $media->focal_y }}%" data-focal-preview><label><input type="radio" name="main_media_id" value="{{ $media->id }}" @checked($product->image===$media->image)> Foto utama</label></div>
             <div class="workspace-media-fields">
                 <div class="media-field-wide"><label>Deskripsi gambar</label><input class="form-control" name="media[{{ $index }}][alt_text]" value="{{ $media->alt_text }}" required></div>
-                <div><label>Warna</label><input class="form-control" name="media[{{ $index }}][color]" value="{{ $media->color }}" placeholder="Semua warna"></div>
+                <div><label>Warna</label><input class="form-control" name="media[{{ $index }}][color]" list="product-media-colors" value="{{ $media->color }}" placeholder="Semua warna"></div>
                 <div><label>Varian / SKU</label><select class="form-select" name="media[{{ $index }}][variant_id]"><option value="">Semua varian</option>@foreach($product->variants as $variant)<option value="{{ $variant->id }}" @selected($media->variant_id===$variant->id)>{{ $variant->sku }}</option>@endforeach</select></div>
                 <div><label>Urutan</label><input class="form-control" type="number" min="0" max="10000" name="media[{{ $index }}][sort_order]" value="{{ $media->sort_order }}" required></div>
                 <div><label>Fokus horizontal</label><input class="form-range" type="range" min="0" max="100" name="media[{{ $index }}][focal_x]" value="{{ $media->focal_x }}" data-focal-x><small><span data-focal-x-value>{{ $media->focal_x }}</span>%</small></div>

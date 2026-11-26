@@ -8,7 +8,7 @@
     @php($shippingTarget=max(0,(int)($shop['free_shipping_threshold'] ?? 500000)))
     @php($shippingRemaining=max(0,$shippingTarget-$cartSubtotal))
     @if(empty($lines))
-        <div class="empty-state cart-empty"><h1>{{ strtoupper(__('store.cart')) }}</h1><p>{{ __('store.empty_cart') }}</p><a class="btn btn-dark" href="{{ route('catalog') }}">{{ strtoupper(__('store.start_shopping')) }}</a></div>
+        <div class="empty-state cart-empty"><h1>{{ strtoupper(__('store.cart')) }}</h1><p>{{ __('store.empty_cart') }}</p><a class="btn btn-dark" href="{{ route('catalog') }}" data-continue-catalog>{{ strtoupper(__('store.start_shopping')) }}</a></div>
     @else
         <header class="cart-page-header">
             <div><span class="eyebrow">PILIHAN ANDA</span><h1>{{ $storeCopy['cart_title'] }}</h1></div>
@@ -55,7 +55,7 @@
                 <p class="small mt-3">Ongkir, voucher, dan biaya COD dihitung pada langkah berikutnya. Harga dan stok diperiksa kembali sebelum pesanan dibuat.</p>
                 <ul class="cart-assurances"><li>Transaksi dan data pelanggan terlindungi</li><li>Total akhir ditampilkan sebelum konfirmasi</li><li>Bantuan pelanggan tersedia via WhatsApp</li></ul>
                 <a class="btn btn-dark w-100" data-cart-page-checkout href="{{ route('checkout') }}">{{ __('store.continue_checkout') }}</a>
-                <a class="d-block text-center small mt-3" href="{{ route('catalog') }}">Lanjut belanja</a>
+                <a class="d-block text-center small mt-3" href="{{ route('catalog') }}" data-continue-catalog>Lanjut belanja</a>
             </aside></div>
         </div>
     @endif
@@ -65,6 +65,20 @@
 @endsection
 @push('scripts')
 <script>
+const catalogReturn = document.querySelector('[data-continue-catalog]');
+try {
+    const position = JSON.parse(sessionStorage.getItem('asfara-catalog-position'));
+    if (position?.url && catalogReturn) {
+        const catalog = new URL(catalogReturn.href);
+        const previous = new URL(position.url);
+        if (catalog.origin === previous.origin && catalog.pathname === previous.pathname) {
+            catalogReturn.href = previous.href;
+            catalogReturn.addEventListener('click', () => {
+                try { sessionStorage.setItem('asfara-catalog-position', JSON.stringify({...position, returning: true})); } catch {}
+            });
+        }
+    }
+} catch {}
 document.querySelectorAll('[data-cart-line-form]').forEach(form => {
     const input = form.querySelector('.quantity');
     form.querySelectorAll('[data-cart-quantity]').forEach(button => button.addEventListener('click', () => {

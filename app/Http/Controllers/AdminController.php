@@ -947,7 +947,7 @@ class AdminController extends Controller
         return view('admin.settings', [
             'storefrontSeries' => Series::orderBy('name')->get(['id', 'name', 'slug']),
             'heroCampaigns' => ContentEntry::published()->where('type', 'campaign')->orderBy('sort_order')->orderBy('id')
-                ->get(['id', 'title', 'blocks'])->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty()),
+                ->get(['id', 'title', 'slug', 'blocks'])->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty()),
             'savedHeroCampaignExists' => ContentEntry::where('type', 'campaign')->whereKey(Setting::get('hero_campaign_id'))->exists(),
         ]);
     }
@@ -1008,7 +1008,7 @@ class AdminController extends Controller
             'loyalty_spend_per_point' => 'required|integer|min:1', 'loyalty_point_value' => 'required|integer|min:1', 'loyalty_min_redeem' => 'required|integer|min:1', 'loyalty_expiry_days' => 'required|integer|between:1,3650',
             'loyalty_tiers_text' => 'nullable|string|max:5000', 'loyalty_bonus_name' => 'nullable|string|max:100', 'loyalty_bonus_multiplier' => 'required|integer|between:1,20', 'loyalty_bonus_start' => 'nullable|date', 'loyalty_bonus_end' => 'nullable|date|after_or_equal:loyalty_bonus_start',
             'loyalty_bonus_segment' => 'required|in:all,customer,business', 'loyalty_bonus_tier' => 'nullable|string|max:100', 'loyalty_bonus_target_type' => 'required|in:all,category,series,variant', 'loyalty_bonus_target_id' => 'nullable|integer|min:1',
-            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120', 'welcome_voucher_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120', 'hero_image_mobile' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120', 'welcome_voucher_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'hero_video' => 'nullable|file|mimetypes:video/mp4,video/webm|max:51200', 'hero_video_mobile' => 'nullable|file|mimetypes:video/mp4,video/webm|max:51200',
             'hero_campaign_enabled' => 'sometimes|boolean', 'hero_video_has_audio' => 'sometimes|boolean',
             'hero_campaign_id' => ['sometimes', 'nullable', 'integer', Rule::exists('content_entries', 'id')->where('type', 'campaign')],
@@ -1079,7 +1079,7 @@ class AdminController extends Controller
                 throw ValidationException::withMessages(['loyalty_bonus_target_id' => 'Target kampanye loyalty tidak ditemukan.']);
             }
         }
-        foreach (['logo', 'favicon', 'hero_image', 'welcome_voucher_image'] as $image) {
+        foreach (['logo', 'favicon', 'hero_image', 'hero_image_mobile', 'welcome_voucher_image'] as $image) {
             unset($data[$image]);
             if ($r->hasFile($image)) {
                 $data[$image] = $r->file($image)->store('branding', 'public');

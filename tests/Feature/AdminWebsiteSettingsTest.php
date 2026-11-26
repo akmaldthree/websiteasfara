@@ -9,6 +9,8 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Models\Variant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminWebsiteSettingsTest extends TestCase
@@ -17,6 +19,7 @@ class AdminWebsiteSettingsTest extends TestCase
 
     public function test_admin_can_manage_brand_and_future_integrations_without_exposing_tokens(): void
     {
+        Storage::fake('public');
         $this->seed();
         $admin = User::factory()->create();
         $admin->forceFill(['role' => 'admin'])->save();
@@ -83,9 +86,12 @@ class AdminWebsiteSettingsTest extends TestCase
         ];
         $payload['brand_name'] = 'Asfara Baru';
         $payload['hero_title'] = 'Judul dari dashboard';
+        $payload['hero_image_mobile'] = UploadedFile::fake()->createWithContent('hero-mobile.webp', file_get_contents(database_path('seeders/assets/demo/abaya-hero-mobile.webp')));
 
         $this->actingAs($admin)->post(route('admin.settings.save'), $payload)->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('Asfara Baru', Setting::get('brand_name'));
+        Storage::disk('public')->assertExists(Setting::get('hero_image_mobile'));
+        $this->get(route('home'))->assertOk()->assertSee(Setting::get('hero_image_mobile'));
         $this->assertSame(['08123456'], Setting::get('cod_blocked_phones'));
         $this->assertSame(['ABC-1'], Setting::get('cod_excluded_skus'));
         $this->assertSame(['abaya'], Setting::get('cod_excluded_categories'));
@@ -115,7 +121,8 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->get('/')->assertOk()->assertSee('Asfara Baru')->assertSee('Judul dari dashboard')->assertSee('KOLEKSI PILIHAN CMS')->assertSee('data-duration="5500"', false)->assertSee('data-announcement-interval="3500"', false)->assertSee('data-notice-prev', false)->assertSee('data-notice-next', false)->assertSee('--palette-sage:#F9F8F6', false)->assertSee('--palette-gold:#C9B59C', false)->assertSee('--text:#202020', false)->assertSee("--body-font:'Poppins',Arial,sans-serif", false)->assertSee('fonts.googleapis.com/css2?family=Poppins', false)->assertSee('theme-header-compact')->assertDontSee('shipping-secret');
         $this->get('/koleksi')->assertOk()->assertSee('BUSANA');
         $this->withSession(['locale' => 'en'])->get('/')->assertOk()->assertSee('CMS CURATED COLLECTION');
-        $this->get(route('admin.settings'))->assertOk()->assertSee('Kampanye pembuka')->assertSee($campaign->title);
+        $this->get(route('admin.settings'))->assertOk()->assertSee('Kampanye pembuka')->assertSee($campaign->title)
+            ->assertSee('id="storefront-preview-page"', false)->assertSee(route('content.show', ['campaign', $campaign->slug]), false);
         $this->post(route('admin.settings.save'), array_replace($payload, [
             'hero_campaign_id' => $campaign->id, 'hero_campaign_enabled' => '1', 'hero_content_style' => 'editorial',
         ]))->assertRedirect()->assertSessionHasNoErrors();

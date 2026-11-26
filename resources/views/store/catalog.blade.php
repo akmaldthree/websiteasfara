@@ -141,8 +141,29 @@ matchMedia('(min-width: 768px)').addEventListener('change', event => {
     if (event.matches && filterPanel.classList.contains('is-open')) setFilterOpen(false);
 });
 
+const catalogPositionKey = 'asfara-catalog-position';
+const saveCatalogPosition = () => {
+    const position = {url: location.href, top: window.scrollY};
+    history.replaceState({...history.state, catalogTop: position.top}, '');
+    try { sessionStorage.setItem(catalogPositionKey, JSON.stringify(position)); } catch {}
+};
+const restoreCatalogPosition = top => {
+    if (Number.isFinite(top)) requestAnimationFrame(() => scrollTo({top, behavior: 'instant'}));
+};
+window.addEventListener('pagehide', saveCatalogPosition);
+try {
+    const position = JSON.parse(sessionStorage.getItem(catalogPositionKey));
+    if (position?.returning && position.url === location.href) {
+        restoreCatalogPosition(position.top);
+        sessionStorage.removeItem(catalogPositionKey);
+    } else if (performance.getEntriesByType('navigation')[0]?.type === 'back_forward') {
+        restoreCatalogPosition(history.state?.catalogTop);
+    }
+} catch {}
+let displayedCatalogUrl = location.href;
 let pendingRequest;
-const updateCatalog = async (url, {fromHistory = false, closeFilter = false, scrollToResults = false, syncForm = false} = {}) => {
+const updateCatalog = async (url, {fromHistory = false, closeFilter = false, scrollToResults = false, syncForm = false, savedTop} = {}) => {
+    if (!fromHistory && url.href !== location.href) saveCatalogPosition();
     pendingRequest?.abort();
     const request = new AbortController();
     pendingRequest = request;
@@ -186,6 +207,8 @@ const updateCatalog = async (url, {fromHistory = false, closeFilter = false, scr
         setGrid(gridDensity);
         if (next.title) document.title = next.title;
         if (!fromHistory && url.href !== location.href) history.pushState(null, '', url);
+        displayedCatalogUrl = location.href;
+        restoreCatalogPosition(savedTop);
         catalogStatus.textContent = resultCount.textContent.trim() + ' ditampilkan.';
         if (closeFilter && filterPanel.classList.contains('is-open')) setFilterOpen(false);
         if (moveFocus || scrollToResults) nextResults.focus({preventScroll: true});
@@ -221,5 +244,15 @@ catalog.addEventListener('click', event => {
     event.preventDefault();
     updateCatalog(new URL(link.href), {scrollToResults: Boolean(link.closest('.pagination')), syncForm: true});
 });
-window.addEventListener('popstate', () => updateCatalog(new URL(location.href), {fromHistory: true, syncForm: true}));
+window.addEventListener('popstate', event => {
+    if (displayedCatalogUrl === location.href) {
+        if (pendingRequest) {
+            pendingRequest.abort();
+            catalogStatus.textContent = '';
+        }
+        restoreCatalogPosition(event.state?.catalogTop);
+        return;
+    }
+    updateCatalog(new URL(location.href), {fromHistory: true, syncForm: true, savedTop: event.state?.catalogTop});
+});
 </script>@endpush

@@ -84,15 +84,21 @@ class DemoAbayaSeeder extends Seeder
     private function updateGallery(Series $series, string $style, string $color): void
     {
         $prefix = 'demo/abaya-'.$style.'-';
-        $photos = ['front' => 'tampak depan', 'back' => 'tampak belakang', 'detail' => 'detail bahan'];
+        $photos = collect(['front' => 'tampak depan', 'back' => 'tampak belakang', 'detail' => 'detail bahan'])
+            ->mapWithKeys(fn ($label, $view) => [$prefix.$view.'.webp' => [$color, $label]]);
+        foreach ($series->variants()->pluck('color')->unique() as $variantColor) {
+            $filename = 'abaya-'.$style.'-'.str($variantColor)->slug().'-front.webp';
+            if (is_file(database_path('seeders/assets/demo/'.$filename))) {
+                $photos->put('demo/'.$filename, [$variantColor, 'tampak depan']);
+            }
+        }
         $series->update(['image' => $prefix.'front.webp']);
-        $series->media()->where('image', 'like', 'demo/%')->whereNotIn('image', array_map(
-            fn ($view) => $prefix.$view.'.webp', array_keys($photos)
-        ))->update(['active' => false]);
-        foreach ($photos as $view => $label) {
-            $series->media()->updateOrCreate(['image' => $prefix.$view.'.webp'], [
-                'variant_id' => null, 'color' => $color, 'alt_text' => $series->name.' — '.$label,
-                'sort_order' => array_search($view, array_keys($photos), true), 'focal_x' => 50, 'focal_y' => 50, 'active' => true,
+        $series->media()->where('image', 'like', 'demo/%')->whereNotIn('image', $photos->keys())->update(['active' => false]);
+        foreach ($photos->keys() as $index => $image) {
+            [$photoColor, $label] = $photos->get($image);
+            $series->media()->updateOrCreate(['image' => $image], [
+                'variant_id' => null, 'color' => $photoColor, 'alt_text' => $series->name.' — '.$photoColor.' — '.$label,
+                'sort_order' => $index, 'focal_x' => 50, 'focal_y' => 50, 'active' => true,
             ]);
         }
     }
@@ -171,6 +177,9 @@ class DemoAbayaSeeder extends Seeder
         }
         if (str_starts_with((string) Setting::get('hero_image'), 'demo/')) {
             Setting::put('hero_image', 'demo/abaya-hero-wide.webp');
+            if (! Setting::get('hero_image_mobile')) {
+                Setting::put('hero_image_mobile', 'demo/abaya-hero-mobile.webp');
+            }
         }
         if (str_starts_with((string) Setting::get('welcome_voucher_image'), 'demo/')) {
             Setting::put('welcome_voucher_image', 'demo/abaya-promo-portrait.webp');
