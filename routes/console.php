@@ -34,6 +34,11 @@ Artisan::command('asfara:demo-media {--activate-hero : Aktifkan video demo pada 
     $this->info('Aset demo diperbarui.');
 })->purpose('Memasang ulang foto dan video demonstrasi Asfara');
 
+Artisan::command('asfara:home-layout', function () {
+    Setting::put('home_section_order', array_keys(config('storefront.home_sections')));
+    $this->info('Urutan beranda bawaan Asfara diterapkan.');
+})->purpose('Menerapkan urutan section beranda Asfara yang terbaru');
+
 Artisan::command('asfara:admin {email} {--name=Administrator}', function () {
     $email = strtolower(trim($this->argument('email')));
     if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {

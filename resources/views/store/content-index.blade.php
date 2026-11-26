@@ -7,6 +7,12 @@
 @section('content')
 <section class="catalog-hero"><div class="container-xxl"><nav><a href="{{ route('home') }}">HOME</a> / {{ $isCampaign ? 'KAMPANYE' : strtoupper($type) }}</nav><div class="catalog-hero-heading"><div>@unless($isCampaign)<span>STORIES BY ASFARA</span>@endunless<h1>{{ $isCampaign ? 'Kampanye Asfara' : strtoupper($type) }}</h1>@unless($isCampaign)<p>Cerita, panduan, dan inspirasi untuk menemani setiap pilihan modest Anda.</p>@endunless</div><strong>{{ $entries->total() }} {{ $isCampaign ? 'KAMPANYE' : 'CERITA' }}</strong></div></div></section>
 <section class="editorial-index container-xxl">
+    @if(in_array($type, ['campaign', 'lookbook'], true))
+        <nav class="editorial-archive-nav" aria-label="Arsip Asfara">
+            <a href="{{ route('content.index', 'campaign') }}" @if($isCampaign) aria-current="page" @endif>Kampanye</a>
+            <a href="{{ route('content.index', 'lookbook') }}" @if(!$isCampaign) aria-current="page" @endif>Lookbook</a>
+        </nav>
+    @endif
     <div class="editorial-grid">
         @forelse($entries as $entry)
         @php($mobileCover = $isCampaign ? $entry->mobileCoverUrl() : null)

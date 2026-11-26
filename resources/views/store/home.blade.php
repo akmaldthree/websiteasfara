@@ -8,7 +8,27 @@
     };
     $newCollections = $curated('home_new_slugs', $collections);
     $categorySlugs = collect(preg_split('/[,\r\n]+/', $shop['home_category_slugs'] ?? ''))->map(fn($slug)=>trim($slug))->filter();
-    $categoryCollections = $categorySlugs->isEmpty() ? $collections->unique('category_id')->take(3) : $categorySlugs->map(fn($slug)=>$collections->firstWhere('slug',$slug))->filter()->unique('category_id')->take(3);
+    $categoryProducts = $categorySlugs->map(fn ($slug) => $collections->firstWhere('slug', $slug))->filter();
+    $categoryTiles = ($categoryProducts->isEmpty() ? $collections : $categoryProducts)->unique('category_id')->take(3)
+        ->filter(fn ($product) => $product->category)
+        ->map(fn ($product) => [
+            'label' => $product->category->name,
+            'url' => route('catalog', ['category' => $product->category->slug]),
+            'image' => $product->image_url,
+            'mobile_image' => null,
+        ])->values();
+    if ($categoryTiles->count() === 1 && $collections->contains(fn ($product) => $product->category?->slug === 'abaya-dewasa')) {
+        $editsBySlug = $campaignEdits->flatten(1)->keyBy('slug');
+        $abayaTiles = collect([
+            'demo-studio-lapis-kota' => 'Abaya Harian',
+            'demo-seri-siluet-senja' => 'Abaya Formal',
+            'demo-seri-langkah-ringan' => 'Abaya Travel',
+        ])->filter(fn ($label, $slug) => !empty($editsBySlug->get($slug)['image']))
+            ->map(fn ($label, $slug) => array_replace($editsBySlug->get($slug), ['label' => $label]))->values();
+        if ($abayaTiles->isNotEmpty()) {
+            $categoryTiles = $abayaTiles;
+        }
+    }
     $defaultOrder = collect(array_keys(config('storefront.home_sections')));
     $homeOrder = collect($shop['home_section_order'] ?? [])->intersect($defaultOrder)->unique();
     $homeOrder = $homeOrder->concat($defaultOrder->diff($homeOrder))->values();
@@ -21,13 +41,11 @@
     $videoEnabled = $shop['hero_video_enabled'] ?? false;
     $heroContentStyle = $shop['hero_content_style'] ?? 'editorial';
     $homeBanners = $contentEntries->where('type', 'banner');
-    $primaryEdit = $campaignEdits->get('main', collect())->firstWhere('image', '!=', null);
-    $campaign = $homeBanners->first();
+    $campaign = $homeBanners->first(fn ($entry) => $entry->image_url);
     $heroCampaign = ($shop['hero_campaign_enabled'] ?? true) && $heroContentStyle === 'editorial'
         ? ($campaignEdits->flatMap(fn ($edits) => $edits->values())->firstWhere('id', $heroCampaignId)
             ?? $campaignEdits->get('main', collect())->first())
         : null;
-    $spotlightProducts = $heroCampaign ? $heroCampaign['items']->whereNotIn('id', $newCollections->pluck('id'))->take(4) : collect();
     $firstSlide = [
         'image' => !empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg'),
         'eyebrow' => $shop['hero_eyebrow'] ?? 'NEW COLLECTION',
@@ -62,7 +80,6 @@
     }
     $videoHero = (bool) $firstSlide['video'];
     $heroContentClass = $videoHero && $heroContentStyle === 'editorial' ? '' : 'hero-content-'.$heroContentStyle;
-    $nextSection = ($shop['home_collections_enabled'] ?? true) ? '#new-in' : route('catalog');
     $heroSlides = collect([$firstSlide])->concat(($videoHero || $heroCampaign ? collect() : $homeBanners)->map(fn ($entry) => [
         'image' => $entry->image_url ?: (!empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg')),
         'eyebrow' => 'ASFARA EDIT',
@@ -113,53 +130,43 @@
         </article>
     @endforeach
     @if($heroSlides->count()>1)<div class="hero-dots" aria-label="Posisi banner">@foreach($heroSlides as $slide)<span class="{{ $loop->first?'is-active':'' }}" data-hero-dot="{{ $loop->index }}" aria-hidden="true"></span>@endforeach</div>@endif
-    <a class="hero-next-section" href="{{ $nextSection }}" aria-label="Ke koleksi terbaru">
+    <a class="hero-next-section" href="#home-after-hero" aria-label="Ke bagian berikutnya">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
     </a>
 </section>
 @endsection
-@if($heroCampaign && ($shop['home_collections_enabled'] ?? true))
+@if($campaign && ($heroCampaign || $videoHero))
     @section('home-campaign')
-    <section class="container-xxl home-campaign-spotlight" aria-labelledby="home-campaign-title">
-        <div class="home-campaign-spotlight-heading">
-            <div>
-                <h2 id="home-campaign-title">{{ $heroCampaign['label'] }}</h2>
-                @if($heroCampaign['summary'])<p>{{ $heroCampaign['summary'] }}</p>@endif
-            </div>
-            <a class="btn btn-outline-dark" href="{{ $heroCampaign['url'] }}">Belanja kampanye</a>
-        </div>
-        @if($spotlightProducts->isNotEmpty())
-            <div class="campaign-product-grid">
-                @foreach($spotlightProducts as $collection)
-                    @include('partials.product-card', ['cardContext' => 'home-spotlight-'])
-                @endforeach
-            </div>
-        @endif
-    </section>
-    @endsection
-@elseif(!$heroCampaign && $videoHero && ($primaryEdit || $campaign))
-    @section('home-campaign')
-    @php($campaignTitle = $primaryEdit['label'] ?? $campaign->title)
     <section class="home-campaign-preview home-primary-campaign" aria-labelledby="home-campaign-title">
-        <a href="{{ $primaryEdit['url'] ?? ($campaign->link_url ?: route('catalog')) }}">
+        <a href="{{ $campaign->link_url ?: route('catalog') }}">
             <picture>
-                @if($mobileBanner = $primaryEdit ? $primaryEdit['mobile_image'] : $campaign->mobileCoverUrl())<source media="(max-width: 767px)" srcset="{{ $mobileBanner }}">@endif
-                <img src="{{ $primaryEdit['image'] ?? ($campaign->image_url ?: $heroSlides->first()['image']) }}" alt="" width="1600" height="800" loading="lazy" decoding="async">
+                @if($mobileBanner = $campaign->mobileCoverUrl())<source media="(max-width: 767px)" srcset="{{ $mobileBanner }}">@endif
+                <img src="{{ $campaign->image_url }}" alt="" width="1600" height="800" loading="lazy" decoding="async">
             </picture>
             <div class="home-primary-campaign-copy">
-                <h2 id="home-campaign-title">{{ $campaignTitle }}</h2>
-                <span>{{ $primaryEdit ? 'Jelajahi kampanye' : ($campaign->link_label ?: 'Lihat koleksi') }}</span>
+                <h2 id="home-campaign-title">{{ $campaign->title }}</h2>
+                <span>{{ $campaign->link_label ?: 'Lihat koleksi' }}</span>
             </div>
         </a>
     </section>
     @endsection
 @endif
-@if($shop['home_categories_enabled'] ?? true)
-@section('home-categories')
-<section class="category-media-grid container-xxl reveal">
-    @foreach($categoryCollections as $categoryProduct)<a href="{{ route('catalog',['category'=>$categoryProduct->category->slug]) }}"><img src="{{ $categoryProduct->image_url }}" alt="{{ $categoryProduct->category->name }}" width="800" height="1000" loading="lazy" decoding="async"><span>{{ strtoupper($categoryProduct->category->name) }}</span></a>@endforeach
-</section>
-@endsection
+@if(($shop['home_categories_enabled'] ?? true) && $categoryTiles->isNotEmpty())
+    @section('home-categories')
+    <section class="container-xxl home-category-section" aria-label="Jelajahi koleksi">
+        <div class="category-media-grid" style="--category-cards: {{ $categoryTiles->count() }}">
+            @foreach($categoryTiles as $tile)
+                <a href="{{ $tile['url'] }}">
+                    <picture>
+                        @if($tile['mobile_image'])<source media="(max-width: 767px)" srcset="{{ $tile['mobile_image'] }}">@endif
+                        <img src="{{ $tile['image'] }}" alt="" width="800" height="1000" loading="lazy" decoding="async">
+                    </picture>
+                    <span>{{ $tile['label'] }}</span>
+                </a>
+            @endforeach
+        </div>
+    </section>
+    @endsection
 @endif
 
 @if($shop['home_collections_enabled'] ?? true)
@@ -174,10 +181,10 @@
     @php($edits = $campaignEdits->get($group, collect()))
     @continue($edits->isEmpty())
     @php($sectionKey = $group === 'main' ? 'collections' : $group)
-    @php($banner = $group === 'main' || $heroCampaign ? null : $edits->firstWhere('image', '!=', null))
+    @php($banner = $group === 'main' ? null : $edits->firstWhere('image', '!=', null))
     @if($banner)
         @section('home-'.$group.'_banner')
-        <section class="home-campaign-preview home-group-banner" aria-label="{{ $banner['label'] }}">
+        <section class="home-campaign-preview home-group-banner" data-campaign-banner="{{ $group }}" aria-label="{{ $banner['label'] }}">
             <a href="{{ $banner['url'] }}">
                 <picture>
                     @if($banner['mobile_image'])<source media="(max-width: 767px)" srcset="{{ $banner['mobile_image'] }}">@endif
@@ -219,6 +226,7 @@
 
 @foreach($homeOrder as $section)
     @yield('home-'.$section)
+    @if($section === 'hero')<div id="home-after-hero" tabindex="-1"></div>@endif
 @endforeach
 @endsection
 @push('scripts')

@@ -13,7 +13,9 @@
     <div class="container-xxl">
         <nav><a href="{{ route('home') }}">HOME</a> / <a href="{{ route('catalog') }}">SHOP</a> / {{ strtoupper($currentCategory?->name ?? (request('sale')?$storeCopy['sale_title']:$storeCopy['catalog_title'])) }}</nav>
         <div class="catalog-hero-heading"><div><h1>{{ $currentCategory?->name ?? (request('sale') ? $storeCopy['sale_title'] : $storeCopy['catalog_title']) }}</h1>@if($currentCategory?->description)<p>{{ $currentCategory->description }}</p>@endif</div></div>
+        @if($categories->count() > 1 || $currentCategory || request('sale'))
         <nav class="catalog-category-strip" aria-label="Kategori produk"><a @class(['is-active'=>!request('category') && !request('sale')]) href="{{ route('catalog') }}" data-catalog-url>ALL</a>@foreach($categories as $category)<a @class(['is-active'=>request('category')===$category->slug]) href="{{ route('catalog',['category'=>$category->slug]) }}" data-catalog-url>{{ strtoupper($category->name) }}</a>@endforeach<a @class(['is-active'=>request('sale')]) href="{{ route('catalog',['sale'=>1]) }}" data-catalog-url>SPECIAL OFFER</a></nav>
+        @endif
     </div>
 </section>
 <section class="catalog-page">

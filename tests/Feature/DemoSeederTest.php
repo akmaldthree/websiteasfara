@@ -69,8 +69,16 @@ class DemoSeederTest extends TestCase
             ->assertSee('id="product-main-image" src="'.$product->media()->where('color', 'Sand')->where('active', true)->firstOrFail()->image_url.'"', false);
         $this->assertMatchesRegularExpression('/data-color="olive"\s+hidden\s/', $response->getContent());
         $this->assertImageRatio('abaya-hero-mobile.webp', 9 / 16);
-        $this->get(route('home'))->assertOk()->assertSee('abaya-hero-wide.webp')->assertSee('abaya-hero-mobile.webp');
+        Setting::put('home_section_order', ['hero', 'categories', 'collections', 'new_in']);
+        $this->get(route('home'))->assertOk()->assertSeeInOrder(['home-category-section', 'id="new-in"'], false);
+        $this->artisan('asfara:home-layout')->assertSuccessful();
+        $this->get(route('home'))->assertOk()->assertSee('abaya-hero-wide.webp')->assertSee('abaya-hero-mobile.webp')
+            ->assertSeeInOrder(['id="new-in"', '--category-cards: 3', 'Abaya Harian', 'Abaya Formal', 'Abaya Travel', 'data-campaign-tabs="main"'], false);
         $this->get(route('content.show', ['campaign', 'demo-seri-ruang-raya']))->assertOk()->assertSee('Abaya dalam palet teduh');
+        ContentEntry::whereIn('slug', ['demo-studio-lapis-kota', 'demo-seri-siluet-senja', 'demo-seri-langkah-ringan'])->update(['active' => false]);
+        $this->get(route('home'))->assertOk()->assertSee('--category-cards: 1', false);
+        Setting::put('home_categories_enabled', false);
+        $this->get(route('home'))->assertOk()->assertDontSee('home-category-section', false);
     }
 
     public function test_demo_store_data_is_complete_and_idempotent(): void
@@ -127,7 +135,7 @@ class DemoSeederTest extends TestCase
         $this->get('/')->assertOk()
             ->assertSee('<h1>Ruang Raya</h1>', false)
             ->assertSee(route('content.show', ['campaign', 'demo-seri-ruang-raya']), false)
-            ->assertSeeInOrder(['id="new-in"', 'class="container-xxl home-campaign-spotlight"', 'id="home-campaign-title">Ruang Raya'], false)
+            ->assertSeeInOrder(['id="home-after-hero"', 'id="new-in"', 'home-category-section', 'data-campaign-tabs="main"', 'data-campaign-banner="signature"', 'data-campaign-tabs="signature"', 'data-campaign-banner="studio"', 'data-campaign-tabs="studio"', 'id="home-campaign-title"'], false)
             ->assertSee('data-hero-play', false)
             ->assertDontSee('<button type="button" data-hero-sound', false)
             ->assertSee(route('media.demo-hero', 'desktop'), false)
