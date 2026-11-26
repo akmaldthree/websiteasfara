@@ -95,7 +95,7 @@ class StorefrontEditorialTest extends TestCase
             ->assertDontSee('class="campaign-tab-banner"', false)
             ->assertSee($url, false)
             ->assertSee('data-collection-tab="campaign-'.$entry->id.'"', false);
-        $this->get($url)->assertOk()->assertSeeInOrder(['ASTER EDITION', 'ZAYNA SERIES'])
+        $this->get($url)->assertOk()->assertSeeInOrder(['Aster Edition', 'Zayna Series'])
             ->assertSee('srcset="/storage/demo/hero.webp"', false)
             ->assertSee('href="#campaign-products-heading"', false);
         $this->get(route('admin.content.preview', $entry))->assertOk()
@@ -106,7 +106,7 @@ class StorefrontEditorialTest extends TestCase
         $this->assertCount(2, $entry->fresh()->campaignProductIds());
 
         $second->update(['active' => false]);
-        $this->get($url)->assertOk()->assertSee('ZAYNA SERIES')->assertDontSee('ASTER EDITION');
+        $this->get($url)->assertOk()->assertSee('Zayna Series')->assertDontSee('Aster Edition');
         $entry->update(['starts_at' => now()->addDay()]);
         $this->get($url)->assertNotFound();
         $this->get(route('home'))->assertOk()->assertDontSee('data-collection-tab="campaign-'.$entry->id.'"', false)->assertDontSee($url, false);
@@ -117,7 +117,7 @@ class StorefrontEditorialTest extends TestCase
         ContentEntry::create(['type' => 'lookbook', 'title' => 'Eid Lookbook', 'slug' => 'eid-lookbook', 'summary' => 'Inspirasi tampilan.', 'active' => true]);
 
         $this->get(route('content.index', 'lookbook'))->assertOk()->assertSee('Eid Lookbook');
-        $this->get(route('catalog', ['sort' => 'title_asc', 'color' => 'Black']))->assertOk()->assertSee('WARNA')->assertSee('Black')->assertSee('UKURAN')->assertSee('ZAYNA SERIES')
+        $this->get(route('catalog', ['sort' => 'title_asc', 'color' => 'Black']))->assertOk()->assertSee('WARNA')->assertSee('Black')->assertSee('UKURAN')->assertSee('Zayna Series')
             ->assertSee('FILTER AKTIF')->assertSee('Warna: Black')->assertSee('Filter lanjutan')->assertSee('data-filter-submit', false);
     }
 
@@ -128,6 +128,7 @@ class StorefrontEditorialTest extends TestCase
             'address' => 'Jl. Buah Batu No. 121',
             'city' => 'Bandung',
             'hours' => '09.00–19.00',
+            'map_url' => 'https://example.com/lokasi-bandung',
             'sort_order' => 1,
             'active' => true,
         ]);
@@ -138,6 +139,7 @@ class StorefrontEditorialTest extends TestCase
 
         $admin = User::factory()->create();
         $admin->forceFill(['role' => 'admin'])->save();
+        $this->get(route('store.locations'))->assertOk()->assertSee('Asfara Bandung')->assertSee('Lihat di peta');
         $this->actingAs($admin)->get(route('admin.resources', 'store-locations'))->assertOk()->assertSee('Asfara Bandung');
     }
 

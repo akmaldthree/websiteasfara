@@ -24,7 +24,18 @@
             'demo-seri-siluet-senja' => 'Abaya Formal',
             'demo-seri-langkah-ringan' => 'Abaya Travel',
         ])->filter(fn ($label, $slug) => !empty($editsBySlug->get($slug)['image']))
-            ->map(fn ($label, $slug) => array_replace($editsBySlug->get($slug), ['label' => $label]))->values();
+            ->map(function ($label, $slug) use ($editsBySlug, $shop) {
+                $edit = $editsBySlug->get($slug);
+                $tile = match ($slug) {
+                    'demo-studio-lapis-kota' => 'harian',
+                    'demo-seri-siluet-senja' => 'formal',
+                    default => 'travel',
+                };
+                $demoCover = ($shop['home_abaya_editorial_enabled'] ?? false) && str_contains($edit['image'], '/storage/demo/abaya-');
+                $portrait = $demoCover ? asset('storage/demo/abaya-editorial-tile-'.$tile.'.webp') : ($edit['mobile_image'] ?: $edit['image']);
+
+                return array_replace($edit, ['label' => $label, 'image' => $portrait, 'mobile_image' => null]);
+            })->values();
         if ($abayaTiles->isNotEmpty()) {
             $categoryTiles = $abayaTiles;
         }
@@ -153,13 +164,13 @@
 @endif
 @if(($shop['home_categories_enabled'] ?? true) && $categoryTiles->isNotEmpty())
     @section('home-categories')
-    <section class="container-xxl home-category-section" aria-label="Jelajahi koleksi">
+    <section class="home-category-section" aria-label="Jelajahi koleksi">
         <div class="category-media-grid" style="--category-cards: {{ $categoryTiles->count() }}">
             @foreach($categoryTiles as $tile)
                 <a href="{{ $tile['url'] }}">
                     <picture>
                         @if($tile['mobile_image'])<source media="(max-width: 767px)" srcset="{{ $tile['mobile_image'] }}">@endif
-                        <img src="{{ $tile['image'] }}" alt="" width="800" height="1000" loading="lazy" decoding="async">
+                        <img src="{{ $tile['image'] }}" alt="" width="760" height="950" loading="lazy" decoding="async">
                     </picture>
                     <span>{{ $tile['label'] }}</span>
                 </a>

@@ -74,7 +74,14 @@ class DemoSeederTest extends TestCase
         $this->artisan('asfara:home-layout')->assertSuccessful();
         $this->get(route('home'))->assertOk()->assertSee('abaya-hero-wide.webp')->assertSee('abaya-hero-mobile.webp')
             ->assertSeeInOrder(['id="new-in"', '--category-cards: 3', 'Abaya Harian', 'Abaya Formal', 'Abaya Travel', 'data-campaign-tabs="main"'], false);
-        $this->get(route('content.show', ['campaign', 'demo-seri-ruang-raya']))->assertOk()->assertSee('Abaya dalam palet teduh');
+        $this->get(route('content.show', ['campaign', 'demo-seri-ruang-raya']))->assertOk()->assertSee('Abaya dalam palet teduh')->assertSee('Film Kampanye');
+        foreach (['harian', 'formal', 'travel'] as $tile) {
+            Storage::disk('public')->assertExists('demo/abaya-editorial-tile-'.$tile.'.webp');
+            $this->assertImageRatio('abaya-editorial-tile-'.$tile.'.webp', .8);
+        }
+        $this->get(route('home'))->assertOk()
+            ->assertSee('abaya-editorial-tile-harian.webp')->assertSee('abaya-editorial-tile-formal.webp')->assertSee('abaya-editorial-tile-travel.webp')
+            ->assertSee('abaya-editorial-signature-wide.webp')->assertSee('abaya-editorial-studio-mobile.webp');
         ContentEntry::whereIn('slug', ['demo-studio-lapis-kota', 'demo-seri-siluet-senja', 'demo-seri-langkah-ringan'])->update(['active' => false]);
         $this->get(route('home'))->assertOk()->assertSee('--category-cards: 1', false);
         Setting::put('home_categories_enabled', false);
@@ -101,7 +108,7 @@ class DemoSeederTest extends TestCase
         $this->assertSame(1, CustomQuote::where('number', 'ASF-CUSTOM-DEMO-001')->count());
         $this->assertSame(12, NewsletterSubscriber::where('email', 'like', 'newsletter%.demo@asfara.co.id')->count());
         $this->assertSame(10, ProductQuestion::where('status', 'answered')->count());
-        $this->assertSame(74, MediaAsset::where('path', 'like', 'demo/%')->count());
+        $this->assertSame(83, MediaAsset::where('path', 'like', 'demo/%')->count());
         $this->assertDatabaseHas('media_assets', ['path' => 'demo/ruang-raya-closing-portrait.webp']);
         $this->assertSame(13, Order::where(fn ($query) => $query->where('number', 'like', 'ASF-DEMO-%')->orWhere('number', 'DEMO-REVIEW-001'))->count());
         $this->assertSame(12, NotificationDelivery::count());
@@ -160,8 +167,8 @@ class DemoSeederTest extends TestCase
         $this->get('/koleksi')->assertOk()
             ->assertSee('class="catalog-category-strip"', false)
             ->assertSee('class="catalog-hero-heading"', false);
-        $this->get('/koleksi?category=abaya-dewasa')->assertOk()->assertSee('RAFFAH SIGNATURE');
-        $this->get('/koleksi?category=outer-khimar')->assertOk()->assertSee('HANA FLOW KHIMAR');
+        $this->get('/koleksi?category=abaya-dewasa')->assertOk()->assertSee('Raffah Signature');
+        $this->get('/koleksi?category=outer-khimar')->assertOk()->assertSee('Hana Flow Khimar');
         $this->get('/koleksi?q=Zayna')->assertOk()->assertSee('Zayna Essential');
         $this->get('/koleksi?q=Safa')->assertOk()->assertSee('Safa Daily Khimar');
         $this->get('/koleksi/raffah-signature')->assertOk()

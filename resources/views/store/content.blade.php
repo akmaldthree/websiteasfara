@@ -3,10 +3,19 @@
 @section('description',$entry->seo_description ?: \Illuminate\Support\Str::limit($entry->summary ?: $entry->body,160))
 @section('body_class','editorial-body')
 @if($entry->image_url)@section('image',$entry->image_url)@endif
-@php($template=$entry->template ?: 'standard')
-@php($isCampaign = $entry->type === 'campaign')
-@php($hasProducts = isset($campaignProducts) && $campaignProducts->isNotEmpty())
-@php($mobileCover = $isCampaign ? $entry->mobileCoverUrl() : null)
+@php
+    $template = $entry->template ?: 'standard';
+    $isCampaign = $entry->type === 'campaign';
+    $hasProducts = isset($campaignProducts) && $campaignProducts->isNotEmpty();
+    $mobileCover = $isCampaign ? $entry->mobileCoverUrl() : null;
+    $film = $isCampaign ? collect($entry->blocks)->firstWhere('type', 'hero_options') : null;
+    $filmDesktop = $film['video_url'] ?? null;
+    $filmMobile = $film['mobile_video_url'] ?? null;
+    if (!$filmDesktop && !$filmMobile && $entry->slug === 'demo-seri-ruang-raya' && ($shop['home_abaya_editorial_enabled'] ?? false)) {
+        $filmDesktop = route('media.demo-hero', 'desktop');
+        $filmMobile = route('media.demo-hero', 'mobile');
+    }
+@endphp
 @section('content')
 @if($preview ?? false)<div class="container-xxl demo-note">Pratinjau admin · konten ini mungkin belum terbit.</div>@endif
 <article @class(['container-xxl section editorial-detail', 'campaign-detail' => $isCampaign || $hasProducts, 'page-narrow' => !$isCampaign && !$hasProducts && $template === 'standard', 'page-template-'.$template => !$isCampaign && !$hasProducts && $template !== 'standard'])>
@@ -27,6 +36,16 @@
                 </picture>
             @endif
         </header>
+        @if($filmDesktop || $filmMobile)
+            <section class="campaign-film" aria-labelledby="campaign-film-title">
+                <h2 id="campaign-film-title">Film Kampanye</h2>
+                <video controls playsinline preload="none" @if($entry->image_url) poster="{{ $entry->image_url }}" @endif>
+                    @if($filmDesktop && $filmMobile)<source media="(max-width: 767px)" src="{{ $filmMobile }}">@endif
+                    <source src="{{ $filmDesktop ?: $filmMobile }}">
+                    <a href="{{ $filmDesktop ?: $filmMobile }}">Buka video kampanye</a>
+                </video>
+            </section>
+        @endif
     @else
     <header @class(['text-center py-5'=>$template==='landing'])><span class="eyebrow">{{ strtoupper(str_replace('_',' ',$type ?? $entry->type)) }}</span><h1>{{ $entry->title }}</h1>@if($entry->summary)<p class="lead">{{ $entry->summary }}</p>@endif</header>
     @if($entry->image_url)

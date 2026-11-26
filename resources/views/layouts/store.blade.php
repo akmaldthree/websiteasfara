@@ -80,7 +80,7 @@
                 <a href="{{ route('catalog',['sort'=>'featured']) }}">Collections</a>
             @endif
             @foreach($cmsMenus->whereIn('placement',['both','desktop'])->take(1) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
-            <a href="#store-locations">Find Us</a>
+            <a href="{{ route('store.locations') }}">Find Us</a>
             <a href="{{ route('catalog',['sale'=>1]) }}">Special Offer</a>
         </nav>
         <div class="header-actions">
@@ -120,7 +120,7 @@
             </div></details>
             <a href="{{ route('catalog',['sale'=>1]) }}">SPECIAL OFFER</a>
             @foreach($cmsMenus->whereIn('placement',['both','mobile']) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
-            <a href="#store-locations">FIND US</a>
+            <a href="{{ route('store.locations') }}">FIND US</a>
             @if($shop['header_tracking_enabled'] ?? true)<a href="{{ route('track') }}">{{ strtoupper(__('store.track')) }}</a>@endif
         </div>
         <footer><a href="{{ route('account') }}">ACCOUNT</a><button type="button" id="mobile-open-search">SEARCH</button><div class="mobile-language"><a href="{{ route('locale','id') }}">INDONESIA</a><a href="{{ route('locale','en') }}">ENGLISH</a></div></footer>
@@ -158,7 +158,7 @@
             </div>
             <details class="col-lg-2 footer-group" open><summary>{{ __('store.shop') }}</summary><a href="{{ route('catalog') }}">{{ __('store.all_collections') }}</a><a href="{{ route('content.index', 'campaign') }}">Campaign</a><a href="{{ route('content.index', 'lookbook') }}">Lookbook</a><a href="{{ route('catalog', ['sale' => 1]) }}">Special Offer</a></details>
             <details class="col-lg-2 footer-group" open><summary>{{ __('store.help') }}</summary><a href="{{ route('account') }}">{{ __('store.account') }}</a>@if($shop['header_tracking_enabled'] ?? true)<a href="{{ route('track') }}">{{ __('store.track') }}</a>@endif @foreach($footerPages->where('slug', '!=', 'tentang') as $p)<a href="{{ route('page',$p->slug) }}">{{ $p->title }}</a>@endforeach</details>
-            <details class="col-lg-2 footer-group" id="store-locations" open><summary>{{ __('store.stores') }}</summary>@forelse($storeLocations as $location)<div class="footer-store"><strong>{{ $location->name }}</strong><small>{{ $location->address }}@if($location->city) · {{ $location->city }}@endif</small>@if($location->map_url)<a href="{{ $location->map_url }}" target="_blank" rel="noopener">MAPS ↗</a>@endif</div>@empty<small>{{ $shop['store_location'] ?? '' }}</small>@endforelse</details>
+            <details class="col-lg-2 footer-group" id="store-locations" open><summary>{{ __('store.stores') }}</summary>@forelse($storeLocations->take(2) as $location)<div class="footer-store"><strong>{{ $location->name }}</strong><small>{{ $location->address }}@if($location->city) · {{ $location->city }}@endif</small>@if($location->map_url)<a href="{{ $location->map_url }}" target="_blank" rel="noopener">MAPS ↗</a>@endif</div>@empty<small>{{ $shop['store_location'] ?? '' }}</small>@endforelse<a href="{{ route('store.locations') }}">Lihat lokasi toko</a></details>
             <div class="col-lg-3 footer-connect"><h2>{{ __('store.connect') }}</h2><p class="small">{{ $storeCopy['newsletter_text'] }}</p><form class="footer-newsletter" method="post" action="{{ route('newsletter.store') }}">@csrf<label class="visually-hidden" for="newsletter-email">Email</label><div><input id="newsletter-email" type="email" name="email" placeholder="{{ __('store.email') }}" required><button aria-label="Daftar newsletter">→</button></div><label><input type="checkbox" name="consent" value="1" required> {{ __('store.newsletter_consent') }}</label></form>@if($shop['footer_social_enabled'] ?? true)<div class="footer-social">@if(!empty($shop['whatsapp']))<a href="https://wa.me/{{ $shop['whatsapp'] }}" target="_blank" rel="noopener"><i>WA</i><span>WhatsApp</span></a>@endif @foreach(['instagram_url'=>['IG','Instagram'],'tiktok_url'=>['TT','TikTok'],'facebook_url'=>['FB','Facebook']] as $key=>$social)@if(!empty($shop[$key]))<a href="{{ $shop[$key] }}" target="_blank" rel="noopener"><i>{{ $social[0] }}</i><span>{{ $social[1] }}</span></a>@endif @endforeach</div>@endif<details class="footer-language language-picker"><summary>{{ app()->getLocale()==='id'?'Indonesia':'English' }}</summary><div><a href="{{ route('locale','id') }}" @class(['is-active'=>app()->getLocale()==='id'])><span>Indonesia</span><small>ID</small></a><a href="{{ route('locale','en') }}" @class(['is-active'=>app()->getLocale()==='en'])><span>English</span><small>EN</small></a></div></details></div>
         </div>
         <div class="footer-bottom">© {{ date('Y') }} {{ $shop['brand_name'] ?? 'Asfara' }} {{ $shop['footer_copyright'] ?? '' }} <span>{{ $storeCopy['footer_trust'] }}</span></div>
@@ -507,16 +507,12 @@ document.querySelectorAll('.reference-carousel').forEach(shell=>{const track=she
 document.addEventListener('click',event=>document.querySelectorAll('.language-picker[open]').forEach(picker=>{if(!picker.contains(event.target))picker.removeAttribute('open')}));
 document.querySelectorAll('[data-product-voucher-copy]').forEach(button=>button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(button.dataset.productVoucherCopy);button.querySelector('small').textContent='KODE TERSALIN'}catch(error){button.querySelector('small').textContent=button.dataset.productVoucherCopy}}));
 const footerMobile = matchMedia('(max-width: 767px)');
-const locationGroup = document.getElementById('store-locations');
 const footerGroups = [...document.querySelectorAll('.footer-group')];
 const syncFooterGroups = () => footerGroups.forEach(group => {
-    group.open = !footerMobile.matches || (group === locationGroup && location.hash === '#store-locations');
+    group.open = !footerMobile.matches || (group.id === 'store-locations' && location.hash === '#store-locations');
 });
 syncFooterGroups();
 footerMobile.addEventListener('change', syncFooterGroups);
-document.querySelectorAll('a[href="#store-locations"]').forEach(link => link.addEventListener('click', () => {
-    locationGroup.open = true;
-}));
 
 const mobileNav = document.getElementById('mobile-nav');
 const mobileNavToggle = header.querySelector('.menu-toggle');

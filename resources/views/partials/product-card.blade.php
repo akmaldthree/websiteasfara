@@ -27,8 +27,8 @@
     @php($isSignature=str_contains(mb_strtolower($collection->name),'signature'))
     @php($cardKey=($cardContext ?? '').$collection->id)
     <a @class(['product-image', 'has-secondary-image' => $secondaryImage]) href="{{ route('product',$collection->slug) }}">
-        <img class="product-image-primary" src="{{ $primaryImage }}" style="object-position:{{ $primaryMedia?->focal_x ?? 50 }}% {{ $primaryMedia?->focal_y ?? 50 }}%" alt="{{ $collection->name }}{{ $collection->image ? '' : ' — ilustrasi koleksi' }}" width="800" height="1000" loading="lazy" decoding="async">
-        @if($secondaryImage)<img class="product-image-secondary" src="{{ $secondaryImage }}" style="object-position:{{ $secondaryMedia->focal_x }}% {{ $secondaryMedia->focal_y }}%" alt="{{ $collection->name }} — tampilan berikutnya" width="800" height="1000" loading="lazy" decoding="async">@endif
+        <img class="product-image-primary" src="{{ $primaryImage }}" style="object-position:{{ $primaryMedia?->focal_x ?? 50 }}% {{ $primaryMedia?->focal_y ?? 50 }}%" alt="{{ $collection->name }}{{ $collection->image ? '' : ' — ilustrasi koleksi' }}" width="800" height="800" loading="lazy" decoding="async">
+        @if($secondaryImage)<img class="product-image-secondary" src="{{ $secondaryImage }}" style="object-position:{{ $secondaryMedia->focal_x }}% {{ $secondaryMedia->focal_y }}%" alt="{{ $collection->name }} — tampilan berikutnya" width="800" height="800" loading="lazy" decoding="async">@endif
         @if($availableStock<=0)<span class="product-tag product-tag-sold">SOLD OUT</span>@elseif($saving>0)<span class="product-tag product-tag-sale">Hemat @rupiah($saving)</span>@elseif($isSignature)<span class="product-tag product-tag-signature">SIGNATURE</span>@elseif($collection->featured)<span class="product-tag product-tag-new">NEW IN</span>@endif
     </a>
     @if($purchasableVariants->count()===1)
@@ -38,8 +38,10 @@
         <button type="button" class="product-quick" data-quick-open="quick-product-{{ $cardKey }}">PILIH OPSI</button>
         <script type="application/json" id="quick-product-{{ $cardKey }}">{!! json_encode(['name'=>$collection->name,'url'=>route('product',$collection->slug),'image'=>$primaryImage,'usesType'=>(bool)$collection->uses_product_type,'variants'=>$quickVariants], JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
     @endif
-    <div class="product-meta"><h3><a href="{{ route('product',$collection->slug) }}">{{ strtoupper($collection->name) }}</a></h3><div class="product-card-prices"><span @class(['sale-price'=>$collection->compare_at_price>$sellingPrice])><small class="visually-hidden">{{ $collection->compare_at_price>$sellingPrice?'HARGA SALE':'HARGA' }}</small>@rupiah($sellingPrice)</span>@if($collection->compare_at_price>$sellingPrice)<del><small class="visually-hidden">HARGA NORMAL</small>@rupiah($collection->compare_at_price)</del>@endif</div></div>
+    <div class="product-meta"><h3><a href="{{ route('product',$collection->slug) }}">{{ $collection->name }}</a></h3><div class="product-card-prices"><span @class(['sale-price'=>$collection->compare_at_price>$sellingPrice])><small class="visually-hidden">{{ $collection->compare_at_price>$sellingPrice?'HARGA SALE':'HARGA' }}</small>@rupiah($sellingPrice)</span>@if($collection->compare_at_price>$sellingPrice)<del><small class="visually-hidden">HARGA NORMAL</small>@rupiah($collection->compare_at_price)</del>@endif</div></div>
     @php($cardColors=$collection->variants->pluck('color')->filter()->unique()->values())
+    <div class="product-card-details">
     <div class="product-card-colors" aria-label="{{ $cardColors->count() }} warna tersedia">@foreach($cardColors->take(5) as $color)<i style="--swatch:{{ \App\Support\ColorSwatch::hex($color) }}" title="{{ $color }}"></i>@endforeach @if($cardColors->count()>5)<small>+{{ $cardColors->count()-5 }}</small>@endif</div>
     @if(($collection->reviews_count ?? 0)>0)<div class="product-rating"><span>★★★★★</span> {{ number_format((float)$collection->reviews_avg_rating,1) }} ({{ $collection->reviews_count }})</div>@endif
+    </div>
 </article>

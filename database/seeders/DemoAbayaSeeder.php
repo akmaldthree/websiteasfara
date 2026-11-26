@@ -67,6 +67,7 @@ class DemoAbayaSeeder extends Seeder
 
             $this->updateCampaigns($series->only(array_keys(self::STYLES))->filter->active, $series->pluck('id'));
             $this->updateEditorial($series);
+            Setting::put('home_abaya_editorial_enabled', true);
         });
     }
 
@@ -109,8 +110,8 @@ class DemoAbayaSeeder extends Seeder
             'demo-seri-ruang-raya' => ['Abaya dalam palet teduh untuk silaturahmi dan momen istimewa.', 'hero-wide', ['raffah-signature', 'naura-pleated', 'kamila-embroidery', 'samira-flare']],
             'demo-seri-siluet-senja' => ['Abaya lembut dengan lipit dan detail bordir untuk acara istimewa.', 'senja-wide', ['naura-pleated', 'kamila-embroidery', 'mahira-luxe']],
             'demo-seri-langkah-ringan' => ['Abaya ringan untuk bepergian dan bergerak nyaman sepanjang hari.', 'harian-wide', ['nayla-travel', 'alesha-everyday', 'zayna-essential']],
-            'demo-signature-rona-malam' => ['Abaya dengan tekstur dan bordir tonal untuk acara malam.', 'malam-wide', ['mahira-luxe', 'kamila-embroidery', 'raffah-signature']],
-            'demo-studio-lapis-kota' => ['Pilihan abaya berpotongan praktis untuk hari yang aktif.', 'harian-wide', ['alesha-everyday', 'nayla-travel', 'zayna-essential']],
+            'demo-signature-rona-malam' => ['Abaya dengan tekstur dan bordir tonal untuk acara malam.', 'editorial-signature-wide', ['mahira-luxe', 'kamila-embroidery', 'raffah-signature']],
+            'demo-studio-lapis-kota' => ['Pilihan abaya berpotongan praktis untuk hari yang aktif.', 'editorial-studio-wide', ['alesha-everyday', 'nayla-travel', 'zayna-essential']],
         ];
         foreach ($campaigns as $slug => [$summary, $cover, $slugs]) {
             $entry = $this->demoContent($slug);
@@ -133,7 +134,8 @@ class DemoAbayaSeeder extends Seeder
     {
         $catalog = '/koleksi?category=abaya-dewasa';
         $sections = [
-            'hero-wide' => ['demo-banner', 'demo-banner-new', 'warm-gathering', 'demo-harmoni'],
+            'editorial-collection-wide' => ['demo-banner'],
+            'hero-wide' => ['demo-banner-new', 'warm-gathering', 'demo-harmoni'],
             'senja-wide' => ['demo-banner-abaya', 'demo-banner-kids', 'little-celebration'],
             'harian-wide' => ['demo-banner-travel', 'everyday-modest-edit', 'soft-earth-journey', 'demo-look-natural'],
             'journal-wide' => ['demo-cerita', 'merawat-busana', 'memilih-sarimbit', 'memadukan-abaya', 'bahan-untuk-perjalanan', 'palet-warna-keluarga', 'mencuci-busana-anak'],

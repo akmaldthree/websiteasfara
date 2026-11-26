@@ -36,6 +36,7 @@ class StoreController extends Controller
         $urls = collect([
             ['url' => route('home'), 'lastmod' => null, 'priority' => '1.0'],
             ['url' => route('catalog'), 'lastmod' => null, 'priority' => '0.9'],
+            ['url' => route('store.locations'), 'lastmod' => null, 'priority' => '0.5'],
             ['url' => route('content.index', 'journal'), 'lastmod' => null, 'priority' => '0.5'],
             ['url' => route('content.index', 'lookbook'), 'lastmod' => null, 'priority' => '0.5'],
             ['url' => route('content.index', 'campaign'), 'lastmod' => null, 'priority' => '0.5'],

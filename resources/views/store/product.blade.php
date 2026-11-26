@@ -47,7 +47,7 @@
 <section class="container-xxl section product-page">
     <nav class="breadcrumb"><a href="{{ route('catalog') }}">Koleksi</a> / {{ $series->category->name }} / {{ $series->name }}</nav>
     <div class="row g-5 product-layout">
-        <div class="col-lg-7 product-gallery-column">
+        <div class="col-lg-7 product-gallery-column" data-gallery-photo-count="{{ $visibleGallery->count() }}">
             <div class="detail-image product-gallery-main product-gallery-stage"><img id="product-main-image" src="{{ $mainImage }}" draggable="false" alt="{{ $mainMedia?->alt_text ?? $series->name }}" style="object-position:{{ $mainMedia?->focal_x ?? 50 }}% {{ $mainMedia?->focal_y ?? 50 }}%" width="800" height="800" loading="eager" fetchpriority="high" decoding="async"><button type="button" class="product-gallery-arrow is-prev" data-product-gallery-prev aria-label="Foto sebelumnya" @disabled($visibleGallery->count() < 2)>‹</button><button type="button" class="product-gallery-arrow is-next" data-product-gallery-next aria-label="Foto berikutnya" @disabled($visibleGallery->count() < 2)>›</button><button type="button" class="product-zoom-button" id="open-product-zoom" aria-label="Perbesar foto">⌕</button><span class="product-gallery-count" @if($visibleGallery->count() < 2) hidden @endif><b data-product-gallery-current>1</b> / <span data-product-gallery-total>{{ $visibleGallery->count() }}</span></span></div>
             @if($gallery->isNotEmpty())
                 <div class="product-gallery-pager" aria-label="Galeri foto produk">
@@ -270,6 +270,7 @@ function updateVariant() {
         visiblePhotos = nextPhotos;
         thumbnails.forEach(photo => photo.hidden = !visiblePhotos.includes(photo));
         galleryPrevious.disabled = galleryNext.disabled = visiblePhotos.length < 2;
+        mainImage.closest('.product-gallery-column').dataset.galleryPhotoCount = visiblePhotos.length;
         galleryTotal.textContent = String(visiblePhotos.length);
         galleryTotal.parentElement.hidden = visiblePhotos.length < 2;
         showImage(visiblePhotos[0]);

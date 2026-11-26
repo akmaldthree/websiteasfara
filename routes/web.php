@@ -25,6 +25,7 @@ Route::get('/bahasa/{locale}', function (string $locale) {
 Route::get('/koleksi', [Store::class, 'catalog'])->name('catalog');
 Route::get('/pencarian/saran', [Store::class, 'searchSuggestions'])->middleware('throttle:60,1')->name('search.suggestions');
 Route::get('/koleksi/{slug}', [Store::class, 'product'])->name('product');
+Route::view('/lokasi-toko', 'store.locations')->name('store.locations');
 Route::get('/halaman/{slug}', [Store::class, 'page'])->name('page');
 Route::get('/konten/{type}/{slug}', [Store::class, 'content'])->name('content.show');
 Route::get('/konten/{type}', [Store::class, 'contentIndex'])->name('content.index');
