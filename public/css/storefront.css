@@ -2290,7 +2290,7 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 }
 
 .store-body .home-category-section .category-media-grid {
-    grid-template-columns: repeat(var(--category-cards), minmax(0, 1fr));
+    grid-template-columns: repeat(var(--category-columns, var(--category-cards)), minmax(0, 1fr));
     grid-template-rows: auto;
     grid-auto-flow: row;
     padding-bottom: 0;

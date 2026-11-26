@@ -12,6 +12,7 @@ use App\Models\ShippingRate;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Variant;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -96,7 +97,7 @@ class CheckoutService
         return $lines;
     }
 
-    public function quote(array $cart, array $input, bool $lock = false, ?User $customer = null, array $customizations = []): array
+    public function quote(array $cart, array $input, bool $lock = false, ?User $customer = null, array $customizations = [], ?CarbonInterface $couponEvaluationAt = null): array
     {
         $lines = $this->lines($cart, $lock, $customer, $customizations);
         $subtotal = array_sum(array_column($lines, 'base_total'));
@@ -164,7 +165,7 @@ class CheckoutService
             $this->check($coupons->count() === $codes->count(), 'Satu atau lebih voucher tidak ditemukan.');
             $this->check($coupons->count() <= 1 || $coupons->every->combinable, 'Voucher ini tidak dapat digabungkan.');
             foreach ($coupons as $coupon) {
-                $this->check($coupon->active && now()->between($coupon->starts_at, $coupon->ends_at) && $coupon->used < $coupon->usage_limit, "Voucher {$coupon->code} tidak aktif atau kuotanya habis.");
+                $this->check($coupon->active && ($couponEvaluationAt ?? now())->between($coupon->starts_at, $coupon->ends_at) && $coupon->used < $coupon->usage_limit, "Voucher {$coupon->code} tidak aktif atau kuotanya habis.");
                 $segmentAllowed = $coupon->segment === 'all' || ($coupon->segment === 'guest' && ! $customer) || ($coupon->segment === 'customer' && $customer && ! $group) || ($coupon->segment === 'business' && $group);
                 $this->check($segmentAllowed && (! $coupon->price_group_id || $group?->id === $coupon->price_group_id), "Voucher {$coupon->code} tidak berlaku untuk akun ini.");
                 if ($coupon->per_user_limit) {

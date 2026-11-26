@@ -9,17 +9,33 @@
 <form method="post" enctype="multipart/form-data" action="{{ route('admin.media.upload') }}" class="panel mb-4">
     @csrf
     <div class="form-grid">
-        <div><label for="media-image">Pilih gambar <span class="required-mark">*</span></label><input id="media-image" class="form-control" type="file" name="image" accept="image/jpeg,image/png,image/webp" required>@include('admin.partials.image-guideline',['preset'=>'media'])@error('image')<div class="text-danger small mt-1">{{ $message }}</div>@enderror</div>
-        <div><label for="media-alt">Deskripsi gambar (alt text) <span class="required-mark">*</span></label><input id="media-alt" class="form-control" name="alt_text" maxlength="200" required placeholder="Contoh: Koleksi gamis Asfara warna sage"><small>Jelaskan isi gambar agar mudah dicari dan ramah aksesibilitas.</small>@error('alt_text')<div class="text-danger small mt-1">{{ $message }}</div>@enderror</div>
+        <div><label for="media-image">Pilih gambar <span class="required-mark">*</span></label><input id="media-image" class="form-control" type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple required>@include('admin.partials.image-guideline',['preset'=>'media'])@foreach($errors->get('images.*') as $messages)@foreach($messages as $message)<div class="text-danger small mt-1">{{ $message }}</div>@endforeach @endforeach @error('image')<div class="text-danger small mt-1">{{ $message }}</div>@enderror</div>
+        <div><label for="media-alt">Deskripsi gambar (alt text)</label><input id="media-alt" class="form-control" name="alt_text" maxlength="200" placeholder="Contoh: Koleksi gamis Asfara warna sage"><small>Bisa unggah hingga 10 gambar. Jika deskripsi kosong, nama file menjadi deskripsi awal yang bisa disunting per gambar.</small>@error('alt_text')<div class="text-danger small mt-1">{{ $message }}</div>@enderror</div>
     </div>
     <button class="btn btn-dark mt-3">Unggah gambar</button>
 </form>
+<form method="get" action="{{ route('admin.media') }}" class="input-group mb-3">
+    <input class="form-control" type="search" name="q" value="{{ $search }}" aria-label="Cari media" placeholder="Cari nama file atau deskripsi">
+    <button class="btn btn-outline-dark">Cari</button>
+</form>
+@error('delete')<p class="alert alert-warning">{{ $message }}</p>@enderror
+@if($inspectedAsset)
+    <div class="panel mb-4">
+        <h2 class="h5">{{ $inspectedAsset->name }} · Penggunaan</h2>
+        @forelse($usage as $placement)
+            <div>{{ $placement }}</div>
+        @empty
+            <p class="mb-0">Belum digunakan di storefront atau draft.</p>
+        @endforelse
+    </div>
+@endif
 <div class="row g-4">
     @forelse($assets as $asset)
         <div class="col-md-6 col-xl-4"><article class="panel h-100">
             <img src="{{ $asset->url }}" alt="{{ $asset->alt_text }}" class="w-100 mb-3" style="aspect-ratio:4/3;object-fit:cover">
             <p class="small"><strong>{{ $asset->name }}</strong><br>{{ number_format($asset->size/1024,1,',','.') }} KB · {{ $asset->mime }} · {{ $asset->active?'Aktif':'Nonaktif' }}</p>
             <div class="input-group mb-3"><input class="form-control" readonly value="{{ $asset->url }}" aria-label="URL media"><button class="btn btn-outline-dark copy-media-url" type="button" data-url="{{ $asset->url }}">Salin URL</button></div>
+            <a class="d-inline-block mb-3" href="{{ route('admin.media', ['usage' => $asset->id, 'q' => $search, 'page' => $assets->currentPage()]) }}">Lihat penggunaan</a>
             <form method="post" action="{{ route('admin.media.update',$asset) }}">@csrf
                 <label for="alt-{{ $asset->id }}">Deskripsi gambar</label><input id="alt-{{ $asset->id }}" class="form-control mb-2" name="alt_text" value="{{ $asset->alt_text }}" required>
                 <label class="checkbox-card"><input type="checkbox" name="active" value="1" @checked($asset->active)><span>Tampilkan dalam pilihan gambar di editor konten.</span></label>

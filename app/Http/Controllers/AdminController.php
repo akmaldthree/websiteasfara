@@ -13,6 +13,7 @@ use App\Models\CommissionPayout;
 use App\Models\ContentEntry;
 use App\Models\ContentRevision;
 use App\Models\Coupon;
+use App\Models\CuratedLink;
 use App\Models\CustomQuote;
 use App\Models\MediaAsset;
 use App\Models\Order;
@@ -20,6 +21,7 @@ use App\Models\OrderItem;
 use App\Models\Page;
 use App\Models\PaymentProof;
 use App\Models\PriceGroup;
+use App\Models\ProductMedia;
 use App\Models\ProductQuestion;
 use App\Models\Refund;
 use App\Models\Review;
@@ -35,6 +37,7 @@ use App\Models\VariantPrice;
 use App\Notifications\ProductQuestionAnswered;
 use App\Services\AfterSalesService;
 use App\Services\Audit;
+use App\Services\CheckoutService;
 use App\Services\CommissionPayoutService;
 use App\Services\CustomProductService;
 use App\Services\OrderWorkflow;
@@ -109,6 +112,8 @@ class AdminController extends Controller
 
     public function contentPreview(ContentEntry $contentEntry)
     {
+        $contentEntry->fill($contentEntry->editorial_draft ?? []);
+
         return view('store.content', [
             'entry' => $contentEntry,
             'preview' => true,
@@ -121,20 +126,60 @@ class AdminController extends Controller
         ]);
     }
 
-    public function mediaLibrary()
+    public function pagePreview(Page $page)
     {
-        return view('admin.media', ['assets' => MediaAsset::with('user')->latest()->paginate(30)]);
+        $page->fill($page->editorial_draft ?? []);
+
+        return view('store.page', ['page' => $page, 'preview' => true]);
+    }
+
+    public function mediaLibrary(Request $request)
+    {
+        $search = mb_substr(trim($request->string('q')->toString()), 0, 100);
+        $assets = MediaAsset::with('user')->latest()
+            ->when($search, fn ($query) => $query->where(fn ($match) => $match
+                ->where('name', 'like', '%'.$search.'%')->orWhere('alt_text', 'like', '%'.$search.'%')))
+            ->paginate(30)->withQueryString();
+
+        $inspectedAsset = MediaAsset::find($request->integer('usage'));
+        $usage = $inspectedAsset ? $this->mediaUsage($inspectedAsset->path, $inspectedAsset->id) : [];
+
+        return view('admin.media', compact('assets', 'search', 'inspectedAsset', 'usage'));
     }
 
     public function mediaUpload(Request $request)
     {
-        $data = $request->validate(['image' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120', 'alt_text' => 'required|string|max:200']);
-        $file = $request->file('image');
-        $path = $file->store('cms-media/'.now()->format('Y/m'), 'public');
-        $asset = MediaAsset::create(['user_id' => $request->user()->id, 'name' => $file->getClientOriginalName(), 'path' => $path, 'mime' => $file->getMimeType(), 'size' => $file->getSize(), 'alt_text' => $data['alt_text']]);
-        Audit::record('media.uploaded', 'media_asset:'.$asset->id, null, $asset->only('name', 'path', 'alt_text'));
+        $data = $request->validate([
+            'image' => 'nullable|required_without:images|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'images' => 'nullable|required_without:image|array|min:1|max:10',
+            'images.*' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'alt_text' => 'nullable|required_with:image|string|max:200',
+        ]);
+        $files = isset($data['image']) ? [$data['image']] : $data['images'];
+        $paths = [];
+        try {
+            DB::transaction(function () use ($request, $data, $files, &$paths) {
+                foreach ($files as $file) {
+                    $path = $file->store('cms-media/'.now()->format('Y/m'), 'public');
+                    if (! $path) {
+                        throw ValidationException::withMessages(['image' => 'File gambar tidak dapat disimpan.']);
+                    }
+                    $paths[] = $path;
+                    $name = $file->getClientOriginalName();
+                    $description = str(pathinfo($name, PATHINFO_FILENAME))->replace(['-', '_'], ' ')->squish()->limit(180)->toString();
+                    $asset = MediaAsset::create([
+                        'user_id' => $request->user()->id, 'name' => $name, 'path' => $path, 'mime' => $file->getMimeType(),
+                        'size' => $file->getSize(), 'alt_text' => $data['alt_text'] ?? ($description ?: 'Gambar storefront'),
+                    ]);
+                    Audit::record('media.uploaded', 'media_asset:'.$asset->id, null, $asset->only('name', 'path', 'alt_text'));
+                }
+            });
+        } catch (\Throwable $error) {
+            Storage::disk('public')->delete($paths);
+            throw $error;
+        }
 
-        return back()->with('success', 'Gambar ditambahkan ke media library.');
+        return back()->with('success', count($files).' gambar ditambahkan ke pustaka media.');
     }
 
     public function mediaUpdate(Request $request, MediaAsset $asset)
@@ -149,9 +194,8 @@ class AdminController extends Controller
 
     public function mediaDestroy(MediaAsset $asset)
     {
-        $fileName = basename($asset->path);
-        if (Page::where('blocks', 'like', '%'.$fileName.'%')->exists() || ContentEntry::where('blocks', 'like', '%'.$fileName.'%')->exists()) {
-            return back()->withErrors(['delete' => 'Media masih digunakan di halaman atau konten. Ganti gambar pada konten terkait terlebih dahulu.']);
+        if ($this->mediaUsage($asset->path, $asset->id) !== []) {
+            return back()->withErrors(['delete' => 'Media masih digunakan oleh storefront, draft, atau riwayat. Nonaktifkan media untuk menyembunyikannya dari pemilih.']);
         }
         $before = $asset->toArray();
         DB::transaction(function () use ($asset, $before) {
@@ -161,6 +205,55 @@ class AdminController extends Controller
         Storage::disk('public')->delete($asset->path);
 
         return back()->with('success', 'Media dan file gambarnya berhasil dihapus.');
+    }
+
+    private function mediaUsage(string $path, ?int $assetId = null): array
+    {
+        $usage = [];
+        $publishedCards = Setting::get('home_visual_cards', []);
+        $draftCards = Setting::get('home_layout_draft', [])['home_visual_cards'] ?? [];
+        if ($assetId && collect([...$publishedCards, ...$draftCards])->contains(fn ($card) => in_array(
+            $assetId, array_map('intval', [$card['desktop_id'] ?? 0, $card['mobile_id'] ?? 0]), true
+        ))) {
+            $usage[] = 'Kartu beranda atau draft beranda';
+        }
+        foreach ([ContentEntry::class => 'Sampul konten', Series::class => 'Foto utama produk', ProductMedia::class => 'Galeri produk', CuratedLink::class => 'Menu kurasi'] as $model => $label) {
+            if ($model::where('image', $path)->exists()) {
+                $usage[] = $label;
+            }
+        }
+
+        $candidate = '%'.basename($path).'%';
+        $structured = [
+            [Page::class, 'blocks', 'Blok halaman'],
+            [Page::class, 'editorial_draft', 'Draft halaman'],
+            [ContentEntry::class, 'blocks', 'Blok konten'],
+            [ContentEntry::class, 'editorial_draft', 'Draft konten'],
+            [ContentRevision::class, 'snapshot', 'Riwayat revisi'],
+            [Setting::class, 'value', 'Pengaturan website'],
+        ];
+        foreach ($structured as [$model, $field, $label]) {
+            if ($model::where($field, 'like', $candidate)->select($field)->cursor()
+                ->contains(fn ($record) => $this->containsMediaPath($record->$field, $path))) {
+                $usage[] = $label;
+            }
+        }
+
+        return $usage;
+    }
+
+    private function containsMediaPath(mixed $value, string $path): bool
+    {
+        if (is_array($value)) {
+            return collect($value)->contains(fn ($item) => $this->containsMediaPath($item, $path));
+        }
+        if (! is_string($value)) {
+            return false;
+        }
+
+        $urlPath = rawurldecode((string) parse_url($value, PHP_URL_PATH));
+
+        return $value === $path || $urlPath === '/storage/'.$path;
     }
 
     public function reviews(Request $request)
@@ -452,7 +545,13 @@ class AdminController extends Controller
         $schema = $this->resource($resource);
         $record = $id ? $schema['model']::findOrFail($id) : new $schema['model'];
 
-        return view('admin.form', compact('resource', 'schema', 'record'));
+        if (in_array($resource, ['pages', 'content'], true)) {
+            $record->fill($record->editorial_draft ?? []);
+        }
+
+        $coverAssets = $resource === 'content' ? MediaAsset::where('active', true)->orderBy('name')->get(['id', 'name', 'path', 'alt_text']) : collect();
+
+        return view('admin.form', compact('resource', 'schema', 'record', 'coverAssets'));
     }
 
     public function save(Request $r, string $resource, ?int $id = null)
@@ -464,6 +563,9 @@ class AdminController extends Controller
             if ($field[1] === 'checkbox') {
                 $r->merge([$name => $r->boolean($name)]);
             } $rules[$name] = $field[2];
+        }
+        if ($resource === 'content') {
+            $rules['image_asset_id'] = ['nullable', 'integer', Rule::exists('media_assets', 'id')->where('active', true)];
         }
         if ($resource === 'variants') {
             $r->merge(['sku' => strtoupper(trim($r->input('sku', ''))), 'product_type' => trim($r->input('product_type', ''))]);
@@ -645,18 +747,34 @@ class AdminController extends Controller
                 throw ValidationException::withMessages(['price' => 'Harga per item harus tetap atau turun ketika jumlah minimum bertambah.']);
             }
         }
+        $sharedCover = ! empty($data['image_asset_id']) ? MediaAsset::findOrFail($data['image_asset_id'])->path : null;
+        unset($data['image_asset_id']);
         if ($r->hasFile('image')) {
             $directory = $resource === 'product-media' ? 'product-gallery' : 'products';
             $data['image'] = $r->file('image')->store($directory, 'public');
+        } elseif ($sharedCover) {
+            $data['image'] = $sharedCover;
         } else {
             unset($data['image']);
         }
         DB::transaction(function () use ($record, $data, $resource) {
+            $editorial = in_array($resource, ['pages', 'content'], true);
+            if ($editorial && $record->exists) {
+                $record->setRawAttributes($record->newQuery()->lockForUpdate()->findOrFail($record->id)->getAttributes(), true);
+            }
             $before = $record->exists ? $record->getAttributes() : null;
-            if ($before && in_array($resource, ['pages', 'content'], true)) {
+            if ($editorial && $before) {
                 ContentRevision::create(['content_type' => $resource, 'content_id' => $record->id, 'user_id' => auth()->id(), 'snapshot' => $before]);
             }
-            $record->fill($data)->save();
+            if ($editorial && $record->active && $record->editorial_status === 'approved' && $data['editorial_status'] !== 'approved') {
+                $record->update(['editorial_draft' => array_replace($record->editorial_draft ?? [], $data)]);
+            } else {
+                $record->fill($data);
+                if ($editorial) {
+                    $record->editorial_draft = null;
+                }
+                $record->save();
+            }
             Audit::record($resource.'.saved', $resource.':'.$record->id, $before, $record->toArray());
         });
 
@@ -671,6 +789,9 @@ class AdminController extends Controller
     {
         $schema = $this->resource($resource);
         $record = $schema['model']::findOrFail($id);
+        if (in_array($resource, ['pages', 'content'], true) && $record->active && $record->editorial_status === 'approved') {
+            abort_unless($request->user()->allowed('content.approve'), 403);
+        }
         $before = $record->toArray();
         $files = $this->resourceFiles($resource, $record);
 
@@ -683,8 +804,10 @@ class AdminController extends Controller
             return back()->withErrors(['delete' => 'Data tidak dapat dihapus karena masih digunakan oleh transaksi atau data lain. Nonaktifkan data ini atau hapus data terkait terlebih dahulu.']);
         }
 
-        if ($files) {
-            Storage::disk('public')->delete($files);
+        foreach ($files as $file) {
+            if ($this->mediaUsage($file, MediaAsset::where('path', $file)->value('id')) === []) {
+                Storage::disk('public')->delete($file);
+            }
         }
 
         $route = $resource === 'series' && $request->input('return_to') === 'products' ? 'admin.products' : 'admin.resources';
@@ -906,8 +1029,23 @@ class AdminController extends Controller
             $before = $record->getAttributes();
             ContentRevision::create(['content_type' => $revision->content_type, 'content_id' => $record->id, 'user_id' => auth()->id(), 'snapshot' => $before]);
             $snapshot = $revision->snapshot;
-            unset($snapshot['id'], $snapshot['created_at'], $snapshot['updated_at']);
-            $record->fill($snapshot)->save();
+            $savedDraft = $snapshot['editorial_draft'] ?? null;
+            if (is_string($savedDraft)) {
+                $savedDraft = json_decode($savedDraft, true);
+            }
+            unset($snapshot['id'], $snapshot['created_at'], $snapshot['updated_at'], $snapshot['editorial_draft']);
+            if (is_string($snapshot['blocks'] ?? null)) {
+                $snapshot['blocks'] = json_decode($snapshot['blocks'], true);
+            }
+            if (auth()->user()->allowed('content.approve') && ! is_array($savedDraft)) {
+                $record->fill($snapshot + ['editorial_draft' => null])->save();
+            } else {
+                $draft = array_replace($savedDraft ?? $snapshot, [
+                    'editorial_status' => 'draft', 'active' => false, 'submitted_by' => null,
+                    'submitted_at' => null, 'reviewed_by' => null, 'reviewed_at' => null,
+                ]);
+                $record->update(['editorial_draft' => $draft]);
+            }
             Audit::record($revision->content_type.'.restored', $revision->content_type.':'.$record->id, $before, $record->getAttributes());
         });
 
@@ -942,10 +1080,143 @@ class AdminController extends Controller
         return back()->with('success', 'Penyesuaian dicatat.');
     }
 
+    public function promotionWorkspace(Request $request)
+    {
+        $campaigns = ContentEntry::where('type', 'campaign')->orderBy('sort_order')->orderBy('id')->get();
+        $campaign = $campaigns->firstWhere('id', $request->integer('campaign')) ?? $campaigns->first();
+        $coupons = Coupon::orderBy('code')->get();
+        $coupon = $campaign ? $coupons->firstWhere('id', Setting::get('campaign_coupon_'.$campaign->id)) : null;
+        $rates = ShippingRate::where('active', true)->orderBy('province')->orderBy('city')->get();
+
+        return view('admin.promotions', compact('campaigns', 'campaign', 'coupons', 'coupon', 'rates'));
+    }
+
+    public function linkCampaignCoupon(Request $request, ContentEntry $campaign)
+    {
+        abort_unless($campaign->type === 'campaign', 404);
+        $data = $request->validate(['coupon_id' => 'nullable|integer|exists:coupons,id']);
+        $key = 'campaign_coupon_'.$campaign->id;
+        DB::transaction(function () use ($data, $key) {
+            $previous = Setting::get($key);
+            $value = $data['coupon_id'] ?? null;
+            Setting::put($key, $value);
+            Audit::record('setting.updated', $key, $previous, $value);
+        });
+
+        return redirect()->route('admin.promotions', ['campaign' => $campaign->id])->with('success', 'Voucher kampanye diperbarui.');
+    }
+
+    public function simulatePromotion(Request $request, CheckoutService $checkout)
+    {
+        $data = $request->validate([
+            'campaign' => 'nullable|integer|exists:content_entries,id',
+            'coupon' => 'required|string|max:200',
+            'shipping_rate_id' => 'required|integer|exists:shipping_rates,id',
+            'items' => 'required|array|min:1|max:3',
+            'items.*.sku' => 'nullable|string|max:80',
+            'items.*.quantity' => 'nullable|integer|min:1|max:100',
+            'evaluate_at' => 'nullable|date',
+        ]);
+        $cart = [];
+        foreach ($data['items'] as $item) {
+            if (blank($item['sku'] ?? null)) {
+                continue;
+            }
+            $variant = Variant::where('sku', strtoupper(trim($item['sku'])))->first();
+            if (! $variant) {
+                throw ValidationException::withMessages(['items' => 'Salah satu SKU tidak ditemukan.']);
+            }
+            $cart[$variant->id] = ($cart[$variant->id] ?? 0) + ($item['quantity'] ?? 1);
+        }
+        $rate = ShippingRate::findOrFail($data['shipping_rate_id']);
+        $quote = $checkout->quote($cart, [
+            'shipping_rate_id' => $rate->id, 'province' => $rate->province, 'city' => $rate->city,
+            'payment_method' => 'transfer', 'coupon' => $data['coupon'],
+        ], couponEvaluationAt: filled($data['evaluate_at'] ?? null) ? Carbon::parse($data['evaluate_at']) : null);
+
+        return redirect()->route('admin.promotions', ['campaign' => $data['campaign'] ?? null])
+            ->withInput()->with('promotion_quote', array_intersect_key($quote, array_flip(['subtotal', 'shipping_cost', 'discount', 'shipping_discount', 'total'])));
+    }
+
+    public function homeLayout()
+    {
+        $keys = ['home_section_order', 'home_section_hidden', 'home_visual_cards', 'home_editorial_sections'];
+        $layout = Setting::get('home_layout_draft', []) + Setting::whereIn('key', $keys)->pluck('value', 'key')->all();
+
+        return view('admin.home-layout', [
+            'layout' => $layout,
+            'sections' => config('storefront.home_sections'),
+            'assets' => MediaAsset::where('active', true)->orderBy('name')->get(),
+            'editorialSections' => ContentEntry::where('type', 'home_section')->orderBy('sort_order')->get(['id', 'title']),
+        ]);
+    }
+
+    public function saveHomeLayout(Request $request)
+    {
+        $allowed = array_keys(config('storefront.home_sections'));
+        $data = $request->validate([
+            'section_order' => 'required|string|max:500',
+            'home_section_hidden' => 'nullable|array|max:12',
+            'home_section_hidden.*' => 'in:'.implode(',', $allowed),
+            'home_visual_cards' => 'nullable|array|max:6',
+            'home_visual_cards.*.label' => 'nullable|string|max:80',
+            'home_visual_cards.*.url' => 'nullable|string|max:400',
+            'home_visual_cards.*.desktop_id' => 'nullable|integer|exists:media_assets,id',
+            'home_visual_cards.*.mobile_id' => 'nullable|integer|exists:media_assets,id',
+            'home_visual_cards.*.focal_x' => 'nullable|integer|between:0,100',
+            'home_visual_cards.*.focal_y' => 'nullable|integer|between:0,100',
+            'home_editorial_sections' => 'nullable|array|max:6',
+            'home_editorial_sections.*' => 'distinct|integer|exists:content_entries,id',
+        ]);
+        $order = collect(explode(',', $data['section_order']))->intersect($allowed)->unique();
+        $cards = collect($data['home_visual_cards'] ?? [])->filter(fn ($card) => collect($card)->only(['label', 'url', 'desktop_id', 'mobile_id'])->filter()->isNotEmpty());
+        foreach ($cards as $index => $card) {
+            if (blank($card['label'] ?? null) || blank($card['url'] ?? null) || ! $this->safeContentUrl($card['url']) || empty($card['desktop_id'])) {
+                throw ValidationException::withMessages(['home_visual_cards.'.$index => 'Isi label, gambar utama, dan tautan internal atau HTTPS yang valid.']);
+            }
+        }
+        $editorial = $data['home_editorial_sections'] ?? [];
+        if (ContentEntry::where('type', 'home_section')->whereIn('id', $editorial)->count() !== count($editorial)) {
+            throw ValidationException::withMessages(['home_editorial_sections' => 'Pilih konten bertipe Section beranda.']);
+        }
+        $draft = [
+            'revision' => (string) Str::uuid(),
+            'home_section_order' => $order->concat(collect($allowed)->diff($order))->values()->all(),
+            'home_section_hidden' => array_values($data['home_section_hidden'] ?? []),
+            'home_visual_cards' => $cards->values()->all(),
+            'home_editorial_sections' => $editorial,
+        ];
+        Setting::put('home_layout_draft', $draft);
+
+        return back()->with('success', 'Draft beranda tersimpan. Buka pratinjau untuk memeriksa hasilnya.');
+    }
+
+    public function publishHomeLayout(Request $request)
+    {
+        $data = $request->validate(['revision' => 'required|uuid']);
+        DB::transaction(function () use ($data) {
+            $record = Setting::query()->lockForUpdate()->find('home_layout_draft');
+            $draft = $record?->value ?? [];
+            if (($draft['revision'] ?? null) !== $data['revision']) {
+                throw ValidationException::withMessages(['revision' => 'Draft sudah berubah. Muat ulang dan periksa pratinjau terbaru.']);
+            }
+            unset($draft['revision']);
+            foreach ($draft as $key => $value) {
+                $previous = Setting::get($key);
+                Setting::put($key, $value);
+                Audit::record('setting.updated', $key, $previous, $value);
+            }
+            $record->delete();
+        });
+
+        return back()->with('success', 'Tata letak beranda diterbitkan.');
+    }
+
     public function settings()
     {
         return view('admin.settings', [
             'storefrontSeries' => Series::orderBy('name')->get(['id', 'name', 'slug']),
+            'brandingAssets' => MediaAsset::where('active', true)->orderBy('name')->get(['id', 'name', 'alt_text']),
             'heroCampaigns' => ContentEntry::published()->where('type', 'campaign')->orderBy('sort_order')->orderBy('id')
                 ->get(['id', 'title', 'slug', 'blocks'])->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty()),
             'savedHeroCampaignExists' => ContentEntry::where('type', 'campaign')->whereKey(Setting::get('hero_campaign_id'))->exists(),
@@ -1009,6 +1280,8 @@ class AdminController extends Controller
             'loyalty_tiers_text' => 'nullable|string|max:5000', 'loyalty_bonus_name' => 'nullable|string|max:100', 'loyalty_bonus_multiplier' => 'required|integer|between:1,20', 'loyalty_bonus_start' => 'nullable|date', 'loyalty_bonus_end' => 'nullable|date|after_or_equal:loyalty_bonus_start',
             'loyalty_bonus_segment' => 'required|in:all,customer,business', 'loyalty_bonus_tier' => 'nullable|string|max:100', 'loyalty_bonus_target_type' => 'required|in:all,category,series,variant', 'loyalty_bonus_target_id' => 'nullable|integer|min:1',
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072', 'favicon' => 'nullable|image|mimes:png|max:512', 'hero_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120', 'hero_image_mobile' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120', 'welcome_voucher_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'hero_image_asset_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where('active', true)],
+            'hero_image_mobile_asset_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where('active', true)],
             'hero_video' => 'nullable|file|mimetypes:video/mp4,video/webm|max:51200', 'hero_video_mobile' => 'nullable|file|mimetypes:video/mp4,video/webm|max:51200',
             'hero_campaign_enabled' => 'sometimes|boolean', 'hero_video_has_audio' => 'sometimes|boolean',
             'hero_campaign_id' => ['sometimes', 'nullable', 'integer', Rule::exists('content_entries', 'id')->where('type', 'campaign')],
@@ -1081,8 +1354,12 @@ class AdminController extends Controller
         }
         foreach (['logo', 'favicon', 'hero_image', 'hero_image_mobile', 'welcome_voucher_image'] as $image) {
             unset($data[$image]);
+            $assetId = $data[$image.'_asset_id'] ?? null;
+            unset($data[$image.'_asset_id']);
             if ($r->hasFile($image)) {
                 $data[$image] = $r->file($image)->store('branding', 'public');
+            } elseif ($assetId) {
+                $data[$image] = MediaAsset::findOrFail($assetId)->path;
             }
         }
         foreach (['hero_video', 'hero_video_mobile'] as $video) {

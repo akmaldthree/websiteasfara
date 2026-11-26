@@ -11,7 +11,7 @@ class ContentEntry extends Model
 
     protected function casts(): array
     {
-        return ['active' => 'boolean', 'starts_at' => 'datetime', 'ends_at' => 'datetime', 'blocks' => 'array', 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime'];
+        return ['active' => 'boolean', 'starts_at' => 'datetime', 'ends_at' => 'datetime', 'blocks' => 'array', 'editorial_draft' => 'array', 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime'];
     }
 
     public function scopePublished($query)

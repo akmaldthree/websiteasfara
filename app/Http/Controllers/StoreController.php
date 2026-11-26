@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\ContentEntry;
 use App\Models\CustomQuote;
+use App\Models\MediaAsset;
 use App\Models\NewsletterSubscriber;
 use App\Models\Order;
 use App\Models\Page;
@@ -56,10 +57,28 @@ class StoreController extends Controller
     public function home(Request $request, Analytics $analytics)
     {
         $analytics->record($request, 'view_home');
+
+        return $this->homeView();
+    }
+
+    public function homePreview()
+    {
+        return $this->homeView(Setting::get('home_layout_draft', []), true);
+    }
+
+    private function homeView(array $homeOverrides = [], bool $homePreview = false)
+    {
+        $setting = fn (string $key, mixed $fallback = null) => $homeOverrides[$key] ?? Setting::get($key, $fallback);
         $contentEntries = ContentEntry::published()->where('type', 'banner')->orderBy('sort_order')->get();
         $collections = Series::published()->withStoreCard()
             ->orderByDesc('featured')->latest()->take(24)->get();
-        $heroCampaignId = (int) Setting::get('hero_campaign_id');
+        $requested = collect(['home_category_slugs', 'home_new_slugs'])
+            ->flatMap(fn ($key) => preg_split('/[\s,]+/', (string) $setting($key)))
+            ->filter()->unique()->diff($collections->pluck('slug'));
+        if ($requested->isNotEmpty()) {
+            $collections = $collections->concat(Series::published()->withStoreCard()->whereIn('slug', $requested)->get());
+        }
+        $heroCampaignId = (int) $setting('hero_campaign_id');
         $campaigns = ContentEntry::published()->where('type', 'campaign')->orderBy('sort_order')->orderBy('id')
             ->get(['id', 'title', 'slug', 'summary', 'image', 'blocks'])
             ->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty())
@@ -81,7 +100,22 @@ class StoreController extends Controller
             'url' => route('content.show', ['campaign', $campaign->slug]),
         ]])->filter(fn (array $campaign) => $campaign['items']->isNotEmpty())->groupBy('group', preserveKeys: true);
 
-        return view('store.home', compact('collections', 'contentEntries', 'campaignEdits', 'heroCampaignId'));
+        $visualCards = collect($setting('home_visual_cards', []));
+        $mediaIds = $visualCards->flatMap(fn ($card) => [$card['desktop_id'] ?? null, $card['mobile_id'] ?? null])->filter()->unique();
+        $media = $mediaIds->isEmpty() ? collect() : MediaAsset::whereKey($mediaIds->all())->get()->keyBy('id');
+        $homeVisualCards = $visualCards->map(fn ($card) => [
+            'label' => $card['label'],
+            'url' => $card['url'],
+            'image' => $media->get($card['desktop_id'])?->url,
+            'mobile_image' => $media->get($card['mobile_id'] ?? null)?->url,
+            'focal_x' => $card['focal_x'] ?? 50,
+            'focal_y' => $card['focal_y'] ?? 50,
+        ])->filter(fn ($card) => $card['image'])->values();
+        $sectionIds = $setting('home_editorial_sections', []);
+        $editorialSections = $sectionIds ? ContentEntry::published()->where('type', 'home_section')
+            ->whereKey($sectionIds)->orderBy('sort_order')->get() : collect();
+
+        return view('store.home', compact('collections', 'contentEntries', 'campaignEdits', 'heroCampaignId', 'homeOverrides', 'homePreview', 'homeVisualCards', 'editorialSections'));
     }
 
     public function catalog(Request $r, Analytics $analytics)
@@ -176,8 +210,9 @@ class StoreController extends Controller
 
     public function product(Request $r, string $slug, PricingService $pricing, Analytics $analytics)
     {
-        $priceGroup = $pricing->groupFor($r->user());
-        $series = Series::published()->where('slug', $slug)->with([
+        $productPreview = $r->routeIs('admin.products.preview');
+        $priceGroup = $productPreview ? null : $pricing->groupFor($r->user());
+        $series = ($productPreview ? Series::query() : Series::published())->where('slug', $slug)->with([
             'category',
             'media' => fn ($q) => $q->where('active', true),
             'variants' => fn ($q) => $q->where('active', true)
@@ -200,11 +235,13 @@ class StoreController extends Controller
             ->withCount(['reviews' => fn ($query) => $query->where('status', 'approved')])
             ->withAvg(['reviews' => fn ($query) => $query->where('status', 'approved')], 'rating')
             ->orderByDesc('featured')->latest('id')->take(8)->get();
-        $recentlyViewedIds = collect($r->session()->get('recently_viewed', []))->prepend($series->id)->unique()->take(8)->values()->all();
-        $r->session()->put('recently_viewed', $recentlyViewedIds);
-        $analytics->record($r, 'view_item', ['series_id' => $series->id, 'variant_id' => $r->integer('variant') ?: null]);
+        if (! $productPreview) {
+            $recentlyViewedIds = collect($r->session()->get('recently_viewed', []))->prepend($series->id)->unique()->take(8)->values()->all();
+            $r->session()->put('recently_viewed', $recentlyViewedIds);
+            $analytics->record($r, 'view_item', ['series_id' => $series->id, 'variant_id' => $r->integer('variant') ?: null]);
+        }
 
-        return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'unitPrices', 'reviews', 'questions', 'helpfulReviewIds', 'isWishlisted', 'relatedProducts'));
+        return view('store.product', compact('series', 'priceGroup', 'businessTiers', 'unitPrices', 'reviews', 'questions', 'helpfulReviewIds', 'isWishlisted', 'relatedProducts', 'productPreview'));
     }
 
     public function question(Request $request, Series $series)

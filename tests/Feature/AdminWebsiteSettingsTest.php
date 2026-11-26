@@ -108,7 +108,7 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame('/koleksi?sort=newest', Setting::get('welcome_voucher_cta_url'));
         $this->assertSame(14, Setting::get('welcome_voucher_frequency_days'));
         $this->assertSame('KOLEKSI PILIHAN CMS', Setting::get('storefront_copy_id')['featured_collection']);
-        $this->assertSame(['hero', 'campaign', 'new_in', 'categories', 'collections', 'signature_banner', 'signature', 'studio_banner', 'studio'], Setting::get('home_section_order'));
+        $this->assertSame(['hero', 'campaign', 'new_in', 'categories', 'collections', 'signature_banner', 'signature', 'studio_banner', 'studio', 'editorial'], Setting::get('home_section_order'));
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertEquals(['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Nilai poin lebih tinggi', 'value_bonus_percent' => 5], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));

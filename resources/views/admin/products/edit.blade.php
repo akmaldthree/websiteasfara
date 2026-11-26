@@ -6,9 +6,23 @@ $hasPhoto=(bool)$product->image || $product->media->isNotEmpty();$hasVariant=$pr
 @endphp
 <div class="admin-heading">
     <div><span class="eyebrow">PRODUCT WORKSPACE</span><h1>{{ $product->name }}</h1><p>{{ $product->category?->name }} · {{ $product->variants->count() }} varian · {{ $product->active?'Tayang':'Draft' }}</p></div>
-    <div class="d-flex gap-2 flex-wrap">@if($product->active)<a class="btn btn-outline-dark" href="{{ route('product',$product->slug) }}" target="_blank" rel="noopener">Lihat produk ↗</a>@endif<form method="post" action="{{ route('admin.products.duplicate',$product) }}">@csrf<button class="btn btn-outline-dark">Duplikat produk</button></form><form method="post" action="{{ route('admin.destroy',['series',$product->id]) }}" onsubmit="return confirm('Hapus produk beserta varian dan fotonya secara permanen?')">@csrf @method('DELETE')<input type="hidden" name="return_to" value="products"><button class="btn btn-outline-danger">Hapus</button></form><a class="btn btn-dark" href="{{ route('admin.products') }}">Selesai</a></div>
+    <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-dark" href="{{ route('admin.products.preview', $product->slug) }}" target="_blank" rel="noopener">Pratinjau produk ↗</a><form method="post" action="{{ route('admin.products.duplicate',$product) }}">@csrf<button class="btn btn-outline-dark">Duplikat produk</button></form><form method="post" action="{{ route('admin.destroy',['series',$product->id]) }}" onsubmit="return confirm('Hapus produk beserta varian dan fotonya secara permanen?')">@csrf @method('DELETE')<input type="hidden" name="return_to" value="products"><button class="btn btn-outline-danger">Hapus</button></form><a class="btn btn-dark" href="{{ route('admin.products') }}">Selesai</a></div>
 </div>
 <div class="workspace-summary mb-4"><div><strong>Kesiapan produk: {{ $ready }}/3</strong><span @class(['complete'=>$hasDescription])>{{ $hasDescription?'✓':'○' }} Deskripsi</span><span @class(['complete'=>$hasVariant])>{{ $hasVariant?'✓':'○' }} Varian & harga</span><span @class(['complete'=>$hasPhoto])>{{ $hasPhoto?'✓':'○' }} Foto</span></div>@if($ready<3)<p>Lengkapi bagian yang masih kosong sebelum menayangkan produk.</p>@else<p>Informasi utama sudah lengkap. Periksa preview sebelum tayang.</p>@endif</div>
+@php
+    $activeVariants = $product->variants->where('active', true);
+    $activePhotos = $product->media->where('active', true);
+    $missingColors = $activeVariants->pluck('color')->filter()->unique()->reject(fn ($color) => $activePhotos->contains(
+        fn ($photo) => strcasecmp((string) $photo->color, $color) === 0
+            || ($photo->variant_id && strcasecmp((string) $variantMap->get($photo->variant_id)?->color, $color) === 0)
+    ));
+@endphp
+@if($missingColors->isNotEmpty() || ($activeVariants->isNotEmpty() && !$product->size_chart))
+    <div class="alert alert-warning">
+        @if($missingColors->isNotEmpty())<div>Belum ada foto khusus untuk warna {{ $missingColors->implode(', ') }}. Storefront memakai foto cadangan.</div>@endif
+        @if($activeVariants->isNotEmpty() && !$product->size_chart)<div>Tabel ukuran produk belum diisi.</div>@endif
+    </div>
+@endif
 <nav class="workspace-tabs" aria-label="Bagian produk"><a href="#basic">1. Informasi</a><a href="#variants">2. Varian & stok <span>{{ $product->variants->count() }}</span></a><a href="#media">3. Foto <span>{{ $product->media->count() }}</span></a><a href="#advanced">Pengaturan lanjutan</a></nav>
 
 <section class="panel workspace-section" id="basic"><div class="section-top"><div><span class="eyebrow">LANGKAH 1</span><h2>Informasi produk</h2></div><span class="badge">{{ $product->active?'Tayang':'Draft' }}</span></div>

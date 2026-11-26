@@ -2,6 +2,8 @@
 @section('title',$schema['title'])
 @section('content')
 @php
+    $liveEditorial = in_array($resource, ['pages', 'content'], true)
+        && $record->getOriginal('active') && $record->getOriginal('editorial_status') === 'approved';
 $hints=[
     'slug'=>'Alamat singkat untuk URL. Gunakan huruf kecil, angka, dan tanda hubung. Bisa dibuat otomatis dari nama atau judul.',
     'sku'=>'Kode unik varian untuk stok dan pesanan. Contoh: RAF-BLK-M.',
@@ -69,6 +71,14 @@ $hints=[
                     <div class="checkbox-card"><input id="{{ $key }}" type="checkbox" name="{{ $key }}" value="1" @checked($value)><span>{{ $value?'Saat ini aktif.':'Saat ini nonaktif.' }} Klik untuk mengubah status.</span></div>
                 @elseif($field[1]==='file')
                     <input class="form-control" id="{{ $key }}" name="{{ $key }}" type="file" accept="image/png,image/jpeg,image/webp">
+                    @if($resource === 'content' && $key === 'image')
+                        <label class="mt-2" for="image-asset-id">Atau pilih dari pustaka media</label>
+                        <select class="form-select" name="image_asset_id" id="image-asset-id">
+                            <option value="">Pertahankan gambar atau pakai unggahan baru</option>
+                            @foreach($coverAssets as $asset)<option value="{{ $asset->id }}" @selected((int) old('image_asset_id') === $asset->id)>{{ $asset->name }} · {{ $asset->alt_text }}</option>@endforeach
+                        </select>
+                        @error('image_asset_id')<div class="text-danger small">{{ $message }}</div>@enderror
+                    @endif
                     @php($imagePreset=match($resource){'curated-links'=>'promo_card','product-media','series'=>'product','content'=>'content',default=>'general'})
                     @include('admin.partials.image-guideline',['preset'=>$imagePreset])
                     @if($record->exists && $value)<div class="mt-2 d-flex align-items-center gap-2"><img src="{{ asset('storage/'.$value) }}" alt="Pratinjau gambar saat ini" width="64" height="64" style="object-fit:cover"><small>Gambar saat ini. Pilih file baru hanya jika ingin menggantinya.</small></div>@endif
@@ -82,7 +92,7 @@ $hints=[
     </div>
     <div class="form-actions"><a href="{{ route('admin.resources',$resource) }}">Batal</a><div><button class="btn btn-outline-dark" name="after_save" value="new">Simpan & tambah lagi</button><button class="btn btn-outline-dark" name="after_save" value="edit">Simpan tanpa keluar</button><button class="btn btn-dark" name="after_save" value="list">Simpan & kembali</button></div></div>
 </form>
-@if($record->exists)
+@if($record->exists && (!$liveEditorial || auth()->user()->allowed('content.approve')))
 <section class="panel mt-4 border-danger-subtle"><div class="section-top"><div><h2 class="mb-1">Hapus data</h2><p class="small mb-0">Data yang sudah dipakai transaksi mungkin tidak dapat dihapus dan sebaiknya dinonaktifkan agar riwayat tetap utuh.</p></div><form method="post" action="{{ route('admin.destroy',[$resource,$record->id]) }}" onsubmit="return confirm('Hapus data ini secara permanen? Tindakan ini tidak dapat dibatalkan.')">@csrf @method('DELETE')<button class="btn btn-outline-danger" type="submit">Hapus permanen</button></form></div></section>
 @endif
 @endsection

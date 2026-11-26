@@ -1,6 +1,7 @@
 @extends('layouts.store')
 @section('content')
 @php
+    $shop = array_replace($shop, $homeOverrides ?? []);
     $curated = function (string $key, $fallback) use ($shop, $collections) {
         $slugs = collect(preg_split('/[,\r\n]+/', $shop[$key] ?? ''))->map(fn ($slug) => trim($slug))->filter();
         if ($slugs->isEmpty()) return collect($fallback)->take(8);
@@ -40,9 +41,12 @@
             $categoryTiles = $abayaTiles;
         }
     }
+    if ($homeVisualCards->isNotEmpty()) {
+        $categoryTiles = $homeVisualCards;
+    }
     $defaultOrder = collect(array_keys(config('storefront.home_sections')));
     $homeOrder = collect($shop['home_section_order'] ?? [])->intersect($defaultOrder)->unique();
-    $homeOrder = $homeOrder->concat($defaultOrder->diff($homeOrder))->values();
+    $homeOrder = $homeOrder->concat($defaultOrder->diff($homeOrder))->diff($shop['home_section_hidden'] ?? [])->values();
     $heroVideoUrl = fn ($path) => match ($path) {
         'demo/hero-desktop.webm' => route('media.demo-hero', ['format' => 'desktop', 'v' => filemtime(database_path('seeders/assets/demo/hero-desktop.webm'))]),
         'demo/hero-mobile.webm' => route('media.demo-hero', ['format' => 'mobile', 'v' => filemtime(database_path('seeders/assets/demo/hero-mobile.webm'))]),
@@ -165,12 +169,12 @@
 @if(($shop['home_categories_enabled'] ?? true) && $categoryTiles->isNotEmpty())
     @section('home-categories')
     <section class="home-category-section" aria-label="Jelajahi koleksi">
-        <div class="category-media-grid" style="--category-cards: {{ $categoryTiles->count() }}">
+        <div class="category-media-grid" style="--category-cards: {{ $categoryTiles->count() }}; --category-columns: {{ min(3, $categoryTiles->count()) }}">
             @foreach($categoryTiles as $tile)
                 <a href="{{ $tile['url'] }}">
                     <picture>
                         @if($tile['mobile_image'])<source media="(max-width: 767px)" srcset="{{ $tile['mobile_image'] }}">@endif
-                        <img src="{{ $tile['image'] }}" alt="" width="760" height="950" loading="lazy" decoding="async">
+                        <img src="{{ $tile['image'] }}" style="object-position:{{ $tile['focal_x'] ?? 50 }}% {{ $tile['focal_y'] ?? 50 }}%" alt="" width="760" height="950" loading="lazy" decoding="async">
                     </picture>
                     <span>{{ $tile['label'] }}</span>
                 </a>
@@ -235,6 +239,21 @@
 @endforeach
 @endif
 
+@if($editorialSections->isNotEmpty())
+    @section('home-editorial')
+        @foreach($editorialSections as $entry)
+            <section class="container-xxl section" aria-labelledby="home-editorial-{{ $entry->id }}">
+                <h2 id="home-editorial-{{ $entry->id }}">{{ $entry->title }}</h2>
+                @if($entry->summary)<p>{{ $entry->summary }}</p>@endif
+                @if($entry->image_url)<a href="{{ route('content.show', ['lookbook', $entry->slug]) }}"><img class="img-fluid d-block mb-3" src="{{ $entry->image_url }}" alt="{{ $entry->title }}" loading="lazy"></a>@endif
+                @include('partials.content-blocks', ['contentBlocks' => $entry->blocks ?? []])
+                <a class="btn btn-outline-dark" href="{{ route('content.show', ['lookbook', $entry->slug]) }}">Lihat lookbook</a>
+            </section>
+        @endforeach
+    @endsection
+@endif
+
+@if($homePreview)<div class="container-xxl demo-note">Pratinjau admin · Draft beranda</div>@endif
 @foreach($homeOrder as $section)
     @yield('home-'.$section)
     @if($section === 'hero')<div id="home-after-hero" tabindex="-1"></div>@endif

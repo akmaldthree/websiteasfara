@@ -90,6 +90,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/penawaran-custom/{customQuote}/referensi', [Admin::class, 'customQuoteReference'])->middleware('permission:catalog.write')->name('custom-quotes.reference');
     Route::get('/item-pesanan/{item}/referensi', [Admin::class, 'orderItemReference'])->middleware('permission:orders.read')->name('order-item.reference');
     Route::get('/ulasan', [Admin::class, 'reviews'])->middleware('permission:content.write')->name('reviews');
+    Route::get('/halaman/{page}/preview', [Admin::class, 'pagePreview'])->middleware('permission:content.write')->name('page.preview');
     Route::get('/konten/{contentEntry}/preview', [Admin::class, 'contentPreview'])->middleware('permission:content.write')->name('content.preview');
     Route::post('/ulasan/{review}', [Admin::class, 'reviewAction'])->middleware('permission:content.write')->name('reviews.update');
     Route::delete('/ulasan/{review}', [Admin::class, 'reviewDestroy'])->middleware('permission:content.write')->name('reviews.destroy');
@@ -104,6 +105,17 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/bukti/{proof}', [Admin::class, 'proof'])->middleware('permission:payments.read')->name('proof');
     Route::get('/inventori', [Admin::class, 'inventory'])->middleware('permission:inventory.read')->name('inventory');
     Route::post('/inventori/{variant}', [Admin::class, 'adjust'])->middleware('permission:inventory.write')->name('inventory.adjust');
+    Route::middleware('permission:promotions.write')->group(function () {
+        Route::get('/storefront/promosi', [Admin::class, 'promotionWorkspace'])->name('promotions');
+        Route::post('/storefront/promosi/simulasi', [Admin::class, 'simulatePromotion'])->name('promotions.simulate');
+        Route::post('/storefront/promosi/{campaign}', [Admin::class, 'linkCampaignCoupon'])->name('promotions.link');
+    });
+    Route::middleware('permission:settings.write')->group(function () {
+        Route::get('/storefront/beranda', [Admin::class, 'homeLayout'])->name('home-layout');
+        Route::post('/storefront/beranda', [Admin::class, 'saveHomeLayout'])->name('home-layout.save');
+        Route::get('/storefront/beranda/preview', [Store::class, 'homePreview'])->name('home-layout.preview');
+        Route::post('/storefront/beranda/terbit', [Admin::class, 'publishHomeLayout'])->name('home-layout.publish');
+    });
     Route::get('/pengaturan', [Admin::class, 'settings'])->middleware('permission:settings.write')->name('settings');
     Route::post('/pengaturan', [Admin::class, 'saveSettings'])->middleware('permission:settings.write')->name('settings.save');
     Route::get('/audit', [Admin::class, 'audit'])->middleware('permission:audit.read')->name('audit');
@@ -138,6 +150,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('/produk/baru', [Products::class, 'create'])->name('products.create');
         Route::post('/produk', [Products::class, 'store'])->name('products.store');
         Route::post('/produk-tindakan-massal', [Products::class, 'bulkAction'])->name('products.bulk');
+        Route::get('/produk/{slug}/preview', [Store::class, 'product'])->name('products.preview');
         Route::get('/produk/{series}/ubah', [Products::class, 'edit'])->name('products.edit');
         Route::post('/produk/{series}', [Products::class, 'update'])->name('products.update');
         Route::post('/produk/{series}/varian', [Products::class, 'addVariant'])->name('products.variants.add');

@@ -11,6 +11,7 @@ return [
         'studio_banner' => 'Banner Asfara Studio',
         'studio' => 'Asfara Studio',
         'campaign' => 'Banner kampanye',
+        'editorial' => 'Shop the Look',
     ],
 
     'campaign_groups' => [

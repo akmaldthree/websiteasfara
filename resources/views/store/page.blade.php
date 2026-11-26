@@ -4,6 +4,7 @@
 @section('body_class','information-body')
 @php($template=$page->template ?: 'standard')
 @section('content')
+@if($preview ?? false)<div class="container-xxl demo-note">Pratinjau admin</div>@endif
 <article class="container-xxl section information-page {{ $template==='standard'?'page-narrow':'page-template-'.$template }}">
     <nav class="content-breadcrumb" aria-label="Breadcrumb"><a href="{{ route('home') }}">HOME</a><span>/</span><span>INFORMASI</span></nav>
     <header @class(['text-center py-5'=>$template==='landing'])><span class="eyebrow">INFORMASI ASFARA</span><h1>{{ $page->title }}</h1>@if($page->seo_description)<p>{{ $page->seo_description }}</p>@endif</header>

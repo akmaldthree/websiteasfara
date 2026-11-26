@@ -23,6 +23,13 @@
         @else
             @include('admin.partials.image-guideline', ['preset' => ['logo' => 'logo', 'favicon' => 'favicon', 'hero_image' => 'hero'][$key]])
         @endif
+        @if(in_array($key, ['hero_image', 'hero_image_mobile'], true))
+            <label class="mt-2" for="{{ $key }}-asset">Atau pilih dari pustaka media</label>
+            <select class="form-select" id="{{ $key }}-asset" name="{{ $key }}_asset_id">
+                <option value="">Pertahankan gambar atau pakai unggahan baru</option>
+                @foreach($brandingAssets as $media)<option value="{{ $media->id }}" @selected((int) old($key.'_asset_id') === $media->id)>{{ $media->name }} · {{ $media->alt_text }}</option>@endforeach
+            </select>
+        @endif
         @if(\App\Models\Setting::get($key))
             <small class="d-block mt-1">File saat ini tersedia. Upload baru untuk mengganti.</small>
         @endif

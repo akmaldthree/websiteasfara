@@ -4,7 +4,7 @@
 @php($seoDescription=trim($__env->yieldContent('description',$shop['default_seo_description'] ?? 'Asfara — koleksi busana muslim dan muslimah.')))
 @php($seoCanonical=trim($__env->yieldContent('canonical',url()->current())))
 @php($seoImage=trim($__env->yieldContent('image',!empty($shop['hero_image']) ? asset('storage/'.$shop['hero_image']) : asset('images/hero.svg'))))
-@php($seoRobots=request()->routeIs('cart','checkout','login','register','password.*','account','orders.*','track','two-factor.*')?'noindex,nofollow':'index,follow')
+@php($seoRobots=(request()->routeIs('admin.*') || request()->routeIs('cart','checkout','login','register','password.*','account','orders.*','track','two-factor.*'))?'noindex,nofollow':'index,follow')
 @php($websiteSchema=['@context'=>'https://schema.org','@graph'=>[['@type'=>'Organization','@id'=>url('/').'#organization','name'=>$shop['brand_name'] ?? 'Asfara','url'=>url('/'),'logo'=>!empty($shop['logo'])?asset('storage/'.$shop['logo']):null,'email'=>$shop['contact_email'] ?? null,'sameAs'=>collect([$shop['instagram_url'] ?? null,$shop['tiktok_url'] ?? null,$shop['facebook_url'] ?? null])->filter()->values()->all()],['@type'=>'WebSite','@id'=>url('/').'#website','url'=>url('/'),'name'=>$shop['brand_name'] ?? 'Asfara','publisher'=>['@id'=>url('/').'#organization'],'inLanguage'=>app()->getLocale(),'potentialAction'=>['@type'=>'SearchAction','target'=>route('catalog').'?q={search_term_string}','query-input'=>'required name=search_term_string']]]])
 <!doctype html>
 <html lang="{{ app()->getLocale() }}">

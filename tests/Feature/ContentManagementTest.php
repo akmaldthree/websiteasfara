@@ -145,7 +145,7 @@ class ContentManagementTest extends TestCase
         $editor->forceFill(['role' => 'editor'])->save();
         $admin = User::factory()->create();
         $admin->forceFill(['role' => 'admin'])->save();
-        $page = Page::create(['title' => 'Editorial', 'slug' => 'editorial', 'body' => 'Menunggu review.', 'active' => true]);
+        $page = Page::create(['title' => 'Editorial', 'slug' => 'editorial', 'body' => 'Menunggu review.', 'editorial_status' => 'draft', 'active' => true]);
         $payload = [
             'title' => 'Editorial', 'slug' => 'editorial', 'body' => 'Menunggu review.', 'template' => 'standard',
             'blocks' => '', 'seo_title' => '', 'seo_description' => '', 'editorial_status' => 'review',
