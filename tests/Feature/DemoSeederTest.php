@@ -54,7 +54,8 @@ class DemoSeederTest extends TestCase
         $this->assertSame(1, CustomQuote::where('number', 'ASF-CUSTOM-DEMO-001')->count());
         $this->assertSame(12, NewsletterSubscriber::where('email', 'like', 'newsletter%.demo@asfara.co.id')->count());
         $this->assertSame(10, ProductQuestion::where('status', 'answered')->count());
-        $this->assertSame(22, MediaAsset::where('path', 'like', 'demo/%')->count());
+        $this->assertSame(23, MediaAsset::where('path', 'like', 'demo/%')->count());
+        $this->assertDatabaseHas('media_assets', ['path' => 'demo/ruang-raya-closing-portrait.webp']);
         $this->assertSame(13, Order::where(fn ($query) => $query->where('number', 'like', 'ASF-DEMO-%')->orWhere('number', 'DEMO-REVIEW-001'))->count());
         $this->assertSame(12, NotificationDelivery::count());
         $this->assertSame(15, ShippingRate::count());
@@ -72,11 +73,13 @@ class DemoSeederTest extends TestCase
         Storage::disk('public')->assertExists('demo/hero-family-sage-2x1.webp');
         Storage::disk('public')->assertExists('demo/hero-kids-2x1.webp');
         Storage::disk('public')->assertExists('demo/hero-travel-2x1.webp');
+        Storage::disk('public')->assertExists('demo/ruang-raya-closing-portrait.webp');
         $this->assertImageRatio('hero-family-2x1.webp', 2.0);
         $this->assertImageRatio('hero-abaya-rose-2x1.webp', 2.0);
         $this->assertImageRatio('hero-family-sage-2x1.webp', 2.0);
         $this->assertImageRatio('hero-kids-2x1.webp', 2.0);
         $this->assertImageRatio('hero-travel-2x1.webp', 2.0);
+        $this->assertImageRatio('ruang-raya-closing-portrait.webp', 9 / 16);
         $this->assertImageRatio('product-olive-4x5.webp', 0.8);
         $this->assertImageRatio('promo-taupe-3x4.webp', 0.75);
         $this->assertImageRatio('editorial-fabrics-3x2.webp', 1.5);

@@ -1525,6 +1525,7 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
     line-height: 1.06;
     letter-spacing: -.03em;
     text-wrap: balance;
+    text-shadow: 0 2px 16px #17111e9c;
 }
 
 .hero-content-campaign .commerce-hero-copy .btn {
@@ -1532,8 +1533,12 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 }
 
 .hero-content-campaign .commerce-hero-overlay {
-    background: linear-gradient(180deg, #221b2a50, transparent 28%, #251e286b 68%, #241d28cb),
-                linear-gradient(90deg, #241d28a6, transparent 68%);
+    background: linear-gradient(180deg, #21192480, transparent 29%, #21192463 64%, #211924d9),
+                linear-gradient(90deg, #211924bf, #21192450 49%, transparent 75%);
+}
+
+.hero-content-campaign :is(.commerce-hero-video, .commerce-hero-slide > picture img) {
+    object-position: center 36%;
 }
 
 .home-campaign-spotlight,
@@ -1693,7 +1698,7 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
     }
 
     .hero-content-campaign .commerce-hero-overlay {
-        background: linear-gradient(180deg, #241d2866, transparent 26%, #241d2866 62%, #241d28e6);
+        background: linear-gradient(180deg, #2119248c, transparent 26%, #21192426 46%, #211924a8 68%, #211924e8);
     }
 
     .campaign-intro-with-image {
@@ -2206,7 +2211,7 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
 @media (max-width: 767px) {
     .hero-content-campaign .commerce-hero-slide .commerce-hero-copy {
         align-items: center;
-        padding-bottom: clamp(112px, 17svh, 156px);
+        padding-bottom: max(clamp(112px, 17svh, 156px), calc(96px + env(safe-area-inset-bottom)));
         text-align: center;
     }
 
