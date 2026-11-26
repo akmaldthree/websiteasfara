@@ -64,10 +64,12 @@
             @if($reviews->isNotEmpty())
                 <div class="product-heading-meta"><a href="#product-reviews"><span aria-hidden="true">★★★★★</span> {{ number_format($reviews->avg('rating'),1).' ('.$reviews->count().')' }}</a></div>
             @endif
-            <div class="product-price-row"><div @class(['product-price','sale-price'=>$saving>0]) id="display-product-price">@rupiah($displayPrice)</div><del id="display-compare-price" @if($saving<=0) hidden @endif>@rupiah($compareAtPrice)</del></div>
-            <div class="product-price-status">
-                <span class="product-stock" id="display-product-stock">{{ $stockLabel }}</span>
-                @if($compareAtPrice > 0)<span class="product-saving" id="display-product-saving" @if($saving<=0) hidden @endif>Hemat @rupiah($saving)</span>@endif
+            <div class="product-pricing">
+                <div class="product-price-row"><div @class(['product-price','sale-price'=>$saving>0]) id="display-product-price">@rupiah($displayPrice)</div><del id="display-compare-price" @if($saving<=0) hidden @endif>@rupiah($compareAtPrice)</del></div>
+                <div class="product-price-status">
+                    <span class="product-stock" id="display-product-stock">{{ $stockLabel }}</span>
+                    @if($compareAtPrice > 0)<span class="product-saving" id="display-product-saving" @if($saving<=0) hidden @endif>Hemat @rupiah($saving)</span>@endif
+                </div>
             </div>
             @if($priceGroup)
                 <div class="alert alert-success">Harga privat <strong>{{ $priceGroup->name }}</strong> aktif. Harga menyesuaikan jumlah SKU yang dipilih.</div>
@@ -279,10 +281,7 @@ function updateVariant() {
     ].filter(Boolean).join(' · ');
     if (!variantChanged) return;
     lastVariant = option.value;
-    const exactPhotos = thumbnails.filter(photo => photo.dataset.variant === option.value);
-    const colorPhotos = thumbnails.filter(photo => !photo.dataset.variant && photo.dataset.color && photo.dataset.color === option.dataset.color);
-    const generalPhotos = thumbnails.filter(photo => !photo.dataset.variant && !photo.dataset.color);
-    const matchingPhotos = [...exactPhotos, ...colorPhotos, ...generalPhotos];
+    const matchingPhotos = storeVariants.gallery(thumbnails, option.value, option.dataset.color);
     const nextPhotos = matchingPhotos.length ? matchingPhotos : thumbnails;
     if (nextPhotos.length !== visiblePhotos.length || nextPhotos.some((photo, index) => photo !== visiblePhotos[index])) {
         visiblePhotos = nextPhotos;
@@ -369,20 +368,7 @@ document.getElementById('close-product-zoom').addEventListener('click', () => li
 lightbox.addEventListener('click', event => { if (event.target === lightbox) lightbox.close(); });
 zoomToggle.addEventListener('click', () => setZoom(zoomToggle.getAttribute('aria-pressed') !== 'true'));
 gridPhotos.forEach(button => button.addEventListener('click', () => openZoom(button.dataset.image, button.dataset.alt)));
-const galleryStage = mainImage.closest('.product-gallery-stage');
-let swipe;
-galleryStage.addEventListener('pointerdown', event => {
-    if (event.target !== mainImage || !event.isPrimary || event.button !== 0) return;
-    swipe = {id: event.pointerId, x: event.clientX, y: event.clientY};
-    galleryStage.setPointerCapture(event.pointerId);
-});
-galleryStage.addEventListener('pointerup', event => {
-    if (swipe?.id !== event.pointerId) return;
-    const delta = event.clientX - swipe.x;
-    if (Math.abs(delta) > 45 && Math.abs(delta) > Math.abs(event.clientY - swipe.y)) stepGallery(delta < 0 ? 1 : -1);
-    swipe = undefined;
-});
-galleryStage.addEventListener('lostpointercapture', () => swipe = undefined);
+bindGallerySwipe(mainImage.closest('.product-gallery-stage'), mainImage, stepGallery);
 const sizeGuide=document.getElementById('size-guide-dialog');document.querySelector('[data-open-size-guide]')?.addEventListener('click',()=>sizeGuide.showModal());document.querySelector('[data-close-size-guide]')?.addEventListener('click',()=>sizeGuide.close());sizeGuide?.addEventListener('click',event=>{if(event.target===sizeGuide)sizeGuide.close()});
 document.getElementById('share-product').addEventListener('click',async()=>{const url=new URL(window.location.href);if(select?.value)url.searchParams.set('variant',select.value);const data={title:@json($series->name),text:@json('Lihat '.$series->name.' dari '.($shop['brand_name'] ?? 'Asfara')),url:url.href};try{if(navigator.share)await navigator.share(data);else{await navigator.clipboard.writeText(data.url);document.getElementById('share-status').textContent='Tautan disalin.'}}catch(error){if(error.name!=='AbortError')document.getElementById('share-status').textContent='Salin alamat halaman dari browser Anda.'}});
 </script>

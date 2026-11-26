@@ -126,7 +126,16 @@
         <footer><a href="{{ route('account') }}">ACCOUNT</a><button type="button" id="mobile-open-search">SEARCH</button><div class="mobile-language"><a href="{{ route('locale','id') }}">INDONESIA</a><a href="{{ route('locale','en') }}">ENGLISH</a></div></footer>
     </nav>
 </header>
-<dialog class="search-drawer" id="search-drawer" aria-labelledby="search-drawer-title"><button type="button" id="close-search" aria-label="Tutup pencarian">×</button><form action="{{ route('catalog') }}" method="get"><label id="search-drawer-title" for="global-search">{{ $storeCopy['search_title'] }}</label><div><input id="global-search" name="q" placeholder="{{ $storeCopy['search_placeholder'] }}" autocomplete="off" aria-describedby="search-hint"><button type="submit" aria-label="Mulai mencari">→</button></div></form><p id="search-hint">{{ $storeCopy['search_hint'] }}</p><div class="predictive-search" id="predictive-search" aria-live="polite"></div></dialog>
+<dialog class="search-drawer" id="search-drawer" aria-labelledby="search-drawer-title">
+    <button type="button" id="close-search" aria-label="Tutup pencarian">×</button>
+    <form action="{{ route('catalog') }}" method="get">
+        <label id="search-drawer-title" for="global-search">{{ $storeCopy['search_title'] }}</label>
+        <div><input id="global-search" name="q" inputmode="search" enterkeyhint="search" maxlength="100" placeholder="{{ $storeCopy['search_placeholder'] }}" autocomplete="off" aria-describedby="search-hint" aria-controls="predictive-search"><button type="submit" aria-label="Mulai mencari">→</button></div>
+    </form>
+    <p id="search-hint">{{ $storeCopy['search_hint'] }}</p>
+    <p id="predictive-search-status" class="visually-hidden" role="status"></p>
+    <div class="predictive-search" id="predictive-search"></div>
+</dialog>
 <dialog class="cart-drawer" id="cart-drawer" aria-labelledby="cart-drawer-title">
     <button type="button" class="drawer-close" data-close-cart aria-label="Tutup keranjang">×</button>
     <header><h2 id="cart-drawer-title">{{ $storeCopy['cart_title'] }} <small id="cart-drawer-count"></small></h2></header>
@@ -139,7 +148,32 @@
         <a class="btn btn-outline-dark" href="{{ route('cart') }}">LIHAT KERANJANG</a>
     </div>
 </dialog>
-<dialog class="quick-product-dialog" id="quick-product-dialog" aria-labelledby="quick-product-name"><button type="button" class="drawer-close" data-quick-close aria-label="Tutup pilihan produk">×</button><div class="quick-product-layout"><img id="quick-product-image" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="900" height="1125" loading="lazy" decoding="async"><div><span class="eyebrow">{{ $storeCopy['quick_shop'] }}</span><h2 id="quick-product-name"></h2><p class="quick-price" id="quick-product-price" aria-live="polite"></p><p id="quick-product-stock" class="small" aria-live="polite"></p><form method="post" action="{{ route('cart.add') }}" id="quick-product-form" data-cart-add>@csrf<div id="quick-product-options"></div><input type="hidden" name="variant_id" id="quick-variant"><input type="hidden" name="quantity" value="1"><button class="btn btn-dark w-100" id="quick-submit" disabled>Pilih varian</button><p class="cart-form-error" data-cart-add-error role="alert" hidden></p></form><a id="quick-product-link" href="#">{{ $storeCopy['quick_view_detail'] }}</a></div></div></dialog>
+<dialog class="quick-product-dialog" id="quick-product-dialog" aria-labelledby="quick-product-name">
+    <button type="button" class="drawer-close" data-quick-close aria-label="Tutup pilihan produk">×</button>
+    <div class="quick-product-layout">
+        <figure class="quick-product-media" data-quick-gallery aria-label="{{ __('store.photo_gallery') }}">
+            <img id="quick-product-image" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="800" height="800" draggable="false" decoding="async">
+            <div class="quick-gallery-controls" hidden>
+                <button type="button" data-quick-photo-step="-1" aria-label="{{ __('store.photo_previous') }}">‹</button>
+                <button type="button" data-quick-photo-step="1" aria-label="{{ __('store.photo_next') }}">›</button>
+                <span class="quick-gallery-count" data-quick-photo-count aria-live="polite"></span>
+            </div>
+        </figure>
+        <div>
+            <span class="eyebrow">{{ $storeCopy['quick_shop'] }}</span>
+            <h2 id="quick-product-name"></h2>
+            <p class="quick-price" id="quick-product-price" aria-live="polite"></p>
+            <p id="quick-product-stock" class="small" aria-live="polite"></p>
+            <form method="post" action="{{ route('cart.add') }}" id="quick-product-form" data-cart-add>
+                @csrf<div id="quick-product-options"></div>
+                <input type="hidden" name="variant_id" id="quick-variant"><input type="hidden" name="quantity" value="1">
+                <button class="btn btn-dark w-100" id="quick-submit" disabled>Pilih varian</button>
+                <p class="cart-form-error" data-cart-add-error role="alert" hidden></p>
+            </form>
+            <a id="quick-product-link" href="#">{{ $storeCopy['quick_view_detail'] }}</a>
+        </div>
+    </div>
+</dialog>
 <main id="main" tabindex="-1">@include('partials.alerts')@yield('content')</main>
 @php($welcomeStartsAt=!empty($shop['welcome_voucher_start'])?\Illuminate\Support\Carbon::parse($shop['welcome_voucher_start']):null)
 @php($welcomeEndsAt=!empty($shop['welcome_voucher_end'])?\Illuminate\Support\Carbon::parse($shop['welcome_voucher_end']):null)
@@ -285,8 +319,28 @@ const storeVariants = (() => {
     const stock = (available, method) => available
         ? (method === 'Pre-order' ? 'Pre-order tersedia' : 'Stok tersedia')
         : 'Varian ini habis';
-    return {field, choices, match, stock};
+    const gallery = (photos, variant, color) => [
+        ...photos.filter(photo => field(photo, 'variant') === String(variant)),
+        ...photos.filter(photo => !field(photo, 'variant') && field(photo, 'color') && field(photo, 'color') === String(color ?? '').toLowerCase()),
+        ...photos.filter(photo => !field(photo, 'variant') && !field(photo, 'color')),
+    ];
+    return {field, choices, match, stock, gallery};
 })();
+const bindGallerySwipe = (stage, image, step) => {
+    let swipe;
+    stage.addEventListener('pointerdown', event => {
+        if (event.target !== image || !event.isPrimary || event.button !== 0) return;
+        swipe = {id: event.pointerId, x: event.clientX, y: event.clientY};
+        stage.setPointerCapture(event.pointerId);
+    });
+    stage.addEventListener('pointerup', event => {
+        if (swipe?.id !== event.pointerId) return;
+        const delta = event.clientX - swipe.x;
+        if (Math.abs(delta) > 45 && Math.abs(delta) > Math.abs(event.clientY - swipe.y)) step(delta < 0 ? 1 : -1);
+        swipe = undefined;
+    });
+    stage.addEventListener('lostpointercapture', () => swipe = undefined);
+};
 (()=>{const header=document.querySelector('.site-header'),floatingWhatsApp=document.querySelector('[data-floating-whatsapp]');const syncHeader=()=>{header?.classList.toggle('is-scrolled',header.classList.contains('sticky-top')&&scrollY>80);floatingWhatsApp?.classList.toggle('is-compact',scrollY>160)};syncHeader();addEventListener('scroll',syncHeader,{passive:true});
 const catalogTrigger = document.querySelector('.catalog-nav-link');
 const catalogMenu = document.querySelector('.catalog-mega-menu');
@@ -364,8 +418,29 @@ const storefrontCopy=@json($storeCopy);
 const searchDrawer = document.getElementById('search-drawer');
 const searchInput = document.getElementById('global-search');
 const searchResults = document.getElementById('predictive-search');
+const searchStatus = document.getElementById('predictive-search-status');
+const searchCopy = @json(__('store.search_panel'));
 let searchTimer;
 let searchRequest;
+const renderSearch = ({suggestions = [], products = [], collections = [], results_url}) => {
+    if (!suggestions.length && !products.length && !collections.length) {
+        searchResults.innerHTML = `<p>${esc(searchCopy.empty)}</p>`;
+        searchStatus.textContent = searchCopy.empty;
+        return;
+    }
+
+    const textLink = item => `<a href="${esc(item.url)}">${esc(item.name)}</a>`;
+    const productLink = item => `<a class="predictive-product" href="${esc(item.url)}"><img src="${esc(item.image)}" alt="" width="96" height="112" loading="lazy" decoding="async"><span><b>${esc(item.name)}</b><small>${esc(item.price)}</small></span></a>`;
+    const viewAll = results_url ? `<a class="predictive-all-results" href="${esc(results_url)}">${esc(searchCopy.all_results)} <span aria-hidden="true">→</span></a>` : '';
+    const section = (key, items, link) => items.length ? `
+        <section class="predictive-${key}" aria-labelledby="predictive-${key}-title">
+            <div class="predictive-heading"><h2 id="predictive-${key}-title">${esc(searchCopy[key])}</h2>${key === 'products' ? viewAll : ''}</div>
+            <ul role="list">${items.map(item => `<li>${link(item)}</li>`).join('')}</ul>
+        </section>` : '';
+    searchResults.innerHTML = `${section('keywords', suggestions, textLink)}
+        <div class="predictive-groups">${section('products', products, productLink)}${section('collections', collections, textLink)}</div>`;
+    searchStatus.textContent = searchCopy.updated;
+};
 const openSearch = () => {
     if (searchDrawer.open) return;
     searchDrawer.showModal();
@@ -385,6 +460,7 @@ searchDrawer.addEventListener('close', () => {
     searchRequest?.abort();
     if (searchResults.getAttribute('aria-busy') === 'true') searchResults.replaceChildren();
     searchResults.removeAttribute('aria-busy');
+    searchStatus.textContent = '';
 });
 searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
@@ -393,10 +469,12 @@ searchInput.addEventListener('input', () => {
     if (query.length < 2) {
         searchResults.replaceChildren();
         searchResults.removeAttribute('aria-busy');
+        searchStatus.textContent = '';
         return;
     }
     searchResults.setAttribute('aria-busy', 'true');
-    searchResults.innerHTML = '<p>Mencari…</p>';
+    searchResults.innerHTML = `<p>${esc(searchCopy.loading)}</p>`;
+    searchStatus.textContent = searchCopy.loading;
     searchTimer = setTimeout(async () => {
         const request = new AbortController();
         searchRequest = request;
@@ -407,9 +485,12 @@ searchInput.addEventListener('input', () => {
             if (!response.ok) throw new Error('Search request failed');
             const data = await response.json();
             if (request.signal.aborted) return;
-            searchResults.innerHTML = data.products.length ? data.products.map(item => `<a href="${esc(item.url)}"><img src="${esc(item.image)}" alt="" width="128" height="160" loading="lazy" decoding="async"><span><b>${esc(item.name)}</b><small>${esc(item.price)}</small></span><i aria-hidden="true">→</i></a>`).join('') : '<p>Produk tidak ditemukan.</p>';
+            renderSearch(data);
         } catch (error) {
-            if (!request.signal.aborted) searchResults.innerHTML = '<p>Pencarian belum dapat dimuat.</p>';
+            if (!request.signal.aborted) {
+                searchResults.innerHTML = `<p>${esc(searchCopy.error)}</p>`;
+                searchStatus.textContent = searchCopy.error;
+            }
         } finally {
             if (!request.signal.aborted) searchResults.removeAttribute('aria-busy');
         }
@@ -556,10 +637,48 @@ const quickDialog = document.getElementById('quick-product-dialog');
 const quickOptions = document.getElementById('quick-product-options');
 const quickVariant = document.getElementById('quick-variant');
 const quickSubmit = document.getElementById('quick-submit');
+const quickStage = quickDialog.querySelector('[data-quick-gallery]');
+const quickImage = document.getElementById('quick-product-image');
+const quickGalleryControls = quickStage.querySelector('.quick-gallery-controls');
+const quickPhotoCount = quickStage.querySelector('[data-quick-photo-count]');
 let quickData = null;
 let quickSelected;
 let quickConfirmed = false;
 let quickTrigger = null;
+let quickPhotos = [];
+let quickPhotoIndex = 0;
+const showQuickPhoto = index => {
+    quickPhotoIndex = (index + quickPhotos.length) % quickPhotos.length;
+    const photo = quickPhotos[quickPhotoIndex];
+    quickImage.src = photo.image;
+    quickImage.alt = photo.alt;
+    quickImage.style.objectPosition = photo.focal_x + '% ' + photo.focal_y + '%';
+    quickPhotoCount.textContent = (quickPhotoIndex + 1) + ' / ' + quickPhotos.length;
+};
+const stepQuickPhoto = direction => {
+    if (quickPhotos.length > 1) showQuickPhoto(quickPhotoIndex + direction);
+};
+const renderQuickGallery = () => {
+    const matches = storeVariants.gallery(quickData.gallery, quickSelected.id, quickSelected.color);
+    const photos = matches.length ? matches : [{
+        image: quickSelected.image ?? quickData.image, alt: quickData.name,
+        focal_x: quickSelected.focal_x, focal_y: quickSelected.focal_y,
+    }];
+    if (photos.length === quickPhotos.length && photos.every((photo, index) => photo === quickPhotos[index])) return;
+
+    quickPhotos = photos;
+    quickGalleryControls.hidden = photos.length < 2;
+    showQuickPhoto(0);
+};
+quickStage.querySelectorAll('[data-quick-photo-step]').forEach(button => {
+    button.addEventListener('click', () => stepQuickPhoto(Number(button.dataset.quickPhotoStep)));
+});
+quickStage.addEventListener('keydown', event => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    stepQuickPhoto(event.key === 'ArrowLeft' ? -1 : 1);
+});
+bindGallerySwipe(quickStage, quickImage, stepQuickPhoto);
 const renderQuick = () => {
     const available = quickData.variants.filter(item => item.available > 0);
     const kinds = [
@@ -589,10 +708,7 @@ const renderQuick = () => {
     document.getElementById('quick-product-stock').textContent = [
         storeVariants.stock(true, quickSelected.method), quickSelected.label, 'SKU ' + quickSelected.sku,
     ].filter(Boolean).join(' · ');
-    const photo = document.getElementById('quick-product-image');
-    photo.src = quickSelected.image ?? quickData.image;
-    photo.alt = quickData.name;
-    photo.style.objectPosition = quickSelected.focal_x + '% ' + quickSelected.focal_y + '%';
+    renderQuickGallery();
     const url = new URL(quickData.url, location.href);
     url.searchParams.set('variant', quickSelected.id);
     document.getElementById('quick-product-link').href = url.href;
@@ -617,6 +733,7 @@ document.addEventListener('click', event => {
     quickSelected = quickData.variants.find(variant => variant.available > 0);
     if (!quickSelected) return;
     quickConfirmed = false;
+    quickPhotos = [];
     quickDialog.querySelector('[data-cart-add-error]').hidden = true;
     document.getElementById('quick-product-name').textContent = quickData.name;
     renderQuick();

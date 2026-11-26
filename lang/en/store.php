@@ -9,4 +9,10 @@ return [
     'cart' => 'Shopping bag', 'empty_cart' => 'Your shopping bag is empty', 'start_shopping' => 'Start shopping',
     'checkout' => 'Checkout', 'order_summary' => 'Order summary', 'subtotal' => 'Subtotal', 'continue_checkout' => 'Continue to checkout',
     'address_shipping' => 'Address & shipping', 'review_order' => 'Review order', 'payment' => 'Payment',
+    'search_panel' => [
+        'keywords' => 'Suggested searches', 'products' => 'Products', 'collections' => 'Collections',
+        'all_results' => 'View all results', 'loading' => 'Searching…', 'updated' => 'Search suggestions are available.',
+        'empty' => 'No products or collections found.', 'error' => 'Search could not load.',
+    ],
+    'photo_gallery' => 'Product photo gallery', 'photo_previous' => 'Previous photo', 'photo_next' => 'Next photo',
 ];

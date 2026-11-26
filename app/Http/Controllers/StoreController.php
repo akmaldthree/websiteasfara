@@ -183,23 +183,57 @@ class StoreController extends Controller
 
     public function searchSuggestions(Request $request)
     {
-        $term = trim(mb_substr((string) $request->query('q'), 0, 100));
+        $query = $request->query('q');
+        $term = is_string($query) ? mb_substr(Str::squish($query), 0, 100) : '';
         if (mb_strlen($term) < 2) {
-            return response()->json(['products' => []]);
+            return response()->json(['suggestions' => [], 'products' => [], 'collections' => [], 'results_url' => null]);
         }
 
-        $products = Series::published()
+        $matches = Series::published()
             ->matchingStorefrontSearch($term)
             ->whereHas('variants', fn ($variant) => $variant->where('active', true))
             ->with(['media' => fn ($query) => $query->where('active', true), 'variants' => fn ($query) => $query->where('active', true)])
-            ->latest()->orderByDesc('series.id')->take(6)->get()->map(fn (Series $series) => [
-                'name' => $series->name,
-                'url' => route('product', $series->slug),
-                'image' => $series->media->first()?->image_url ?? $series->image_url,
-                'price' => 'Rp '.number_format((int) $series->variants->min('price'), 0, ',', '.'),
-            ]);
+            ->latest()->orderByDesc('series.id')->take(6)->get();
+        $products = $matches->map(fn (Series $series) => [
+            'name' => $series->name,
+            'url' => route('product', $series->slug),
+            'image' => $series->media->first()?->image_url ?? $series->image_url,
+            'price' => 'Rp '.number_format((int) $series->variants->min('price'), 0, ',', '.'),
+        ]);
 
-        return response()->json(['products' => $products]);
+        $pattern = '%'.$term.'%';
+        $categories = Category::query()->where('active', true)
+            ->where(fn ($category) => $category->whereLike('name', $pattern)->orWhereLike('slug', $pattern))
+            ->whereHas('series', fn ($series) => $series->where('active', true)
+                ->whereHas('variants', fn ($variants) => $variants->where('active', true)))
+            ->orderBy('name')->limit(3)->get(['name', 'slug']);
+        $campaigns = ContentEntry::published()->where('type', 'campaign')
+            ->where(fn ($campaign) => $campaign->whereLike('title', $pattern)
+                ->orWhereLike('slug', $pattern)->orWhereLike('summary', $pattern))
+            ->orderBy('sort_order')->latest()->limit(6)->get(['title', 'slug']);
+        $collections = $categories->map(fn (Category $category) => [
+            'name' => $category->name, 'url' => route('catalog', ['category' => $category->slug]),
+        ])->concat($campaigns->map(fn (ContentEntry $campaign) => [
+            'name' => $campaign->title, 'url' => route('content.show', ['campaign', $campaign->slug]),
+        ]))->unique(fn (array $collection) => mb_strtolower($collection['name']))->take(4)->values();
+
+        $normalizedTerm = mb_strtolower($term);
+        $keywords = $categories->pluck('name')->concat($matches->pluck('name'))
+            ->filter(fn (string $name) => Str::startsWith(mb_strtolower($name), $normalizedTerm));
+        if ($categories->isNotEmpty()) {
+            $colors = $matches->flatMap(fn (Series $series) => $series->variants->pluck('color'))->filter();
+            $keywords = $keywords->concat($colors->map(fn (string $color) => $term.' '.$color));
+        }
+        $suggestions = $keywords->reject(fn (string $word) => mb_strtolower($word) === $normalizedTerm || mb_strlen($word) > 100)
+            ->unique(fn (string $word) => mb_strtolower($word))->take(4)->values()
+            ->map(fn (string $word) => ['name' => $word, 'url' => route('catalog', ['q' => $word])]);
+
+        return response()->json([
+            'suggestions' => $suggestions,
+            'products' => $products,
+            'collections' => $collections,
+            'results_url' => $matches->isNotEmpty() ? route('catalog', ['q' => $term]) : null,
+        ]);
     }
 
     public function product(Request $r, string $slug, PricingService $pricing, Analytics $analytics)

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\ImportController;
 use App\Models\Category;
+use App\Models\ContentEntry;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Series;
@@ -148,6 +149,28 @@ class CommerceTest extends TestCase
             ->assertOk()->assertJsonPath('products', []);
         $this->get(route('catalog', ['q' => 'raf-sand-l']))
             ->assertOk()->assertViewHas('collections', fn ($results) => $results->isEmpty());
+    }
+
+    public function test_predictive_search_groups_keywords_products_and_published_collections(): void
+    {
+        $campaign = ContentEntry::create(['type' => 'campaign', 'slug' => 'signature', 'title' => 'Signature', 'summary' => 'Koleksi abaya untuk acara istimewa.', 'active' => true, 'editorial_status' => 'approved']);
+        ContentEntry::create(['type' => 'campaign', 'slug' => 'abaya-draft', 'title' => 'Abaya Draft', 'active' => true, 'editorial_status' => 'draft']);
+        ContentEntry::create(['type' => 'campaign', 'slug' => 'abaya-future', 'title' => 'Abaya Future', 'active' => true, 'editorial_status' => 'approved', 'starts_at' => now()->addDay()]);
+        Category::create(['name' => 'Abaya Kosong', 'slug' => 'abaya-kosong', 'active' => true]);
+
+        $this->getJson(route('search.suggestions', ['q' => 'abaya']))
+            ->assertOk()
+            ->assertJsonPath('suggestions.0.name', 'abaya Black')
+            ->assertJsonPath('suggestions.0.url', route('catalog', ['q' => 'abaya Black']))
+            ->assertJsonPath('products.0.name', 'Raffah')
+            ->assertJsonCount(2, 'collections')
+            ->assertJsonPath('collections.0.url', route('catalog', ['category' => 'abaya']))
+            ->assertJsonPath('collections.1.url', route('content.show', ['campaign', $campaign->slug]))
+            ->assertJsonPath('results_url', route('catalog', ['q' => 'abaya']));
+
+        $this->getJson(route('search.suggestions', ['q' => 'a']))->assertOk()
+            ->assertJsonPath('suggestions', [])->assertJsonPath('products', [])
+            ->assertJsonPath('collections', [])->assertJsonPath('results_url', null);
     }
 
     public function test_checkout_review_totals_follow_cart_quantity_voucher_and_shipping(): void

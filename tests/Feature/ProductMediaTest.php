@@ -64,6 +64,26 @@ class ProductMediaTest extends TestCase
         Storage::disk('public')->assertExists($media->image);
     }
 
+    public function test_quick_shop_provides_active_gallery_photos_with_variant_and_color_information(): void
+    {
+        $category = Category::create(['name' => 'Abaya', 'slug' => 'abaya-gallery', 'active' => true]);
+        $series = Series::create(['category_id' => $category->id, 'name' => 'Rania', 'slug' => 'rania-gallery', 'active' => true]);
+        $olive = $series->variants()->create(['sku' => 'RANIA-OLIVE-L', 'color' => 'Olive', 'size' => 'L', 'price' => 320000, 'stock' => 4, 'weight' => 500]);
+        $series->variants()->create(['sku' => 'RANIA-SAND-M', 'color' => 'Sand', 'size' => 'M', 'price' => 360000, 'stock' => 4, 'weight' => 500]);
+        $series->media()->create(['image' => 'product-gallery/sleeve.webp', 'alt_text' => 'Detail lengan', 'variant_id' => $olive->id, 'focal_x' => 42, 'focal_y' => 61, 'sort_order' => 1, 'active' => true]);
+        $series->media()->create(['image' => 'product-gallery/olive-back.webp', 'alt_text' => 'Olive tampak belakang', 'color' => 'Olive', 'sort_order' => 2, 'active' => true]);
+        $series->media()->create(['image' => 'product-gallery/hidden.webp', 'alt_text' => 'Foto nonaktif', 'sort_order' => 3, 'active' => false]);
+
+        $page = $this->get(route('catalog'))->assertOk()->assertSee('data-quick-gallery', false);
+        $this->assertSame(1, preg_match('/id="quick-product-'.$series->id.'">([^<]+)<\/script>/', $page->getContent(), $payload));
+        $gallery = json_decode($payload[1], true, flags: JSON_THROW_ON_ERROR)['gallery'];
+
+        $this->assertSame(['Detail lengan', 'Olive tampak belakang'], array_column($gallery, 'alt'));
+        $this->assertSame($olive->id, $gallery[0]['variant']);
+        $this->assertSame([42, 61], [$gallery[0]['focal_x'], $gallery[0]['focal_y']]);
+        $this->assertSame('olive', $gallery[1]['color']);
+    }
+
     public function test_category_metadata_and_shareable_variant_are_rendered(): void
     {
         $this->seed();
