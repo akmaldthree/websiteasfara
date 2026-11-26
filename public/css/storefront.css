@@ -2143,6 +2143,22 @@ html{scroll-behavior:smooth}.store-body{overflow-x:hidden}.store-body .site-head
     display: none;
 }
 
+.store-body .product-card .product-image,
+.catalog-grid .product-card .product-image,
+.store-body.product-detail-body .product-gallery-main,
+.store-body.product-detail-body .product-gallery-main img,
+.store-body.product-detail-body .product-gallery-grid img {
+    aspect-ratio: 1;
+}
+
+.store-body .quick-product-layout > img {
+    height: auto;
+    max-height: 48dvh;
+    aspect-ratio: 1;
+    object-fit: contain;
+    background: var(--palette-cream);
+}
+
 .catalog-filter-fields {
     display: contents;
 }

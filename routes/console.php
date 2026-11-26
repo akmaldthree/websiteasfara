@@ -8,14 +8,19 @@ use App\Services\Audit;
 use App\Services\DeliveryService;
 use App\Services\OrderWorkflow;
 use App\Services\SystemHealthService;
+use Database\Seeders\DemoAbayaSeeder;
 use Database\Seeders\DemoMediaSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Validation\ValidationException;
 
-Artisan::command('asfara:demo-media {--activate-hero : Aktifkan video demo pada hero utama}', function (DemoMediaSeeder $media) {
+Artisan::command('asfara:demo-media {--activate-hero : Aktifkan video demo pada hero utama} {--abaya : Terapkan aset dan kurasi katalog demo Abaya}', function (DemoMediaSeeder $media, DemoAbayaSeeder $abayaSeeder) {
     $media->run();
+    if ($this->option('abaya')) {
+        $abayaSeeder->setCommand($this)->run();
+        $this->info('Aset dan kurasi demo Abaya diperbarui.');
+    }
 
     if ($this->option('activate-hero')) {
         DB::transaction(function () {

@@ -34,6 +34,31 @@ class DemoSeederTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_abaya_media_install_updates_demo_catalog_without_overwriting_real_product_media(): void
+    {
+        Storage::fake('public');
+        $this->seed(DemoSeeder::class);
+        $product = Series::where('slug', 'raffah-signature')->firstOrFail();
+        $custom = Series::where('slug', 'naura-pleated')->firstOrFail();
+        $custom->update(['image' => 'products/naura-owned.webp']);
+        $mediaCount = MediaAsset::count();
+
+        $this->artisan('asfara:demo-media', ['--abaya' => true])->assertSuccessful();
+        $this->artisan('asfara:demo-media', ['--abaya' => true])->assertSuccessful();
+
+        $this->assertSame($mediaCount, MediaAsset::count());
+        $this->assertSame('demo/abaya-olive-front.webp', $product->fresh()->image);
+        $this->assertSame('products/naura-owned.webp', $custom->fresh()->image);
+        $this->assertSame(3, $product->media()->where('active', true)->count());
+        $this->assertFalse(Series::where('slug', 'arcelia-family')->firstOrFail()->active);
+        $this->assertDatabaseHas('variants', ['sku' => 'DEMO-RAF-STD-OLI-M']);
+        Storage::disk('public')->assertExists('demo/abaya-hero-mobile.webp');
+        $this->assertImageRatio('abaya-olive-front.webp', 1.0);
+        $this->assertImageRatio('abaya-hero-mobile.webp', 9 / 16);
+        $this->get(route('home'))->assertOk()->assertSee('abaya-hero-wide.webp')->assertSee('abaya-hero-mobile.webp');
+        $this->get(route('content.show', ['campaign', 'demo-seri-ruang-raya']))->assertOk()->assertSee('Abaya dalam palet teduh');
+    }
+
     public function test_demo_store_data_is_complete_and_idempotent(): void
     {
         $this->seed(DemoSeeder::class);
@@ -54,7 +79,7 @@ class DemoSeederTest extends TestCase
         $this->assertSame(1, CustomQuote::where('number', 'ASF-CUSTOM-DEMO-001')->count());
         $this->assertSame(12, NewsletterSubscriber::where('email', 'like', 'newsletter%.demo@asfara.co.id')->count());
         $this->assertSame(10, ProductQuestion::where('status', 'answered')->count());
-        $this->assertSame(23, MediaAsset::where('path', 'like', 'demo/%')->count());
+        $this->assertSame(57, MediaAsset::where('path', 'like', 'demo/%')->count());
         $this->assertDatabaseHas('media_assets', ['path' => 'demo/ruang-raya-closing-portrait.webp']);
         $this->assertSame(13, Order::where(fn ($query) => $query->where('number', 'like', 'ASF-DEMO-%')->orWhere('number', 'DEMO-REVIEW-001'))->count());
         $this->assertSame(12, NotificationDelivery::count());
