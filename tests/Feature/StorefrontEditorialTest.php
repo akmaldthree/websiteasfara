@@ -332,7 +332,10 @@ class StorefrontEditorialTest extends TestCase
         $this->get(route('home'))->assertOk()
             ->assertSee('id="'.$formId.'"', false)
             ->assertSee('name="variant_id" value="'.$variant->id.'"', false)
-            ->assertSee('form="'.$formId.'" class="product-quick">ADD TO CART', false);
+            ->assertSee('form="'.$formId.'" class="product-quick">TAMBAH KE KERANJANG', false);
+
+        $this->withSession(['locale' => 'en'])->get(route('home'))->assertOk()
+            ->assertSee('form="'.$formId.'" class="product-quick">ADD TO BAG', false);
     }
 
     public function test_sold_out_product_has_no_quick_purchase_action(): void

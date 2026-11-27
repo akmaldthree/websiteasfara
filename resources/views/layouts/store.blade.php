@@ -52,7 +52,7 @@
     @stack('head')
     <script type="application/ld+json">{!! json_encode($websiteSchema, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
 </head>
-<body class="store-body theme-header-{{ $shop['theme_header_style'] ?? 'standard' }} @yield('body_class')">
+<body class="store-body theme-header-{{ $shop['theme_header_style'] ?? 'standard' }} @yield('body_class') @if($shop['header_announcement_enabled'] ?? true) has-announcement @endif">
 <a href="#main" class="visually-hidden-focusable skip-link">Langsung ke konten</a>
 @php($announcements=collect(preg_split('/[\r\n]+/',$shop['announcement_lines'] ?? ''))->map(fn($line)=>trim($line))->filter())
 @php($announcements=$announcements->isEmpty()?collect([$shop['tagline'] ?? '','WORLDWIDE SHIPPING'])->filter():$announcements)
@@ -127,8 +127,12 @@
     <div id="cart-drawer-lines" aria-live="polite"><p>Memuat keranjang…</p></div>
     <div class="cart-drawer-footer" id="cart-drawer-footer" hidden>
         <p><span>SUBTOTAL</span><strong id="cart-drawer-subtotal"></strong></p>
-        <small>Ongkir dan total akhir dihitung saat checkout.</small>
-        <a class="btn btn-dark" href="{{ route('checkout') }}">CHECKOUT</a>
+        @if($shop['checkout_enabled'] ?? false)
+            <small>Ongkir dan total akhir dihitung saat checkout.</small>
+            <a class="btn btn-dark" data-cart-drawer-checkout href="{{ route('checkout') }}">{{ __('store.checkout') }}</a>
+        @else
+            <small data-checkout-closed>{{ __('store.checkout_closed') }}</small>
+        @endif
         <a class="btn btn-outline-dark" href="{{ route('cart') }}">LIHAT KERANJANG</a>
     </div>
 </dialog>
@@ -151,7 +155,7 @@
             <form method="post" action="{{ route('cart.add') }}" id="quick-product-form" data-cart-add>
                 @csrf<div id="quick-product-options"></div>
                 <input type="hidden" name="variant_id" id="quick-variant"><input type="hidden" name="quantity" value="1">
-                <button class="btn btn-dark w-100" id="quick-submit" disabled>Pilih varian</button>
+                <button class="btn btn-dark w-100" id="quick-submit" disabled>{{ __('store.purchase.choose_variant') }}</button>
                 <p class="cart-form-error" data-cart-add-error role="alert" hidden></p>
             </form>
             <a id="quick-product-link" href="#">{{ $storeCopy['quick_view_detail'] }}</a>
@@ -331,6 +335,7 @@
 })();
 </script>
 <script>
+const purchaseCopy = @json(__('store.purchase'));
 const storeVariants = (() => {
     const field = (variant, key) => String((variant?.dataset ?? variant)?.[key] ?? '').toLowerCase();
     const choices = (variants, groups, kind, current) => {
@@ -344,8 +349,8 @@ const storeVariants = (() => {
             .sort((left, right) => score(right) - score(left))[0];
     };
     const stock = (available, method) => available
-        ? (method === 'Pre-order' ? 'Pre-order tersedia' : 'Stok tersedia')
-        : 'Varian ini habis';
+        ? (method === 'Pre-order' ? purchaseCopy.pre_order_available : purchaseCopy.in_stock)
+        : purchaseCopy.variant_unavailable;
     const gallery = (photos, variant, color) => [
         ...photos.filter(photo => field(photo, 'variant') === String(variant)),
         ...photos.filter(photo => !field(photo, 'variant') && field(photo, 'color') && field(photo, 'color') === String(color ?? '').toLowerCase()),
@@ -716,9 +721,9 @@ bindGallerySwipe(quickStage, quickImage, stepQuickPhoto);
 const renderQuick = () => {
     const available = quickData.variants.filter(item => item.available > 0);
     const kinds = [
-        ...(quickData.usesType ? [['type', 'Jenis produk']] : []),
-        ['color', 'Warna'],
-        ['size', 'Ukuran'],
+        ...(quickData.usesType ? [['type', purchaseCopy.product_type]] : []),
+        ['color', purchaseCopy.color],
+        ['size', purchaseCopy.size],
     ].filter(([kind]) => available.some(item => item[kind]));
     if (kinds.length === 0) quickConfirmed = true;
     const groups = kinds.map(([kind]) => kind);
@@ -735,7 +740,7 @@ const renderQuick = () => {
     }).join('');
     quickVariant.value = quickConfirmed ? quickSelected.id : '';
     quickSubmit.disabled = !quickConfirmed;
-    quickSubmit.textContent = quickConfirmed ? 'Tambah ke keranjang' : 'Pilih varian';
+    quickSubmit.textContent = quickConfirmed ? purchaseCopy.add_to_cart : purchaseCopy.choose_variant;
     document.getElementById('quick-product-price').textContent = new Intl.NumberFormat('id-ID', {
         style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
     }).format(quickSelected.price);

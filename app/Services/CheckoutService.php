@@ -233,6 +233,11 @@ class CheckoutService
         ], JSON_THROW_ON_ERROR));
     }
 
+    public function isOpen(): bool
+    {
+        return (bool) Setting::get('checkout_enabled', false);
+    }
+
     public function place(array $cart, array $input, string $key, ?int $userId = null, ?string $expectedQuote = null, array $customizations = []): Order
     {
         return DB::transaction(function () use ($cart, $input, $key, $userId, $expectedQuote, $customizations) {
@@ -244,7 +249,7 @@ class CheckoutService
             if ($existing = Order::where('checkout_key', $key)->first()) {
                 return $existing;
             }
-            $this->check(Setting::get('checkout_enabled', false), 'Checkout belum dibuka. Silakan hubungi Asfara.');
+            $this->check($this->isOpen(), __('store.checkout_closed'));
             $customer = $userId ? User::whereKey($userId)->lockForUpdate()->first() : null;
             $q = $this->quote($cart, $input, true, $customer, $customizations);
             $this->check($expectedQuote === null || hash_equals($expectedQuote, $this->fingerprint($q)), 'Harga atau pengiriman berubah. Kembali ke checkout untuk meninjau total terbaru sebelum memesan.');

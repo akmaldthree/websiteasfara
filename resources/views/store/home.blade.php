@@ -88,7 +88,8 @@
             ?: $firstSlide['mobile_image'];
         $firstSlide['title'] = $heroCampaign['label'];
         $firstSlide['url'] = $heroCampaign['url'];
-        $firstSlide['label'] = 'Lihat koleksi';
+        $firstSlide['label'] = __('store.campaign_cta');
+        $firstSlide['align'] = $options['align'] ?? 'center';
     }
     $videoHero = (bool) $firstSlide['video'];
     $heroContentClass = $videoHero && $heroContentStyle === 'editorial' ? '' : 'hero-content-'.$heroContentStyle;

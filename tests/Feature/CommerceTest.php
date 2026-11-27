@@ -12,6 +12,7 @@ use App\Models\Setting;
 use App\Models\ShippingRate;
 use App\Models\User;
 use App\Models\Variant;
+use App\Services\CartService;
 use App\Services\CheckoutService;
 use App\Services\OrderWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -64,6 +65,10 @@ class CommerceTest extends TestCase
         $order = $this->order();
         $this->get($order->customerUrl())->assertOk()->assertSee($order->number);
         $this->get('/pesanan/'.$order->id)->assertForbidden();
+        $this->post(route('track.find'), ['number' => $order->number, 'phone' => '(0812) 3456-7890'])
+            ->assertRedirect($order->customerUrl());
+        $this->post(route('track.find'), ['number' => $order->number, 'phone' => '0812 3456 7891'])
+            ->assertSessionHasErrors('number');
     }
 
     public function test_cart_and_checkout_display_the_selected_variant_photo(): void
@@ -502,12 +507,18 @@ class CommerceTest extends TestCase
         $this->assertStringContainsString('"price_label":"Rp 20.000"', $response->getContent());
     }
 
-    public function test_buy_now_adds_the_selected_variant_and_opens_checkout(): void
+    public function test_buy_now_opens_checkout_with_only_the_selected_variant(): void
     {
+        $checkoutParameters = ['buy_now' => 1];
         $this->post('/keranjang', ['variant_id' => $this->variant->id, 'quantity' => 1, 'buy_now' => 1])
-            ->assertRedirect(route('checkout'));
+            ->assertRedirect(route('checkout', $checkoutParameters))
+            ->assertSessionMissing('cart');
 
-        $this->assertSame(1, session('cart')[$this->variant->id]);
+        $this->get(route('checkout', $checkoutParameters))
+            ->assertOk()
+            ->assertSee(route('checkout.review', $checkoutParameters))
+            ->assertViewHas('lines', fn (array $lines) => count($lines) === 1
+                && $lines[0]['variant']->is($this->variant) && $lines[0]['quantity'] === 1);
     }
 
     public function test_cart_repairs_stale_quantities_before_adding_or_rendering(): void
@@ -525,14 +536,70 @@ class CommerceTest extends TestCase
             ->assertSee('Keranjang Anda masih kosong');
     }
 
-    public function test_buy_now_uses_selected_quantity_instead_of_duplicating_an_existing_line(): void
+    public function test_buy_now_keeps_saved_cart_and_regular_checkout_after_purchase_and_retry(): void
     {
-        $this->withSession(['cart' => [$this->variant->id => 2]])
-            ->post('/keranjang', ['variant_id' => $this->variant->id, 'quantity' => 1, 'buy_now' => 1])
-            ->assertRedirect(route('checkout'))
-            ->assertSessionHasNoErrors();
+        $customer = $this->user('customer');
+        $other = Variant::create([
+            'series_id' => $this->variant->series_id, 'sku' => 'raf-olive-m', 'color' => 'Olive',
+            'size' => 'M', 'price' => 350000, 'stock' => 4, 'weight' => 600,
+        ]);
+        $cart = [$this->variant->id => 2, $other->id => 1];
+        app(CartService::class)->sync($customer, $cart);
 
-        $this->assertSame(1, session('cart')[$this->variant->id]);
+        $this->actingAs($customer)->withSession(['cart' => $cart])->get(route('checkout'))->assertOk();
+        $cartKey = session('checkout_key');
+        $this->post(route('checkout.review'), ['name' => 'Checkout keranjang'] + $this->input)->assertOk();
+
+        $checkoutParameters = ['buy_now' => 1];
+        $this
+            ->post('/keranjang', ['variant_id' => $this->variant->id, 'quantity' => 1, 'buy_now' => 1])
+            ->assertRedirect(route('checkout', $checkoutParameters))
+            ->assertSessionHas('cart', $cart);
+        $purchaseKey = session('buy_now_checkout.checkout_key');
+
+        $this->post(route('checkout.review', $checkoutParameters), ['checkout_key' => $cartKey] + $this->input)
+            ->assertRedirect(route('catalog'))
+            ->assertSessionMissing('buy_now_checkout.checkout_quote');
+        $this->post(route('checkout.review', $checkoutParameters), ['checkout_key' => $purchaseKey] + $this->input)
+            ->assertOk()
+            ->assertSee(route('checkout.place', $checkoutParameters))
+            ->assertViewHas('quote', fn (array $quote) => count($quote['lines']) === 1 && $quote['lines'][0]['quantity'] === 1);
+        $this->get(route('checkout', $checkoutParameters))->assertSee($this->input['name']);
+        $placeUrl = route('checkout.place', $checkoutParameters);
+        $this->post($placeUrl, ['checkout_key' => $purchaseKey])
+            ->assertRedirect()
+            ->assertSessionHas('cart', $cart)
+            ->assertSessionHas('checkout_key', $cartKey)
+            ->assertSessionHas('checkout_data.name', 'Checkout keranjang')
+            ->assertSessionMissing('buy_now_checkout.cart');
+
+        $order = Order::sole();
+        $this->assertSame(1, $order->items()->sole()->quantity);
+        $this->assertEquals($cart, $customer->cartItems()->pluck('quantity', 'variant_id')->all());
+        $this->post($placeUrl, ['checkout_key' => $purchaseKey])->assertRedirect($order->customerUrl());
+        $this->assertDatabaseCount('orders', 1);
+    }
+
+    public function test_closed_checkout_blocks_entry_review_and_confirmation_without_changing_cart(): void
+    {
+        $cart = [$this->variant->id => 1];
+        $this->withSession(['cart' => $cart])->get(route('checkout'))->assertOk();
+        $checkoutKey = session('checkout_key');
+        $this->post(route('checkout.review'), $this->input)->assertOk();
+
+        Setting::put('checkout_enabled', false);
+
+        $this->get(route('cart'))->assertOk()->assertSee(__('store.checkout_closed'))
+            ->assertDontSee('data-cart-page-checkout', false)->assertDontSee('data-cart-drawer-checkout', false);
+        $this->get(route('product', $this->variant->series->slug))->assertDontSee('name="buy_now"', false);
+        $this->get(route('checkout'))->assertRedirect(route('cart'))->assertSessionHas('warning');
+        $this->post(route('checkout.review'))->assertRedirect(route('cart'))->assertSessionHasNoErrors();
+        $this->post(route('cart.add'), ['variant_id' => $this->variant->id, 'quantity' => 1, 'buy_now' => 1])
+            ->assertRedirect(route('cart'))->assertSessionMissing('buy_now_checkout');
+        $this->post(route('checkout.place'), ['checkout_key' => $checkoutKey])
+            ->assertRedirect(route('cart'))->assertSessionHas('cart', $cart);
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertSame(0, $this->variant->fresh()->reserved);
     }
 
     public function test_import_requires_preview_and_rejects_duplicates(): void

@@ -54,7 +54,11 @@
                 @endif
                 <p class="small mt-3">Ongkir, voucher, dan biaya COD dihitung pada langkah berikutnya. Harga dan stok diperiksa kembali sebelum pesanan dibuat.</p>
                 <ul class="cart-assurances"><li>Transaksi dan data pelanggan terlindungi</li><li>Total akhir ditampilkan sebelum konfirmasi</li><li>Bantuan pelanggan tersedia via WhatsApp</li></ul>
-                <a class="btn btn-dark w-100" data-cart-page-checkout href="{{ route('checkout') }}">{{ __('store.continue_checkout') }}</a>
+                @if($shop['checkout_enabled'] ?? false)
+                    <a class="btn btn-dark w-100" data-cart-page-checkout href="{{ route('checkout') }}">{{ __('store.continue_checkout') }}</a>
+                @else
+                    <p class="alert alert-warning mb-2" data-checkout-closed>{{ __('store.checkout_closed') }}</p>
+                @endif
                 <a class="d-block text-center small mt-3" href="{{ route('catalog') }}" data-continue-catalog>Lanjut belanja</a>
             </aside></div>
         </div>

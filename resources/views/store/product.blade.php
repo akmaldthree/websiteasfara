@@ -15,11 +15,11 @@
     $compareAtPrice = (int) $series->compare_at_price;
     $saving = max(0, $compareAtPrice - $displayPrice);
     $stockLabel = match (true) {
-        $canBuySelected && $selectedVariant->fulfillment === 'pre_order' => 'Pre-order tersedia',
-        $canBuySelected => 'Stok tersedia',
-        $selectedVariant !== null => 'Varian ini habis',
-        $standardVariants->isEmpty() && $series->variants->contains('fulfillment', 'custom_made') => 'Dibuat sesuai pesanan',
-        default => 'Stok habis',
+        $canBuySelected && $selectedVariant->fulfillment === 'pre_order' => __('store.purchase.pre_order_available'),
+        $canBuySelected => __('store.purchase.in_stock'),
+        $selectedVariant !== null => __('store.purchase.variant_unavailable'),
+        $standardVariants->isEmpty() && $series->variants->contains('fulfillment', 'custom_made') => __('store.purchase.made_to_order'),
+        default => __('store.purchase.out_of_stock'),
     };
 
     $gallery = $series->media->sortByDesc(fn ($media) => $series->image === $media->image)->values();
@@ -68,7 +68,7 @@
                 <div class="product-price-row"><div @class(['product-price','sale-price'=>$saving>0]) id="display-product-price">@rupiah($displayPrice)</div><del id="display-compare-price" @if($saving<=0) hidden @endif>@rupiah($compareAtPrice)</del></div>
                 <div class="product-price-status">
                     <span class="product-stock" id="display-product-stock">{{ $stockLabel }}</span>
-                    @if($compareAtPrice > 0)<span class="product-saving" id="display-product-saving" @if($saving<=0) hidden @endif>Hemat @rupiah($saving)</span>@endif
+                    @if($compareAtPrice > 0)<span class="product-saving" id="display-product-saving" @if($saving<=0) hidden @endif>{{ __('store.purchase.saving', ['amount' => 'Rp '.number_format($saving, 0, ',', '.')]) }}</span>@endif
                 </div>
             </div>
             @if($priceGroup)
@@ -76,13 +76,13 @@
             @endif
             @if($standardVariants->isNotEmpty())<form method="post" action="{{ $previewSubmitUrl ?? route('cart.add') }}" id="product-purchase-form" data-cart-add>@csrf
                 <div class="variant-option-groups" id="product-variant-options">
-                    @if($series->uses_product_type)<div><div class="variant-option-label" id="variant-type-label">Jenis produk</div><div class="variant-choices" role="group" aria-labelledby="variant-type-label">@foreach($standardVariants->pluck('product_type')->unique() as $type)<button type="button" class="variant-choice" data-kind="type" data-value="{{ mb_strtolower($type) }}">{{ $type }}</button>@endforeach</div></div>@endif
-                    <div><div class="variant-option-label" id="variant-color-label">Warna</div><div class="variant-choices" role="group" aria-labelledby="variant-color-label">@foreach($standardVariants->pluck('color')->unique() as $color)<button type="button" class="variant-choice color-choice" data-kind="color" data-value="{{ mb_strtolower($color) }}"><i style="--swatch:{{ \App\Support\ColorSwatch::hex($color) }}"></i>{{ $color }}</button>@endforeach</div></div>
-                    <div><div class="variant-option-label"><span id="variant-size-label">Ukuran</span><button type="button" class="size-guide-link" data-open-size-guide aria-haspopup="dialog">Panduan ukuran</button></div><div class="variant-choices" role="group" aria-labelledby="variant-size-label">@foreach($standardVariants->pluck('size')->unique() as $size)<button type="button" class="variant-choice" data-kind="size" data-value="{{ mb_strtolower($size) }}">{{ $size }}</button>@endforeach</div></div>
+                    @if($series->uses_product_type)<div><div class="variant-option-label" id="variant-type-label">{{ __('store.purchase.product_type') }}</div><div class="variant-choices" role="group" aria-labelledby="variant-type-label">@foreach($standardVariants->pluck('product_type')->unique() as $type)<button type="button" class="variant-choice" data-kind="type" data-value="{{ mb_strtolower($type) }}">{{ $type }}</button>@endforeach</div></div>@endif
+                    <div><div class="variant-option-label" id="variant-color-label">{{ __('store.purchase.color') }}</div><div class="variant-choices" role="group" aria-labelledby="variant-color-label">@foreach($standardVariants->pluck('color')->unique() as $color)<button type="button" class="variant-choice color-choice" data-kind="color" data-value="{{ mb_strtolower($color) }}"><i style="--swatch:{{ \App\Support\ColorSwatch::hex($color) }}"></i>{{ $color }}</button>@endforeach</div></div>
+                    <div><div class="variant-option-label"><span id="variant-size-label">{{ __('store.purchase.size') }}</span><button type="button" class="size-guide-link" data-open-size-guide aria-haspopup="dialog">{{ __('store.purchase.size_guide') }}</button></div><div class="variant-choices" role="group" aria-labelledby="variant-size-label">@foreach($standardVariants->pluck('size')->unique() as $size)<button type="button" class="variant-choice" data-kind="size" data-value="{{ mb_strtolower($size) }}">{{ $size }}</button>@endforeach</div></div>
                 </div>
-                <label class="visually-hidden" for="variant">Kombinasi varian</label>
+                <label class="visually-hidden" for="variant">{{ __('store.purchase.variant') }}</label>
                 <select name="variant_id" id="variant" class="visually-hidden" required>
-                    <option value="">Pilih varian Anda</option>
+                    <option value="">{{ __('store.purchase.choose_variant') }}</option>
                     @foreach($standardVariants as $v)
                         @php($tiers=$businessTiers[$v->id]->map(fn($tier)=>['minimum'=>$tier->minimum_quantity,'price'=>$tier->price])->values())
                         <option value="{{ $v->id }}" data-price="{{ $unitPrices[$v->id] }}" data-tiers="{{ $tiers->toJson() }}" data-stock="{{ $v->available }}" data-sku="{{ $v->sku }}" data-label="{{ $v->label }}" data-type="{{ mb_strtolower($v->product_type) }}" data-color="{{ mb_strtolower($v->color) }}" data-size="{{ mb_strtolower($v->size) }}" data-method="{{ $v->fulfillment==='ready_stock'?'Ready stock':($v->fulfillment==='bundle'?'Bundle':'Pre-order') }}" data-estimate="{{ $v->lead_time }}" @disabled($v->available<1) @selected($selectedVariant?->id === $v->id)>{{ $v->label }} — @rupiah($unitPrices[$v->id]) {{ $v->available<1?'(habis)':'' }}</option>
@@ -90,17 +90,19 @@
                 </select>
                 <div class="product-purchase">
                     <div class="product-quantity-block">
-                        <label for="qty">Jumlah</label>
+                        <label for="qty">{{ __('store.purchase.quantity') }}</label>
                         <div class="quantity-stepper">
-                            <button type="button" data-qty-change="-1" aria-label="Kurangi jumlah">−</button>
+                            <button type="button" data-qty-change="-1" aria-label="{{ __('store.purchase.quantity_decrease') }}">−</button>
                             <input class="form-control quantity" type="number" name="quantity" id="qty" min="1" max="100" value="1" required>
-                            <button type="button" data-qty-change="1" aria-label="Tambah jumlah">+</button>
+                            <button type="button" data-qty-change="1" aria-label="{{ __('store.purchase.quantity_increase') }}">+</button>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-dark" aria-describedby="variant-info" data-product-submit @disabled(!$canBuySelected)>TAMBAH KE KERANJANG</button>
-                    <button type="submit" class="btn btn-outline-dark product-buy-now" name="buy_now" value="1" aria-describedby="variant-info" data-product-submit @disabled(!$canBuySelected)>BELI SEKARANG</button>
+                    <button type="submit" class="btn btn-dark" aria-describedby="variant-info" data-product-submit @disabled(!$canBuySelected)>{{ strtoupper(__('store.purchase.add_to_cart')) }}</button>
+                    @if($shop['checkout_enabled'] ?? false)
+                        <button type="submit" class="btn btn-outline-dark product-buy-now" name="buy_now" value="1" aria-describedby="variant-info" data-product-submit @disabled(!$canBuySelected)>{{ strtoupper(__('store.purchase.buy_now')) }}</button>
+                    @endif
                 </div>
-                <div class="variant-info" id="variant-info" aria-live="polite">Pilih varian untuk melihat harga dan ketersediaan.</div>
+                <div class="variant-info" id="variant-info" aria-live="polite">{{ __('store.purchase.choose_variant_hint') }}</div>
                 <p class="cart-form-error" data-cart-add-error role="alert" tabindex="-1" hidden></p>
             </form>@endif
             <div class="product-share"><button type="button" id="share-product" class="product-share-link">Bagikan pilihan ↗</button><span id="share-status" class="small ms-2" aria-live="polite"></span></div>
@@ -160,14 +162,14 @@
 @auth<form class="panel mt-4" method="post" action="{{ $previewSubmitUrl ?? route('product.question',$series) }}">@csrf<label for="product-question"><strong>Ajukan pertanyaan</strong></label><textarea id="product-question" class="form-control mt-2" name="question" rows="3" minlength="10" maxlength="1000" required>{{ old('question') }}</textarea><button class="btn btn-dark mt-3">Kirim pertanyaan</button></form>@else<p><a href="{{ route('login') }}">Masuk</a> untuk mengajukan pertanyaan produk.</p>@endauth
 </section>
 <dialog class="product-lightbox" id="product-lightbox" aria-label="Foto {{ $series->name }} diperbesar"><div class="product-lightbox-controls"><button type="button" id="close-product-zoom" aria-label="Tutup foto">×</button><button type="button" class="product-zoom-toggle" aria-label="Perbesar gambar" aria-pressed="false">+</button></div><img id="product-lightbox-image" src="{{ $mainImage }}" alt="{{ $series->name }} diperbesar" width="800" height="800" loading="lazy" decoding="async"></dialog>
-<dialog class="size-guide-dialog" id="size-guide-dialog" aria-labelledby="size-guide-title"><button type="button" class="drawer-close" data-close-size-guide aria-label="Tutup panduan ukuran">×</button><span class="eyebrow">{{ strtoupper($series->name) }}</span><h2 id="size-guide-title">PANDUAN UKURAN</h2>@include('partials.size-chart')<p class="small">Jika berada di antara dua ukuran, pilih ukuran lebih besar atau hubungi Asfara melalui WhatsApp.</p></dialog>
+<dialog class="size-guide-dialog" id="size-guide-dialog" aria-labelledby="size-guide-title"><button type="button" class="drawer-close" data-close-size-guide aria-label="Tutup panduan ukuran">×</button><span class="eyebrow">{{ strtoupper($series->name) }}</span><h2 id="size-guide-title">{{ strtoupper(__('store.purchase.size_guide')) }}</h2>@include('partials.size-chart')<p class="small">Jika berada di antara dua ukuran, pilih ukuran lebih besar atau hubungi Asfara melalui WhatsApp.</p></dialog>
 @if($standardVariants->isNotEmpty())
     <div class="mobile-purchase-bar">
         <div>
             <strong id="mobile-product-price">@rupiah($displayPrice)</strong>
-            <small data-mobile-variant>{{ $selectedVariant?->label ?? 'Stok habis' }}</small>
+            <small data-mobile-variant>{{ $selectedVariant?->label ?? __('store.purchase.out_of_stock') }}</small>
         </div>
-        <button type="button" class="btn btn-dark" data-mobile-add aria-controls="product-variant-options" @disabled($availableVariants->isEmpty())>{{ $needsVariantSelection ? 'Pilih varian' : ($canBuySelected ? 'Tambah ke keranjang' : 'Stok habis') }}</button>
+        <button type="button" class="btn btn-dark" data-mobile-add aria-controls="product-variant-options" @disabled($availableVariants->isEmpty())>{{ $needsVariantSelection ? __('store.purchase.choose_variant') : __('store.purchase.'.($canBuySelected ? 'add_to_cart' : 'out_of_stock')) }}</button>
     </div>
 @endif
 @endsection
@@ -248,10 +250,10 @@ function updateVariant() {
         button.disabled = !purchasable || (Number(button.dataset.qtyChange) < 0 ? amount <= 1 : amount >= Number(qty.max));
     });
     mobileAdd.disabled = availableOptions.length === 0;
-    mobileAdd.textContent = mobileAdd.disabled ? 'Stok habis' : (needsVariantSelection || !purchasable ? 'Pilih varian' : 'Tambah ke keranjang');
-    mobileVariant.textContent = hasVariant ? option.dataset.label : 'Stok habis';
+    mobileAdd.textContent = mobileAdd.disabled ? purchaseCopy.out_of_stock : (needsVariantSelection || !purchasable ? purchaseCopy.choose_variant : purchaseCopy.add_to_cart);
+    mobileVariant.textContent = hasVariant ? option.dataset.label : purchaseCopy.out_of_stock;
     if (!hasVariant) {
-        variantInfo.textContent = 'Stok habis.';
+        variantInfo.textContent = purchaseCopy.out_of_stock;
         return;
     }
     const stockLabel = storeVariants.stock(purchasable, option.dataset.method);
@@ -269,7 +271,7 @@ function updateVariant() {
     displayCompare.hidden = compareAtPrice <= price;
     if (displaySaving) {
         displaySaving.hidden = compareAtPrice <= price;
-        displaySaving.textContent = 'Hemat ' + rupiah(compareAtPrice - price);
+        displaySaving.textContent = purchaseCopy.saving.replace(':amount', rupiah(compareAtPrice - price));
     }
     mobilePrice.textContent = rupiah(price);
     variantInfo.textContent = [

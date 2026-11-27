@@ -25,6 +25,9 @@ use App\Services\CustomProductService;
 use App\Services\OrderCommunication;
 use App\Services\PricingService;
 use App\Support\HomeLayout;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -376,18 +379,33 @@ class StoreController extends Controller
         ]);
     }
 
-    public function add(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics)
+    public function add(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics): RedirectResponse|JsonResponse
     {
         $d = $r->validate(['variant_id' => 'required|integer|exists:variants,id', 'quantity' => 'required|integer|min:1|max:100', 'buy_now' => 'nullable|boolean']);
+        $buyNow = $r->boolean('buy_now');
+        if ($buyNow && ! $service->isOpen()) {
+            return $this->closedCheckout($r);
+        }
+
         $variant = Variant::findOrFail($d['variant_id']);
         if ($variant->fulfillment === 'custom_made') {
             throw ValidationException::withMessages(['variant_id' => 'Gunakan formulir ukuran custom pada halaman produk.']);
         }
+
+        if ($buyNow) {
+            $selection = [$variant->id => $d['quantity']];
+            $service->lines($selection, false, $r->user());
+            $r->session()->put('buy_now_checkout', [
+                'cart' => $selection,
+                'checkout_key' => Str::random(64),
+            ]);
+
+            return redirect()->route('checkout', ['buy_now' => 1]);
+        }
+
         $cart = $this->normalizedCart($r, $cartService);
         $currentQuantity = (int) ($cart[$d['variant_id']] ?? 0);
-        $cart[$d['variant_id']] = $r->boolean('buy_now')
-            ? $d['quantity']
-            : min(100, $currentQuantity + $d['quantity']);
+        $cart[$d['variant_id']] = min(100, $currentQuantity + $d['quantity']);
         $service->lines($cart, false, $r->user(), $r->session()->get('cart_customizations', []));
         $r->session()->put('cart', $cart);
         if ($r->user()) {
@@ -396,11 +414,11 @@ class StoreController extends Controller
         $r->session()->forget('checkout_key');
         $analytics->record($r, 'add_to_cart', ['variant_id' => $variant->id, 'sku' => $variant->sku, 'quantity' => $d['quantity'], 'value' => $variant->price * $d['quantity']]);
 
-        if ($r->expectsJson() && ! $r->boolean('buy_now')) {
+        if ($r->expectsJson()) {
             return $this->cartSummary($r, $service, $cartService);
         }
 
-        return redirect()->route($r->boolean('buy_now') ? 'checkout' : 'cart')->with('success', 'Pilihan Anda sudah ditambahkan.');
+        return redirect()->route('cart')->with('success', 'Pilihan Anda sudah ditambahkan.');
     }
 
     private function recentlyViewed(Request $request)
@@ -459,16 +477,28 @@ class StoreController extends Controller
         return back();
     }
 
-    public function checkout(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics)
+    public function checkout(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics): RedirectResponse|View
     {
-        $cart = $this->normalizedCart($r, $cartService);
+        if (! $service->isOpen()) {
+            return $this->closedCheckout($r);
+        }
+        $buyNow = $r->boolean('buy_now');
+        $prefix = $buyNow ? 'buy_now_checkout.' : '';
+        $checkoutParameters = $buyNow ? ['buy_now' => 1] : [];
+        [$cart, $customizations] = $this->checkoutSelection($r, $cartService, $buyNow);
         if (! $cart) {
-            return redirect()->route('cart');
+            return $buyNow ? $this->expiredPurchase($r) : redirect()->route('cart');
         }
-        if (! $r->session()->has('checkout_key')) {
-            $r->session()->put('checkout_key', Str::random(64));
+        $checkoutKey = $r->session()->get($prefix.'checkout_key');
+        if (! $checkoutKey) {
+            $checkoutKey = Str::random(64);
+            $r->session()->put($prefix.'checkout_key', $checkoutKey);
         }
-        $lines = $service->lines($cart, false, $r->user(), $r->session()->get('cart_customizations', []));
+        try {
+            $lines = $service->lines($cart, false, $r->user(), $customizations);
+        } catch (ValidationException $exception) {
+            return redirect()->route('cart')->withErrors($exception->errors());
+        }
         $weight = array_sum(array_map(fn ($line) => $line['unit_weight'] * $line['quantity'], $lines));
         $billableKilograms = max(1, (int) ceil($weight / 1000));
         $rates = ShippingRate::where('active', true)->get()
@@ -480,7 +510,35 @@ class StoreController extends Controller
         $businessAccount = $r->user()?->businessAccount;
         $analytics->record($r, 'begin_checkout', ['items' => array_sum(array_column($lines, 'quantity')), 'value' => array_sum(array_column($lines, 'total'))]);
 
-        return view('store.checkout', compact('lines', 'rates', 'businessAccount'));
+        $checkoutData = $r->session()->get($prefix.'checkout_data', []);
+
+        return view('store.checkout', compact('lines', 'rates', 'businessAccount', 'checkoutData', 'checkoutKey', 'checkoutParameters'));
+    }
+
+    private function closedCheckout(Request $request): RedirectResponse
+    {
+        $locale = $request->session()->get('locale') === 'en' ? 'en' : 'id';
+
+        return redirect()->route('cart')->with('warning', trans('store.checkout_closed', [], $locale));
+    }
+
+    private function expiredPurchase(Request $request): RedirectResponse
+    {
+        $locale = $request->session()->get('locale') === 'en' ? 'en' : 'id';
+
+        return redirect()->route('catalog')->with('warning', trans('store.checkout_selection_expired', [], $locale));
+    }
+
+    /**
+     * @return array{0: array<int, int>, 1: array<int, array>}
+     */
+    private function checkoutSelection(Request $request, CartService $cartService, bool $buyNow): array
+    {
+        if ($buyNow) {
+            return [$request->session()->get('buy_now_checkout.cart', []), []];
+        }
+
+        return [$this->normalizedCart($request, $cartService), $request->session()->get('cart_customizations', [])];
     }
 
     private function normalizedCart(Request $request, CartService $cartService): array
@@ -500,11 +558,16 @@ class StoreController extends Controller
         return $cart;
     }
 
+    private function normalizePhone(string $phone): string
+    {
+        return preg_replace('/[\s().-]+/', '', $phone);
+    }
+
     private function checkoutData(Request $r): array
     {
         foreach (['phone', 'sender_phone'] as $field) {
-            if ($r->filled($field)) {
-                $r->merge([$field => preg_replace('/[\s().-]+/', '', (string) $r->input($field))]);
+            if (is_string($r->input($field))) {
+                $r->merge([$field => $this->normalizePhone($r->input($field))]);
             }
         }
 
@@ -517,46 +580,70 @@ class StoreController extends Controller
         ]);
     }
 
-    public function review(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics)
+    public function review(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics): RedirectResponse|View
     {
-        $data = $this->checkoutData($r);
-        $cart = $this->normalizedCart($r, $cartService);
-        if (! $cart) {
-            return redirect()->route('cart')->withErrors(['checkout' => 'Keranjang kosong. Pilih produk sebelum checkout.']);
+        if (! $service->isOpen()) {
+            return $this->closedCheckout($r);
         }
-        $quote = $service->quote($cart, $data, false, $r->user(), $r->session()->get('cart_customizations', []));
-        $r->session()->put('checkout_data', $data);
-        $r->session()->put('checkout_quote', $service->fingerprint($quote));
+        $buyNow = $r->boolean('buy_now');
+        $prefix = $buyNow ? 'buy_now_checkout.' : '';
+        $checkoutParameters = $buyNow ? ['buy_now' => 1] : [];
+        $checkoutKey = $r->session()->get($prefix.'checkout_key');
+        $submittedKey = $r->input('checkout_key');
+        if ($buyNow && (! $checkoutKey || ! is_string($submittedKey) || ! hash_equals($checkoutKey, $submittedKey))) {
+            return $this->expiredPurchase($r);
+        }
+        $data = $this->checkoutData($r);
+        [$cart, $customizations] = $this->checkoutSelection($r, $cartService, $buyNow);
+        if (! $cart) {
+            return $buyNow ? $this->expiredPurchase($r) : redirect()->route('cart')->withErrors(['checkout' => 'Keranjang kosong. Pilih produk sebelum checkout.']);
+        }
+        $quote = $service->quote($cart, $data, false, $r->user(), $customizations);
+        $checkoutKey ??= Str::random(64);
+        $r->session()->put([
+            $prefix.'checkout_key' => $checkoutKey,
+            $prefix.'checkout_data' => $data,
+            $prefix.'checkout_quote' => $service->fingerprint($quote),
+        ]);
         $analytics->record($r, 'shipping_selected', ['courier' => $quote['rate']->courier, 'service' => $quote['rate']->service, 'value' => $quote['shipping_cost']]);
         $analytics->record($r, 'payment_selected', ['method' => $data['payment_method'], 'value' => $quote['total']]);
 
-        return view('store.review', compact('data', 'quote'));
+        return view('store.review', compact('data', 'quote', 'checkoutKey', 'checkoutParameters'));
     }
 
-    public function place(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics)
+    public function place(Request $r, CheckoutService $service, CartService $cartService, Analytics $analytics): RedirectResponse
     {
         $r->validate(['checkout_key' => 'required|string|size:64']);
-        abort_unless(hash_equals($r->session()->get('checkout_key', ''), $r->input('checkout_key')), 419);
+        $buyNow = $r->boolean('buy_now');
+        $prefix = $buyNow ? 'buy_now_checkout.' : '';
+        $checkoutParameters = $buyNow ? ['buy_now' => 1] : [];
+        abort_unless(hash_equals($r->session()->get($prefix.'checkout_key', ''), $r->input('checkout_key')), 419);
         if ($existing = Order::where('checkout_key', $r->input('checkout_key'))->first()) {
             return redirect($existing->customerUrl());
         }
-        $data = $r->session()->get('checkout_data');
+        if (! $service->isOpen()) {
+            return $this->closedCheckout($r);
+        }
+        $data = $r->session()->get($prefix.'checkout_data');
         abort_unless($data, 419);
-        abort_unless($r->session()->has('checkout_quote'), 419);
-        $cart = $this->normalizedCart($r, $cartService);
+        abort_unless($r->session()->has($prefix.'checkout_quote'), 419);
+        [$cart, $customizations] = $this->checkoutSelection($r, $cartService, $buyNow);
         if (! $cart) {
-            return redirect()->route('cart')->withErrors(['checkout' => 'Keranjang kosong. Pilih produk sebelum checkout.']);
+            return $buyNow ? $this->expiredPurchase($r) : redirect()->route('cart')->withErrors(['checkout' => 'Keranjang kosong. Pilih produk sebelum checkout.']);
         }
         try {
-            $o = $service->place($cart, $data, $r->input('checkout_key'), $r->user()?->id, $r->session()->get('checkout_quote'), $r->session()->get('cart_customizations', []));
+            $o = $service->place($cart, $data, $r->input('checkout_key'), $r->user()?->id, $r->session()->get($prefix.'checkout_quote'), $customizations);
         } catch (ValidationException $exception) {
-            $r->session()->forget('checkout_quote');
+            $r->session()->forget($prefix.'checkout_quote');
 
-            return redirect()->route('checkout')->withErrors($exception->errors())->withInput($data);
+            return redirect()->route('checkout', $checkoutParameters)->withErrors($exception->errors())->withInput($data);
         }
-        $r->session()->forget(['cart', 'cart_customizations', 'checkout_data', 'checkout_quote']);
-        if ($r->user()) {
-            $cartService->sync($r->user(), []);
+        $r->session()->forget([$prefix.'cart', $prefix.'checkout_data', $prefix.'checkout_quote']);
+        if (! $buyNow) {
+            $r->session()->forget('cart_customizations');
+            if ($r->user()) {
+                $cartService->sync($r->user(), []);
+            }
         }
         $analytics->record($r, 'purchase', ['value' => $o->total, 'items' => $o->items()->sum('quantity'), 'method' => $o->payment_method]);
 
@@ -645,7 +732,7 @@ class StoreController extends Controller
         return redirect($order->customerUrl())->with('success', 'Bukti diterima. Tim Keuangan akan memverifikasi pembayaran.');
     }
 
-    public function track(Request $r)
+    public function track(Request $r): RedirectResponse
     {
         $d = $r->validate(['number' => 'required|string|max:50', 'phone' => 'required|string|max:30']);
         $number = strtoupper(trim($d['number']));
@@ -656,7 +743,10 @@ class StoreController extends Controller
         if (str_starts_with($number, 'DTH-')) {
             $aliases->push('ASF-'.substr($number, 4));
         }
-        $o = Order::whereIn('number', $aliases->unique())->where('phone', trim($d['phone']))->first();
+        $phone = $this->normalizePhone($d['phone']);
+        $o = preg_match('/^\+?[0-9]{9,15}$/D', $phone)
+            ? Order::whereIn('number', $aliases->unique())->get()->first(fn (Order $order) => $this->normalizePhone($order->phone) === $phone)
+            : null;
         if (! $o) {
             throw ValidationException::withMessages(['number' => 'Nomor pesanan atau nomor telepon tidak cocok.']);
         }

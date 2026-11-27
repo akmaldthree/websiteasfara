@@ -55,9 +55,9 @@
     </a>
     @if($purchasableVariants->count()===1)
         <form id="direct-add-{{ $cardKey }}" method="post" action="{{ route('cart.add') }}" data-cart-add hidden>@csrf<input type="hidden" name="variant_id" value="{{ $purchasableVariants->first()['id'] }}"><input type="hidden" name="quantity" value="1"></form>
-        <button type="submit" form="direct-add-{{ $cardKey }}" class="product-quick">ADD TO CART</button>
+        <button type="submit" form="direct-add-{{ $cardKey }}" class="product-quick">{{ strtoupper(__('store.purchase.add_to_cart')) }}</button>
     @elseif($purchasableVariants->isNotEmpty())
-        <button type="button" class="product-quick" aria-haspopup="dialog" aria-controls="quick-product-dialog" data-quick-open="quick-product-{{ $cardKey }}">PILIH OPSI</button>
+        <button type="button" class="product-quick" aria-haspopup="dialog" aria-controls="quick-product-dialog" data-quick-open="quick-product-{{ $cardKey }}">{{ strtoupper(__('store.purchase.choose_options')) }}</button>
         <script type="application/json" id="quick-product-{{ $cardKey }}">{!! json_encode($quickProduct, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
     @endif
     <div class="product-meta">
