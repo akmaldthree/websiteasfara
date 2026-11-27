@@ -55,6 +55,7 @@
             @if(collect(['catalog.write','inventory.write','settings.write','promotions.write','content.write'])->contains(fn($permission)=>auth()->user()->allowed($permission)))<a href="{{ route('admin.import') }}" @class(['active'=>request()->routeIs('admin.import*')])>Import & export Excel</a>@endif
             @if(auth()->user()->allowed('promotions.write'))<a href="{{ route('admin.promotions') }}" @class(['active'=>request()->routeIs('admin.promotions*')])>Kampanye & voucher</a>@endif
             @if(auth()->user()->allowed('settings.write'))<a href="{{ route('admin.home-layout') }}" @class(['active'=>request()->routeIs('admin.home-layout*')])>Editor beranda</a>@endif
+            @if(auth()->user()->allowed('settings.write'))<a href="{{ route('admin.navigation') }}" @class(['active'=>request()->routeIs('admin.navigation*')])>Navigasi &amp; footer</a>@endif
             @foreach(['admin.settings'=>['Pengaturan website','settings.write'],'admin.team'=>['Tim & hak akses','users.write'],'admin.security'=>['Keamanan akun','dashboard'],'admin.monitoring'=>['Monitoring sistem','audit.read'],'admin.audit'=>['Audit log','audit.read']] as $route=>$nav)@if(auth()->user()->allowed($nav[1]))<a href="{{ route($route) }}" @class(['active'=>request()->routeIs($route)])>{{ $nav[0] }}</a>@endif @endforeach
         </div>
     </nav>

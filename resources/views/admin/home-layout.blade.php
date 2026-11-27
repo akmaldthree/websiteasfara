@@ -2,12 +2,10 @@
 @section('title', 'Editor beranda')
 @section('content')
 @php
-    $sectionIds = collect(array_keys($sections));
-    $order = collect(explode(',', old('section_order', implode(',', $layout['home_section_order'] ?? $sectionIds->all()))))
-        ->intersect($sectionIds)->unique();
-    $order = $order->concat($sectionIds->diff($order))->values();
+    $order = \App\Support\HomeLayout::order(old('section_order', $layout['home_section_order'] ?? null));
     $hidden = old('home_section_hidden', $layout['home_section_hidden'] ?? []);
     $cards = old('home_visual_cards', $layout['home_visual_cards'] ?? []);
+    $closing = old('campaign_products', $layout['home_campaign_products'] ?? []);
 @endphp
 <div class="admin-heading">
     <div><h1>Editor beranda</h1><p>Simpan draft, cek tampilannya, lalu terbitkan perubahan.</p></div>
@@ -23,7 +21,7 @@
     @csrf
     <section class="panel mb-4">
         <h2>Urutan dan visibilitas</h2>
-        <input type="hidden" name="section_order" id="editorial-home-order" value="{{ $order->implode(',') }}">
+        <input type="hidden" name="section_order" id="editorial-home-order" value="{{ implode(',', $order) }}">
         <ol class="home-order-list" id="editorial-home-list">
             @foreach($order as $key)
                 <li data-section="{{ $key }}">
@@ -59,15 +57,34 @@
                                 @foreach($assets as $asset)
                                     <option value="{{ $asset->id }}" @selected((int) ($cards[$row][$field] ?? 0) === $asset->id)>{{ $asset->name }} · {{ $asset->alt_text }}</option>
                                 @endforeach
-                    <label>Fokus gambar horizontal (%)<input class="form-control" type="number" name="home_visual_cards[{{ $row }}][focal_x]" min="0" max="100" value="{{ $cards[$row]['focal_x'] ?? 50 }}"></label>
-                    <label>Fokus gambar vertikal (%)<input class="form-control" type="number" name="home_visual_cards[{{ $row }}][focal_y]" min="0" max="100" value="{{ $cards[$row]['focal_y'] ?? 50 }}"></label>
                             </select>
                         </label>
                     @endforeach
+                    <label>Fokus gambar horizontal (%)<input class="form-control" type="number" name="home_visual_cards[{{ $row }}][focal_x]" min="0" max="100" value="{{ $cards[$row]['focal_x'] ?? 50 }}"></label>
+                    <label>Fokus gambar vertikal (%)<input class="form-control" type="number" name="home_visual_cards[{{ $row }}][focal_y]" min="0" max="100" value="{{ $cards[$row]['focal_y'] ?? 50 }}"></label>
                 </div>
             </details>
         @endfor
         @if(auth()->user()->allowed('content.write'))<a href="{{ route('admin.media') }}">Buka pustaka media</a>@endif
+    </section>
+    <section class="panel mb-4">
+        <h2>Produk penutup</h2>
+        <p>Pilih produk sesuai urutan tampil. Jika semua pilihan kosong, beranda memilih produk dari tautan katalog pada banner kampanye. Visibilitas blok bisa diatur di bagian atas.</p>
+        <div class="form-grid">
+            <label>Judul Indonesia<input class="form-control" name="campaign_products[title_id]" maxlength="100" value="{{ $closing['title_id'] ?? '' }}" placeholder="Pilihan dari koleksi ini"></label>
+            <label>Judul Inggris<input class="form-control" name="campaign_products[title_en]" maxlength="100" value="{{ $closing['title_en'] ?? '' }}" placeholder="From this collection"></label>
+            <label class="span-2">Tautan Lihat semua (opsional)<input class="form-control" name="campaign_products[url]" maxlength="400" value="{{ $closing['url'] ?? '' }}" placeholder="/koleksi"></label>
+            @for($slot = 0; $slot < \App\Support\HomeLayout::CLOSING_PRODUCT_LIMIT; $slot++)
+                <label>Produk {{ $slot + 1 }}
+                    <select class="form-select" name="campaign_products[products][{{ $slot }}]">
+                        <option value="">Kosong</option>
+                        @foreach($closingProducts as $product)
+                            <option value="{{ $product->id }}" @selected((int) ($closing['products'][$slot] ?? 0) === $product->id)>{{ $product->name }}{{ $product->active ? '' : ' · Arsip' }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            @endfor
+        </div>
     </section>
     <button class="btn btn-dark">Simpan draft</button>
 </form>

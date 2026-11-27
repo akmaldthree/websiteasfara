@@ -3,9 +3,9 @@
 @php
     $shop = array_replace($shop, $homeOverrides ?? []);
     $curated = function (string $key, $fallback) use ($shop, $collections) {
-        $slugs = collect(preg_split('/[,\r\n]+/', $shop[$key] ?? ''))->map(fn ($slug) => trim($slug))->filter();
+        $slugs = collect(preg_split('/[\s,]+/', $shop[$key] ?? ''))->filter()->unique();
         if ($slugs->isEmpty()) return collect($fallback)->take(8);
-        return $slugs->map(fn ($slug) => $collections->firstWhere('slug', $slug))->filter()->values()->take(8);
+        return $slugs->map(fn ($slug) => $collections->firstWhere('slug', $slug))->filter()->values()->take(\App\Support\HomeLayout::NEW_IN_LIMIT);
     };
     $newCollections = $curated('home_new_slugs', $collections);
     $categorySlugs = collect(preg_split('/[,\r\n]+/', $shop['home_category_slugs'] ?? ''))->map(fn($slug)=>trim($slug))->filter();
@@ -44,9 +44,7 @@
     if ($homeVisualCards->isNotEmpty()) {
         $categoryTiles = $homeVisualCards;
     }
-    $defaultOrder = collect(array_keys(config('storefront.home_sections')));
-    $homeOrder = collect($shop['home_section_order'] ?? [])->intersect($defaultOrder)->unique();
-    $homeOrder = $homeOrder->concat($defaultOrder->diff($homeOrder))->diff($shop['home_section_hidden'] ?? [])->values();
+    $homeOrder = collect(\App\Support\HomeLayout::order($shop['home_section_order'] ?? null))->diff($shop['home_section_hidden'] ?? [])->values();
     $heroVideoUrl = fn ($path) => match ($path) {
         'demo/hero-desktop.webm' => route('media.demo-hero', ['format' => 'desktop', 'v' => filemtime(database_path('seeders/assets/demo/hero-desktop.webm'))]),
         'demo/hero-mobile.webm' => route('media.demo-hero', ['format' => 'mobile', 'v' => filemtime(database_path('seeders/assets/demo/hero-mobile.webm'))]),
@@ -116,7 +114,7 @@
 @endpush
 @php($heroAutoplayMs=(int)round((float)($shop['hero_autoplay_seconds'] ?? 5)*1000))
 @section('home-hero')
-<section @class(['commerce-hero', 'hero-content-video' => $videoHero, 'hero-content-campaign' => $heroCampaign, $heroContentClass => $heroContentClass !== '']) data-hero-slider @if($heroSlides->count()>1) aria-roledescription="carousel" @endif>
+<section @class(['commerce-hero', 'hero-content-video' => $videoHero, 'hero-content-campaign' => $heroCampaign, 'hero-height-fixed' => ($shop['hero_height_mode'] ?? 'auto') === 'fixed', $heroContentClass => $heroContentClass !== '']) data-hero-slider @if($heroSlides->count()>1) aria-roledescription="carousel" @endif>
     @foreach($heroSlides as $slide)
         <article class="commerce-hero-slide hero-align-{{ $slide['align'] }} hero-tone-{{ $slide['tone'] }} {{ $loop->first?'is-active':'' }}" data-hero-slide data-duration="{{ $loop->first ? $heroAutoplayMs : (int) $slide['duration'] }}" aria-hidden="{{ $loop->first?'false':'true' }}">
             @if($slide['video'])
@@ -163,16 +161,18 @@
             </div>
         </a>
     </section>
-    @if($bannerProducts->isNotEmpty())
-        <section class="home-product-section container-xxl" id="home-campaign-products" aria-labelledby="home-campaign-products-title">
-            <h2 id="home-campaign-products-title" class="home-product-title">{{ __('store.campaign_products') }}</h2>
-            @include('partials.home-product-carousel', [
-                'items' => $bannerProducts,
-                'cardContext' => 'home-campaign-',
-                'viewAllUrl' => $campaign->link_url ?: route('catalog'),
-            ])
-        </section>
-    @endif
+    @endsection
+@endif
+@if($bannerProducts->isNotEmpty() && (!empty($closing['products']) || ($campaign && ($heroCampaign || $videoHero))))
+    @section('home-campaign_products')
+    <section class="home-product-section container-xxl" id="home-campaign-products" aria-labelledby="home-campaign-products-title">
+        <h2 id="home-campaign-products-title" class="home-product-title">{{ ($closing['title_'.app()->getLocale()] ?? null) ?: __('store.campaign_products') }}</h2>
+        @include('partials.home-product-carousel', [
+            'items' => $bannerProducts,
+            'cardContext' => 'home-campaign-',
+            'viewAllUrl' => ($closing['url'] ?? null) ?: (empty($closing['products']) ? $campaign?->link_url : null) ?: route('catalog'),
+        ])
+    </section>
     @endsection
 @endif
 @if(($shop['home_categories_enabled'] ?? true) && $categoryTiles->isNotEmpty())

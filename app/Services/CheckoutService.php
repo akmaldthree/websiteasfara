@@ -165,9 +165,8 @@ class CheckoutService
             $this->check($coupons->count() === $codes->count(), 'Satu atau lebih voucher tidak ditemukan.');
             $this->check($coupons->count() <= 1 || $coupons->every->combinable, 'Voucher ini tidak dapat digabungkan.');
             foreach ($coupons as $coupon) {
-                $this->check($coupon->active && ($couponEvaluationAt ?? now())->between($coupon->starts_at, $coupon->ends_at) && $coupon->used < $coupon->usage_limit, "Voucher {$coupon->code} tidak aktif atau kuotanya habis.");
-                $segmentAllowed = $coupon->segment === 'all' || ($coupon->segment === 'guest' && ! $customer) || ($coupon->segment === 'customer' && $customer && ! $group) || ($coupon->segment === 'business' && $group);
-                $this->check($segmentAllowed && (! $coupon->price_group_id || $group?->id === $coupon->price_group_id), "Voucher {$coupon->code} tidak berlaku untuk akun ini.");
+                $this->check($coupon->isAvailableAt($couponEvaluationAt ?? now()), "Voucher {$coupon->code} tidak aktif atau kuotanya habis.");
+                $this->check($coupon->appliesToAudience($customer !== null, $group?->id), "Voucher {$coupon->code} tidak berlaku untuk akun ini.");
                 if ($coupon->per_user_limit) {
                     $this->check($customer !== null, "Masuk ke akun untuk menggunakan voucher {$coupon->code}.");
                     $this->check(CouponRedemption::where('coupon_id', $coupon->id)->where('user_id', $customer->id)->count() < $coupon->per_user_limit, "Batas pemakaian voucher {$coupon->code} sudah tercapai.");

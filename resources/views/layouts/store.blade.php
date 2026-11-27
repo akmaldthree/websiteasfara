@@ -56,32 +56,35 @@
             @if(!empty($shop['logo']))<img src="{{ asset('storage/'.$shop['logo']) }}" alt="{{ $shop['brand_name'] ?? 'Asfara' }}" width="240" height="80" decoding="async">
             @else<strong>{{ strtoupper($shop['brand_name'] ?? 'Asfara') }}</strong><span>{{ $shop['brand_subtitle'] ?? 'MODEST WEAR' }}</span>@endif
         </a>
+        @php($navigation = \App\Support\StorefrontNavigation::storefront($shop))
         <nav class="desktop-nav" aria-label="Utama">
-            <a href="{{ route('catalog',['sort'=>'newest']) }}">New In</a>
-            <a href="{{ route('catalog') }}" class="catalog-nav-link" aria-haspopup="true" aria-expanded="false" aria-controls="catalog-mega-menu" @if(request()->routeIs('catalog','product')) aria-current="page" @endif>Shop</a>
-            @if($campaignMenu->isNotEmpty())
-                <details class="campaign-nav">
-                    <summary aria-controls="campaign-desktop-menu" aria-expanded="false">Collections</summary>
-                    <div id="campaign-desktop-menu">
-                        @foreach(config('storefront.campaign_groups') as $group => $label)
-                            @php($menuEntries = $campaignMenu->get($group, collect())->take(8))
-                            @continue($menuEntries->isEmpty())
-                            <section class="campaign-menu-group" aria-label="{{ $label }}">
-                                <strong>{{ $label }}</strong>
-                                @foreach($menuEntries as $campaignLink)
-                                    <a href="{{ route('content.show', ['campaign', $campaignLink->slug]) }}">{{ $campaignLink->title }}</a>
-                                @endforeach
-                            </section>
-                        @endforeach
-                        <a href="{{ route('content.index', 'campaign') }}">{{ $storeCopy['view_all'] }}</a>
-                    </div>
-                </details>
-            @else
-                <a href="{{ route('catalog',['sort'=>'featured']) }}">Collections</a>
-            @endif
-            @foreach($cmsMenus->whereIn('placement',['both','desktop'])->take(1) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
-            <a href="{{ route('store.locations') }}">Find Us</a>
-            <a href="{{ route('catalog',['sale'=>1]) }}">Special Offer</a>
+            @foreach($navigation['desktop'] as $link)
+                @if($link['kind'] === 'shop')
+                    <a href="{{ $link['href'] }}" class="catalog-nav-link" aria-haspopup="true" aria-expanded="false" aria-controls="catalog-mega-menu" @if(request()->routeIs('catalog', 'product')) aria-current="page" @endif>{{ $link['label'] }}</a>
+                @elseif($link['kind'] === 'collections' && $campaignMenu->isNotEmpty())
+                    <details class="campaign-nav">
+                        <summary aria-controls="campaign-desktop-menu" aria-expanded="false">{{ $link['label'] }}</summary>
+                        <div id="campaign-desktop-menu">
+                            @include('partials.campaign-navigation')
+                            <a href="{{ route('content.index', 'campaign') }}">{{ $storeCopy['view_all'] }}</a>
+                        </div>
+                    </details>
+                @elseif($link['kind'] === 'cms')
+                    @php($extra = $cmsMenus->whereIn('placement', ['both', 'desktop']))
+                    @if($extra->count() === 1)
+                        <a href="{{ $extra->first()->link_url ?: '#' }}">{{ $extra->first()->title }}</a>
+                    @elseif($extra->isNotEmpty())
+                        <details class="extra-navigation">
+                            <summary>{{ $link['label'] }}</summary>
+                            <div>
+                                @foreach($extra as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
+                            </div>
+                        </details>
+                    @endif
+                @else
+                    <a href="{{ $link['href'] }}">{{ $link['label'] }}</a>
+                @endif
+            @endforeach
         </nav>
         <div class="header-actions">
             <details class="language-picker"><summary>{{ app()->getLocale()==='id'?'INDONESIA':'ENGLISH' }}</summary><div><a href="{{ route('locale','id') }}" @class(['is-active'=>app()->getLocale()==='id'])><span>Indonesia</span><small>ID</small></a><a href="{{ route('locale','en') }}" @class(['is-active'=>app()->getLocale()==='en'])><span>English</span><small>EN</small></a></div></details>
@@ -97,31 +100,32 @@
     <nav class="collapse mobile-nav" id="mobile-nav" aria-label="Navigasi mobile">
         <header><a class="wordmark" href="{{ route('home') }}"><strong>{{ strtoupper($shop['brand_name'] ?? 'Asfara') }}</strong><span>{{ $shop['brand_subtitle'] ?? 'MODEST WEAR' }}</span></a><button type="button" class="mobile-nav-close" data-bs-toggle="collapse" data-bs-target="#mobile-nav" aria-label="Tutup menu">×</button></header>
         <div class="mobile-nav-links">
-            <a href="{{ route('catalog',['sort'=>'newest']) }}">NEW IN</a>
-            <details name="mobile-discovery" @if(request()->routeIs('catalog', 'product')) open @endif><summary>Shop</summary><div class="mobile-discovery-links">
-                <a href="{{ route('catalog') }}">Semua produk</a>
-                @if($shop['header_categories_enabled'] ?? true)
-                    @foreach($categories as $category)<a href="{{ route('catalog',['category'=>$category->slug]) }}" @if(request()->routeIs('catalog') && request('category') === $category->slug) aria-current="page" @endif>{{ $category->name }}</a>@endforeach
+            @foreach($navigation['mobile'] as $link)
+                @if($link['kind'] === 'shop')
+                    <details name="mobile-discovery" @if(request()->routeIs('catalog', 'product')) open @endif>
+                        <summary>{{ $link['label'] }}</summary>
+                        <div class="mobile-discovery-links">
+                            <a href="{{ $link['href'] }}">{{ __('store.all_collections') }}</a>
+                            @if($shop['header_categories_enabled'] ?? true)
+                                @foreach($categories as $category)<a href="{{ route('catalog', ['category' => $category->slug]) }}" @if(request()->routeIs('catalog') && request('category') === $category->slug) aria-current="page" @endif>{{ $category->name }}</a>@endforeach
+                            @endif
+                            @foreach($curatedLinks->get('fit', collect()) as $curated)<a href="{{ $curated->url }}">{{ $curated->title }}</a>@endforeach
+                        </div>
+                    </details>
+                @elseif($link['kind'] === 'collections')
+                    <details name="mobile-discovery" @if(request()->routeIs('content.*') && request()->route('type') === 'campaign') open @endif>
+                        <summary>{{ $link['label'] }}</summary>
+                        <div class="mobile-discovery-links">
+                            @include('partials.campaign-navigation')
+                            <a href="{{ route('content.index', 'campaign') }}">{{ $storeCopy['view_all'] }}</a>
+                        </div>
+                    </details>
+                @elseif($link['kind'] === 'cms')
+                    @foreach($cmsMenus->whereIn('placement', ['both', 'mobile']) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
+                @else
+                    <a href="{{ $link['href'] }}">{{ $link['kind'] === 'link' ? $link['label'] : mb_strtoupper($link['label']) }}</a>
                 @endif
-                @foreach($curatedLinks->get('fit',collect()) as $link)<a href="{{ $link->url }}">{{ $link->title }}</a>@endforeach
-            </div></details>
-            <details name="mobile-discovery" @if(request()->routeIs('content.*') && request()->route('type') === 'campaign') open @endif><summary>Collections</summary><div class="mobile-discovery-links">
-                @foreach(config('storefront.campaign_groups') as $group => $label)
-                    @php($menuEntries = $campaignMenu->get($group, collect())->take(8))
-                    @continue($menuEntries->isEmpty())
-                    <section class="campaign-menu-group" aria-label="{{ $label }}">
-                        <strong>{{ $label }}</strong>
-                        @foreach($menuEntries as $campaignLink)
-                            <a href="{{ route('content.show', ['campaign', $campaignLink->slug]) }}">{{ $campaignLink->title }}</a>
-                        @endforeach
-                    </section>
-                @endforeach
-                <a href="{{ route('content.index', 'campaign') }}">Semua kampanye</a>
-            </div></details>
-            <a href="{{ route('catalog',['sale'=>1]) }}">SPECIAL OFFER</a>
-            @foreach($cmsMenus->whereIn('placement',['both','mobile']) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
-            <a href="{{ route('store.locations') }}">FIND US</a>
-            @if($shop['header_tracking_enabled'] ?? true)<a href="{{ route('track') }}">{{ strtoupper(__('store.track')) }}</a>@endif
+            @endforeach
         </div>
         <footer><a href="{{ route('account') }}">ACCOUNT</a><button type="button" id="mobile-open-search">SEARCH</button><div class="mobile-language"><a href="{{ route('locale','id') }}">INDONESIA</a><a href="{{ route('locale','en') }}">ENGLISH</a></div></footer>
     </nav>
@@ -178,53 +182,65 @@
 @php($welcomeStartsAt=!empty($shop['welcome_voucher_start'])?\Illuminate\Support\Carbon::parse($shop['welcome_voucher_start']):null)
 @php($welcomeEndsAt=!empty($shop['welcome_voucher_end'])?\Illuminate\Support\Carbon::parse($shop['welcome_voucher_end']):null)
 @php($welcomePage=request()->routeIs('home') || (request()->routeIs('content.show') && request()->route('type') === 'campaign' && request()->route('slug') === $popupCampaign?->slug))
-@php($welcomeActive=($shop['welcome_voucher_enabled'] ?? false) && $popupCampaign && $welcomePage && (!$welcomeStartsAt || $welcomeStartsAt->lte(now())) && (!$welcomeEndsAt || $welcomeEndsAt->gte(now())))
-@if($welcomeActive)<dialog class="welcome-voucher {{ !empty($shop['welcome_voucher_image'])?'has-image':'' }}" id="welcome-voucher" aria-labelledby="welcome-voucher-title" data-delay="{{ (int)($shop['welcome_voucher_delay_seconds'] ?? 1) }}" data-frequency-days="{{ (int)($shop['welcome_voucher_frequency_days'] ?? 30) }}">@if(!empty($shop['welcome_voucher_image']))<div class="welcome-voucher-media"><img src="{{ asset('storage/'.$shop['welcome_voucher_image']) }}" alt="" width="800" height="1000" loading="lazy" decoding="async"></div>@endif<div class="welcome-voucher-content"><button type="button" class="drawer-close" data-close-welcome aria-label="Tutup">×</button><span class="eyebrow">{{ $storeCopy['welcome_eyebrow'] }}</span><h2 id="welcome-voucher-title">{{ ($shop['welcome_voucher_title'] ?? '') ?: 'Hadiah untuk pembelian pertama' }}</h2><p>{{ $shop['welcome_voucher_text'] ?? '' }}</p>@if(!empty($shop['welcome_voucher_code']))<button type="button" class="voucher-code" data-copy-voucher="{{ $shop['welcome_voucher_code'] }}"><span>{{ strtoupper($shop['welcome_voucher_code']) }}</span><small>{{ $storeCopy['welcome_copy'] }}</small></button>@endif<a class="btn btn-dark" href="{{ ($shop['welcome_voucher_cta_url'] ?? '') ?: route('content.show', ['campaign', $popupCampaign->slug]) }}">{{ strtoupper(($shop['welcome_voucher_cta_label'] ?? '') ?: $storeCopy['welcome_cta']) }}</a></div></dialog>@endif
+@php($welcomeActive=$popupCoupon && $welcomePage && (!$welcomeStartsAt || $welcomeStartsAt->lte(now())) && (!$welcomeEndsAt || $welcomeEndsAt->gte(now())))
+@if($welcomeActive)
+    <dialog @class(['welcome-voucher', 'has-image' => !empty($shop['welcome_voucher_image'])]) id="welcome-voucher" aria-labelledby="welcome-voucher-title" data-delay="{{ (int) ($shop['welcome_voucher_delay_seconds'] ?? 1) }}" data-frequency-days="{{ (int) ($shop['welcome_voucher_frequency_days'] ?? 30) }}">
+        @if(!empty($shop['welcome_voucher_image']))
+            <div class="welcome-voucher-media"><img src="{{ asset('storage/'.$shop['welcome_voucher_image']) }}" alt="" width="800" height="1000" loading="lazy" decoding="async"></div>
+        @endif
+        <div class="welcome-voucher-content">
+            <button type="button" class="drawer-close" data-close-welcome aria-label="Tutup">×</button>
+            <span class="eyebrow">{{ $storeCopy['welcome_eyebrow'] }}</span>
+            <h2 id="welcome-voucher-title">{{ ($shop['welcome_voucher_title'] ?? '') ?: 'Hadiah untuk pembelian pertama' }}</h2>
+            <p>{{ $shop['welcome_voucher_text'] ?? '' }}</p>
+            <button type="button" class="voucher-code" data-copy-voucher="{{ $popupCoupon->code }}"><span>{{ $popupCoupon->code }}</span><small>{{ $storeCopy['welcome_copy'] }}</small></button>
+            <a class="btn btn-dark" href="{{ ($shop['welcome_voucher_cta_url'] ?? '') ?: route('content.show', ['campaign', $popupCampaign->slug]) }}">{{ strtoupper(($shop['welcome_voucher_cta_label'] ?? '') ?: $storeCopy['welcome_cta']) }}</a>
+        </div>
+    </dialog>
+@endif
 @if(($shop['floating_whatsapp_enabled'] ?? true) && !empty($shop['whatsapp']))<a class="floating-whatsapp" data-floating-whatsapp href="https://wa.me/{{ $shop['whatsapp'] }}" target="_blank" rel="noopener" aria-label="Chat Asfara melalui WhatsApp"><span>{{ $storeCopy['whatsapp_floating'] }}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5A11.7 11.7 0 0 0 2.1 17.6L.5 23.5l6-1.6A11.7 11.7 0 0 0 20.5 3.5Zm-8.3 17a9.6 9.6 0 0 1-4.9-1.3l-.4-.2-3.5.9.9-3.4-.2-.4a9.6 9.6 0 1 1 8.1 4.4Zm5.3-7.2c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.2l-.9 1.1c-.2.2-.4.2-.7.1-1.8-.9-3-1.6-4.2-3.6-.3-.5.3-.5.9-1.7.1-.2 0-.4 0-.6L9 5.9c-.2-.5-.5-.4-.7-.4h-.6c-.2 0-.6.1-.9.4-.3.4-1.2 1.2-1.2 2.9s1.2 3.3 1.4 3.6c.2.2 2.4 3.7 5.9 5.2 2.2.9 3.1 1 4.2.8.7-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.6-.3Z"/></svg></a>@endif
-@php($footerPages = ($shop['footer_pages_enabled'] ?? true) ? \App\Models\Page::published()->orderBy('title')->get() : collect())
 <footer class="site-footer">
     <div class="container-xxl">
         <div class="row footer-columns">
             <div class="col-lg-3">
                 <a class="wordmark" href="{{ route('home') }}"><strong>{{ strtoupper($shop['brand_name'] ?? 'Asfara') }}</strong><span>{{ $shop['brand_subtitle'] ?? 'MODEST WEAR' }}</span></a>
+                @if(!empty($shop['footer_text']))<p class="footer-brand-description">{{ $shop['footer_text'] }}</p>@endif
                 <ul class="footer-link-list">
                     @if(!empty($shop['contact_email']))<li><a href="mailto:{{ $shop['contact_email'] }}">{{ $shop['contact_email'] }}</a></li>@endif
-                    @if($footerPages->contains('slug', 'tentang'))<li><a href="{{ route('page', 'tentang') }}">Tentang Asfara</a></li>@endif
-                </ul>
-            </div>
-            <details class="col-lg-2 footer-group" open>
-                <summary>{{ __('store.shop') }}</summary>
-                <ul class="footer-link-list">
-                    <li><a href="{{ route('catalog') }}">{{ __('store.all_collections') }}</a></li>
-                    <li><a href="{{ route('content.index', 'campaign') }}">Campaign</a></li>
-                    <li><a href="{{ route('content.index', 'lookbook') }}">Lookbook</a></li>
-                    <li><a href="{{ route('catalog', ['sale' => 1]) }}">Special Offer</a></li>
-                </ul>
-            </details>
-            <details class="col-lg-2 footer-group" open>
-                <summary>{{ __('store.help') }}</summary>
-                <ul class="footer-link-list">
-                    <li><a href="{{ route('account') }}">{{ __('store.account') }}</a></li>
-                    @if($shop['header_tracking_enabled'] ?? true)<li><a href="{{ route('track') }}">{{ __('store.track') }}</a></li>@endif
-                    @foreach($footerPages->where('slug', '!=', 'tentang') as $page)
-                        <li><a href="{{ route('page', $page->slug) }}">{{ $page->title }}</a></li>
+                    @foreach($navigation['footer']->get('brand', collect()) as $link)
+                        <li><a href="{{ $link['href'] }}">{{ $link['label'] }}</a></li>
                     @endforeach
                 </ul>
-            </details>
-            <details class="col-lg-2 footer-group" id="store-locations" open>
-                <summary>{{ __('store.stores') }}</summary>
-                @forelse($storeLocations->take(2) as $location)
-                    <div class="footer-store">
-                        <strong>{{ $location->name }}</strong>
-                        <small>{{ $location->address }}@if($location->city) · {{ $location->city }}@endif</small>
-                        @if($location->map_url)<a href="{{ $location->map_url }}" target="_blank" rel="noopener">MAPS ↗</a>@endif
-                    </div>
-                @empty
-                    <small>{{ $shop['store_location'] ?? '' }}</small>
-                @endforelse
-                <a class="footer-locations-link" href="{{ route('store.locations') }}">Lihat lokasi toko</a>
-            </details>
-            <div class="col-lg-3 footer-connect"><h2>{{ __('store.connect') }}</h2><p class="small">{{ $storeCopy['newsletter_text'] }}</p><form class="footer-newsletter" method="post" action="{{ route('newsletter.store') }}">@csrf<label class="visually-hidden" for="newsletter-email">Email</label><div><input id="newsletter-email" type="email" name="email" placeholder="{{ __('store.email') }}" required><button aria-label="Daftar newsletter">→</button></div><label><input type="checkbox" name="consent" value="1" required> {{ __('store.newsletter_consent') }}</label></form>@if($shop['footer_social_enabled'] ?? true)<div class="footer-social">@if(!empty($shop['whatsapp']))<a href="https://wa.me/{{ $shop['whatsapp'] }}" target="_blank" rel="noopener"><i>WA</i><span>WhatsApp</span></a>@endif @foreach(['instagram_url'=>['IG','Instagram'],'tiktok_url'=>['TT','TikTok'],'facebook_url'=>['FB','Facebook']] as $key=>$social)@if(!empty($shop[$key]))<a href="{{ $shop[$key] }}" target="_blank" rel="noopener"><i>{{ $social[0] }}</i><span>{{ $social[1] }}</span></a>@endif @endforeach</div>@endif<details class="footer-language language-picker"><summary>{{ app()->getLocale()==='id'?'Indonesia':'English' }}</summary><div><a href="{{ route('locale','id') }}" @class(['is-active'=>app()->getLocale()==='id'])><span>Indonesia</span><small>ID</small></a><a href="{{ route('locale','en') }}" @class(['is-active'=>app()->getLocale()==='en'])><span>English</span><small>EN</small></a></div></details></div>
+            </div>
+            @foreach($navigation['footer_order'] as $column)
+                @if($column === 'connect')
+                    @include('partials.footer-connect', ['newsletterEnabled' => $navigation['newsletter_enabled']])
+                @else
+                    @php($links = $navigation['footer']->get($column, collect()))
+                    @continue($column !== 'stores' && $links->isEmpty())
+                    <details class="col-lg-2 footer-group" @if($column === 'stores') id="store-locations" @endif open>
+                        <summary>{{ __('store.'.$column) }}</summary>
+                        @if($column === 'stores')
+                            @forelse($storeLocations->take(2) as $location)
+                                <div class="footer-store">
+                                    <strong>{{ $location->name }}</strong>
+                                    <small>{{ $location->address }}@if($location->city) · {{ $location->city }}@endif</small>
+                                    @if($location->map_url)<a href="{{ $location->map_url }}" target="_blank" rel="noopener">MAPS ↗</a>@endif
+                                </div>
+                            @empty
+                                <small>{{ $shop['store_location'] ?? '' }}</small>
+                            @endforelse
+                        @endif
+                        @if($links->isNotEmpty())
+                            <ul class="footer-link-list">
+                                @foreach($links as $link)
+                                    <li><a href="{{ $link['href'] }}">{{ $link['label'] }}</a></li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </details>
+                @endif
+            @endforeach
         </div>
         <div class="footer-bottom">© {{ date('Y') }} {{ $shop['brand_name'] ?? 'Asfara' }} {{ $shop['footer_copyright'] ?? '' }} <span>{{ $storeCopy['footer_trust'] }}</span></div>
     </div>
@@ -791,7 +807,7 @@ document.querySelectorAll('[data-drag-scroll]').forEach(track => {
     let dragged = false;
     track.addEventListener('pointerdown', event => {
         dragged = false;
-        if (event.pointerType !== 'mouse' || event.button !== 0 || event.target.closest('button, input, select, textarea')) return;
+        if (track.scrollWidth <= track.clientWidth || event.pointerType !== 'mouse' || event.button !== 0 || event.target.closest('button, input, select, textarea')) return;
         gesture = {id: event.pointerId, x: event.clientX, left: track.scrollLeft};
     });
     track.addEventListener('dragstart', event => event.preventDefault());
@@ -825,6 +841,7 @@ document.querySelectorAll('.reference-carousel').forEach(shell => {
     const previous = shell.querySelector('[data-carousel-prev]');
     const next = shell.querySelector('[data-carousel-next]');
     const sync = () => {
+        track.classList.toggle('is-scrollable', track.scrollWidth > track.clientWidth + 4);
         previous?.toggleAttribute('disabled', track.scrollLeft < 4);
         next?.toggleAttribute('disabled', track.scrollLeft >= track.scrollWidth - track.clientWidth - 4);
     };

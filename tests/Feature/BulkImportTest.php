@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\ContentRevision;
+use App\Models\Page;
+use App\Models\Role;
 use App\Models\Series;
 use App\Models\Setting;
 use App\Models\ShippingRate;
@@ -132,5 +135,41 @@ class BulkImportTest extends TestCase
         $this->post(route('admin.import.preview'), ['type' => 'loyalty-tiers', 'mode' => 'upsert', 'file' => UploadedFile::fake()->createWithContent('tiers.csv', $tiers)])->assertOk();
         $this->post(route('admin.import.commit'))->assertRedirect();
         $this->assertSame('Platinum', collect(Setting::get('loyalty_tiers'))->firstWhere('minimum', 5000)['name']);
+    }
+
+    public function test_page_import_uses_editorial_approval_and_preserves_published_versions(): void
+    {
+        Role::create(['name' => 'editor', 'permissions' => ['content.write']]);
+        $editor = User::factory()->create(['role' => 'editor']);
+        $page = Page::create(['title' => 'Panduan resmi', 'slug' => 'panduan-import', 'body' => 'Isi versi publik', 'editorial_status' => 'approved', 'active' => true]);
+        $columns = app(BulkImportService::class)->definitions()['pages']['columns'];
+        $row = [
+            'title' => 'Panduan revisi', 'slug' => $page->slug, 'body' => 'Isi revisi editor',
+            'template' => 'standard', 'editorial_status' => 'review', 'active' => 1,
+        ];
+        $file = fn (array $values) => UploadedFile::fake()->createWithContent('pages.csv',
+            implode(',', $columns)."\n".implode(',', array_map(fn ($column) => $values[$column] ?? '', $columns))."\n");
+
+        $this->actingAs($editor)->post(route('admin.import.preview'), ['type' => 'pages', 'mode' => 'upsert', 'file' => $file($row)])
+            ->assertOk()->assertSee('Valid');
+        $this->post(route('admin.import.commit'))->assertRedirect()->assertSessionHasNoErrors();
+        $this->get(route('page', $page->slug))->assertOk()->assertSee('Isi versi publik')->assertDontSee('Isi revisi editor');
+        $this->get(route('admin.page.preview', $page))->assertOk()->assertSee('Isi revisi editor');
+        $this->assertSame('review', $page->fresh()->editorial_draft['editorial_status']);
+        $this->assertSame('Isi versi publik', ContentRevision::where('content_type', 'pages')->where('content_id', $page->id)->sole()->snapshot['body']);
+
+        $approval = array_replace($row, ['editorial_status' => 'approved']);
+        $this->post(route('admin.import.preview'), ['type' => 'pages', 'mode' => 'upsert', 'file' => $file($approval)])
+            ->assertOk()->assertSee('tidak dapat menyetujuinya');
+        $this->post(route('admin.import.commit'))->assertSessionHasErrors('file');
+        $this->assertSame('Isi versi publik', $page->fresh()->body);
+
+        $this->actingAs($this->admin)->post(route('admin.import.preview'), ['type' => 'pages', 'mode' => 'upsert', 'file' => $file($approval)])
+            ->assertOk()->assertSee('Valid');
+        $this->post(route('admin.import.commit'))->assertRedirect()->assertSessionHasNoErrors();
+        $this->get(route('page', $page->slug))->assertOk()->assertSee('Isi revisi editor');
+        $this->assertNull($page->fresh()->editorial_draft);
+        $this->assertSame($editor->id, $page->fresh()->submitted_by);
+        $this->assertSame($this->admin->id, $page->fresh()->reviewed_by);
     }
 }

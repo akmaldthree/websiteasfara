@@ -33,6 +33,8 @@ class BulkImportService
 {
     public const MAXIMUM_ROWS = 1000;
 
+    public function __construct(private EditorialWorkflow $editorial) {}
+
     /** @return array<string, array<string, mixed>> */
     public function definitions(): array
     {
@@ -103,12 +105,13 @@ class BulkImportService
     }
 
     /** @return array{0: array<int, array<string, mixed>>, 1: array<int, array<int, string>>} */
-    public function validateRows(string $type, array $rows, string $mode): array
+    public function validateRows(string $type, array $rows, string $mode, User $actor): array
     {
         $definition = $this->definitions()[$type];
         $clean = [];
         $errors = [];
         $seen = [];
+        $checkApproval = in_array($type, ['pages', 'content'], true) && ! $actor->allowed('content.approve');
         foreach ($rows as $index => $input) {
             $input = array_map(fn ($value) => trim((string) $value), $input);
             foreach (['sku', 'bundle_sku', 'component_sku', 'code'] as $uppercase) {
@@ -117,6 +120,9 @@ class BulkImportService
                 }
             }
             $messages = Validator::make($input, $definition['rules'])->errors()->all();
+            if ($checkApproval && ($input['editorial_status'] ?? null) === 'approved') {
+                $messages[] = EditorialWorkflow::APPROVAL_REQUIRED;
+            }
             $row = $this->transform($type, $input, $messages);
             $identity = $this->identity($definition, $row);
             if (isset($seen[$identity])) {
@@ -146,15 +152,19 @@ class BulkImportService
         return [$clean, $errors];
     }
 
-    public function commit(string $type, array $rows, string $mode, int $userId): int
+    public function commit(string $type, array $rows, string $mode, User $actor): int
     {
-        [$clean, $errors] = $this->validateRows($type, $rows, $mode);
+        [$clean, $errors] = $this->validateRows($type, $rows, $mode, $actor);
         if ($errors) {
-            throw ValidationException::withMessages(['file' => 'Data berubah. Buat pratinjau ulang.']);
+            $message = collect($errors)->flatten()->contains(EditorialWorkflow::APPROVAL_REQUIRED)
+                ? EditorialWorkflow::APPROVAL_REQUIRED
+                : 'Data berubah. Buat pratinjau ulang.';
+            throw ValidationException::withMessages(['file' => $message]);
         }
         $definition = $this->definitions()[$type];
 
-        return DB::transaction(function () use ($clean, $definition, $mode, $type, $userId) {
+        return DB::transaction(function () use ($clean, $definition, $mode, $type, $actor) {
+            $userId = $actor->id;
             foreach ($clean as $row) {
                 if ($type === 'stock-adjustments') {
                     $variant = Variant::whereKey($row['variant_id'])->lockForUpdate()->firstOrFail();
@@ -192,6 +202,11 @@ class BulkImportService
                 }
                 $oldStock = $type === 'variants' ? ($existing?->stock ?? 0) : 0;
                 $record = $existing ?: new $definition['model'];
+                if ($record instanceof ContentEntry || $record instanceof Page) {
+                    $this->editorial->save($record, $row, $actor);
+
+                    continue;
+                }
                 $record->fill($row)->save();
                 if ($type === 'variants' && ($delta = $record->stock - $oldStock)) {
                     StockMovement::create(['variant_id' => $record->id, 'user_id' => $userId, 'stock_delta' => $delta, 'reserved_delta' => 0, 'reason' => $existing ? 'Penyesuaian stok import upsert' : 'Stok awal import']);

@@ -56,7 +56,7 @@ class ImportController extends Controller
             : $this->csv($file->getRealPath(), $definition['columns'], $type === 'variants' ? self::COLUMNS : null);
         $rows = $this->defaults($type, $rows);
         $mode = $request->input('mode', 'create');
-        [, $errors] = $this->imports->validateRows($type, $rows, $mode);
+        [, $errors] = $this->imports->validateRows($type, $rows, $mode, $request->user());
         $request->session()->put('import_preview', compact('type', 'rows', 'mode'));
 
         return view('admin.import', $this->viewData($type) + ['preview' => $rows, 'rowErrors' => $errors, 'mode' => $mode]);
@@ -85,7 +85,7 @@ class ImportController extends Controller
         }
         $type = 'variants';
         $mode = $data['mode'];
-        [, $errors] = $this->imports->validateRows($type, $rows, $mode);
+        [, $errors] = $this->imports->validateRows($type, $rows, $mode, $request->user());
         $request->session()->put('import_preview', compact('type', 'rows', 'mode'));
 
         return view('admin.import', $this->viewData($type) + ['preview' => $rows, 'rowErrors' => $errors, 'mode' => $mode]);
@@ -98,7 +98,7 @@ class ImportController extends Controller
             throw ValidationException::withMessages(['file' => 'Pratinjau import tidak ditemukan.']);
         }
         $this->authorizeType($request, $preview['type']);
-        $count = $this->imports->commit($preview['type'], $preview['rows'], $preview['mode'], $request->user()->id);
+        $count = $this->imports->commit($preview['type'], $preview['rows'], $preview['mode'], $request->user());
         $request->session()->forget('import_preview');
 
         return redirect()->route('admin.import', ['type' => $preview['type']])->with('success', "Import berhasil. {$count} baris disimpan secara atomik.");

@@ -115,6 +115,8 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::post('/storefront/beranda', [Admin::class, 'saveHomeLayout'])->name('home-layout.save');
         Route::get('/storefront/beranda/preview', [Store::class, 'homePreview'])->name('home-layout.preview');
         Route::post('/storefront/beranda/terbit', [Admin::class, 'publishHomeLayout'])->name('home-layout.publish');
+        Route::get('/storefront/navigasi', [Admin::class, 'storefrontNavigation'])->name('navigation');
+        Route::post('/storefront/navigasi', [Admin::class, 'saveStorefrontNavigation'])->name('navigation.save');
     });
     Route::get('/pengaturan', [Admin::class, 'settings'])->middleware('permission:settings.write')->name('settings');
     Route::post('/pengaturan', [Admin::class, 'saveSettings'])->middleware('permission:settings.write')->name('settings.save');

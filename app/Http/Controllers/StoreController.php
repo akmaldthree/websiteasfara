@@ -24,6 +24,7 @@ use App\Services\CheckoutService;
 use App\Services\CustomProductService;
 use App\Services\OrderCommunication;
 use App\Services\PricingService;
+use App\Support\HomeLayout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -72,9 +73,18 @@ class StoreController extends Controller
         $setting = fn (string $key, mixed $fallback = null) => $homeOverrides[$key] ?? Setting::get($key, $fallback);
         $contentEntries = ContentEntry::published()->where('type', 'banner')->orderBy('sort_order')->get();
         $campaign = $contentEntries->first(fn (ContentEntry $entry) => $entry->image_url);
-        $bannerProducts = $campaign && $setting('home_collections_enabled', true) && ! in_array('campaign', (array) $setting('home_section_hidden', []), true)
-            ? $this->homeBannerProducts($campaign->link_url ?: route('catalog'))
-            : collect();
+        $closing = (array) $setting('home_campaign_products', []);
+        $closingIds = collect($closing['products'] ?? [])->unique()->take(HomeLayout::CLOSING_PRODUCT_LIMIT);
+        $bannerProducts = collect();
+        if ($setting('home_collections_enabled', true) && ! in_array('campaign_products', (array) $setting('home_section_hidden', []), true)) {
+            if ($closingIds->isNotEmpty()) {
+                $eligible = Series::published()->withStoreCard()->whereKey($closingIds->all())
+                    ->whereHas('variants', fn ($variants) => $variants->where('active', true))->get()->keyBy('id');
+                $bannerProducts = $closingIds->map(fn ($id) => $eligible->get($id))->filter();
+            } elseif ($campaign) {
+                $bannerProducts = $this->homeBannerProducts($campaign->link_url ?: route('catalog'));
+            }
+        }
         $collections = Series::published()->withStoreCard()
             ->orderByDesc('featured')->latest()->take(24)->get();
         $requested = collect(['home_category_slugs', 'home_new_slugs'])
@@ -120,7 +130,7 @@ class StoreController extends Controller
         $editorialSections = $sectionIds ? ContentEntry::published()->where('type', 'home_section')
             ->whereKey($sectionIds)->orderBy('sort_order')->get() : collect();
 
-        return view('store.home', compact('collections', 'contentEntries', 'campaign', 'bannerProducts', 'campaignEdits', 'heroCampaignId', 'homeOverrides', 'homePreview', 'homeVisualCards', 'editorialSections'));
+        return view('store.home', compact('collections', 'contentEntries', 'campaign', 'closing', 'bannerProducts', 'campaignEdits', 'heroCampaignId', 'homeOverrides', 'homePreview', 'homeVisualCards', 'editorialSections'));
     }
 
     private function homeBannerProducts(string $url): Collection
@@ -142,7 +152,7 @@ class StoreController extends Controller
         return Series::published()->withStoreCard()
             ->whereHas('variants', fn ($variants) => $variants->where('active', true))
             ->when($categorySlug !== '', fn ($query) => $query->whereRelation('category', 'slug', $categorySlug))
-            ->orderByDesc('featured')->latest('id')->take(4)->get();
+            ->orderByDesc('featured')->latest('id')->take(HomeLayout::CLOSING_PRODUCT_LIMIT)->get();
     }
 
     public function catalog(Request $r, Analytics $analytics)
@@ -339,7 +349,8 @@ class StoreController extends Controller
         $lines = $cart ? $service->lines($cart, false, $request->user(), $request->session()->get('cart_customizations', [])) : [];
         $subtotal = array_sum(array_column($lines, 'total'));
         $target = max(0, (int) Setting::get('free_shipping_threshold', 500000));
-        $recommendations = ($request->boolean('compact') ? collect() : $this->cartRecommendations($lines))->take(3)->map(fn ($series) => [
+        $showRecommendations = ! $request->boolean('compact') && Setting::get('cart_recommendations_enabled', true);
+        $recommendations = ($showRecommendations ? $this->cartRecommendations($lines) : collect())->take(3)->map(fn ($series) => [
             'name' => $series->name,
             'price' => 'Rp '.number_format((int) $series->variants_min_price, 0, ',', '.'),
             'image' => $series->image_url,

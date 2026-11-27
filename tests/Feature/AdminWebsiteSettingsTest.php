@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\ContentEntry;
+use App\Models\Page;
 use App\Models\Series;
 use App\Models\Setting;
 use App\Models\User;
@@ -23,6 +24,7 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->seed();
         $admin = User::factory()->create();
         $admin->forceFill(['role' => 'admin'])->save();
+        $publishedOrder = Setting::get('home_section_order');
         $payload = [];
         foreach (['brand_name', 'brand_subtitle', 'tagline', 'hero_eyebrow', 'hero_title', 'hero_text', 'hero_button_label', 'hero_button_url', 'benefit_1', 'benefit_2', 'benefit_3', 'story_eyebrow', 'story_title', 'story_text', 'footer_text', 'store_location', 'contact_email', 'whatsapp', 'instagram_url', 'tiktok_url', 'facebook_url', 'default_seo_title', 'default_seo_description', 'shipping_mode', 'shipping_provider', 'shipping_api_url', 'tracking_mode', 'whatsapp_mode', 'whatsapp_provider', 'whatsapp_api_url', 'payment_hours', 'cod_hours', 'cod_min', 'cod_max', 'cod_fee', 'cod_percent', 'cod_fee_max', 'loyalty_spend_per_point', 'loyalty_point_value', 'loyalty_min_redeem', 'loyalty_expiry_days', 'loyalty_bonus_name', 'loyalty_bonus_multiplier', 'loyalty_bonus_start', 'loyalty_bonus_end', 'loyalty_bonus_segment', 'loyalty_bonus_tier', 'loyalty_bonus_target_type', 'loyalty_bonus_target_id'] as $key) {
             $payload[$key] = Setting::get($key, '');
@@ -52,6 +54,8 @@ class AdminWebsiteSettingsTest extends TestCase
             'theme_container_width' => 1400,
             'theme_radius' => 12,
             'theme_header_style' => 'compact',
+            'hero_height_mode' => 'fixed',
+            'hero_height_desktop' => 520,
             'hero_content_style' => 'compact',
             'hero_autoplay_seconds' => 5.5,
             'social_proof_interval' => 30,
@@ -71,7 +75,6 @@ class AdminWebsiteSettingsTest extends TestCase
             'welcome_voucher_enabled' => '1',
             'welcome_voucher_title' => 'Hadiah Asfara',
             'welcome_voucher_text' => 'Promo khusus pelanggan baru.',
-            'welcome_voucher_code' => 'ASAFIRST',
             'welcome_voucher_cta_label' => 'Belanja pilihan',
             'welcome_voucher_cta_url' => '/koleksi?sort=newest',
             'welcome_voucher_delay_seconds' => 2,
@@ -86,12 +89,14 @@ class AdminWebsiteSettingsTest extends TestCase
         ];
         $payload['brand_name'] = 'Asfara Baru';
         $payload['hero_title'] = 'Judul dari dashboard';
+        $payload['footer_text'] = 'Deskripsi footer tersimpan';
         $payload['hero_image_mobile'] = UploadedFile::fake()->createWithContent('hero-mobile.webp', file_get_contents(database_path('seeders/assets/demo/abaya-hero-mobile.webp')));
 
         $this->actingAs($admin)->post(route('admin.settings.save'), $payload)->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('Asfara Baru', Setting::get('brand_name'));
         Storage::disk('public')->assertExists(Setting::get('hero_image_mobile'));
-        $this->get(route('home'))->assertOk()->assertSee(Setting::get('hero_image_mobile'));
+        $this->get(route('home'))->assertOk()->assertSee(Setting::get('hero_image_mobile'))
+            ->assertSee('hero-height-fixed', false)->assertSee('--hero-height:520px', false)->assertSee('Deskripsi footer tersimpan');
         $this->assertSame(['08123456'], Setting::get('cod_blocked_phones'));
         $this->assertSame(['ABC-1'], Setting::get('cod_excluded_skus'));
         $this->assertSame(['abaya'], Setting::get('cod_excluded_categories'));
@@ -108,7 +113,7 @@ class AdminWebsiteSettingsTest extends TestCase
         $this->assertSame('/koleksi?sort=newest', Setting::get('welcome_voucher_cta_url'));
         $this->assertSame(14, Setting::get('welcome_voucher_frequency_days'));
         $this->assertSame('KOLEKSI PILIHAN CMS', Setting::get('storefront_copy_id')['featured_collection']);
-        $this->assertSame(['hero', 'campaign', 'new_in', 'categories', 'collections', 'signature_banner', 'signature', 'studio_banner', 'studio', 'editorial'], Setting::get('home_section_order'));
+        $this->assertSame($publishedOrder, Setting::get('home_section_order'));
         $this->assertSame(['guest', 'customer', 'business'], Setting::get('cod_allowed_segments'));
         $this->assertEquals(['name' => 'Silver', 'minimum' => 500, 'benefit' => 'Nilai poin lebih tinggi', 'value_bonus_percent' => 5], Setting::get('loyalty_tiers')[1]);
         $this->assertNotSame('shipping-secret', Setting::get('shipping_api_token'));
@@ -128,5 +133,40 @@ class AdminWebsiteSettingsTest extends TestCase
         ]))->assertRedirect()->assertSessionHasNoErrors();
         $this->assertEquals($campaign->id, Setting::get('hero_campaign_id'));
         $this->get('/')->assertOk()->assertSee('<h1>Kurasi CMS</h1>', false);
+    }
+
+    public function test_navigation_uses_admin_order_device_visibility_and_localized_labels(): void
+    {
+        $this->seed();
+        $customer = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $page = Page::create(['title' => 'Panduan asli', 'slug' => 'panduan-cms', 'body' => 'Panduan Asfara', 'editorial_status' => 'approved', 'active' => true]);
+        $data = [
+            'header' => [
+                ['kind' => 'link', 'placement' => 'mobile', 'url' => '/koleksi', 'label_id' => 'Khusus HP', 'label_en' => 'Mobile shortcut', 'enabled' => 1],
+                ['kind' => 'shop', 'placement' => 'both', 'label_id' => 'Pilih Abaya', 'label_en' => 'Shop Abaya', 'enabled' => 1],
+                ['kind' => 'link', 'placement' => 'desktop', 'url' => '/lokasi-toko', 'label_id' => 'Khusus Desktop', 'enabled' => 1],
+                ['kind' => 'link', 'placement' => 'both', 'url' => '/koleksi', 'label_id' => 'Menu tersembunyi', 'enabled' => 0],
+            ],
+            'footer' => [
+                ['kind' => 'page', 'group' => 'shop', 'page_id' => $page->id, 'label_id' => 'Panduan pesanan', 'label_en' => 'Order guide', 'enabled' => 1],
+            ],
+            'footer_order' => ['connect', 'shop', 'help', 'stores'],
+            'newsletter_enabled' => 0,
+        ];
+
+        $this->actingAs($customer)->post(route('admin.navigation.save'), $data)->assertForbidden();
+        $this->actingAs($admin)->get(route('admin.navigation'))->assertOk()->assertSee('Tampilkan formulir newsletter');
+        $this->post(route('admin.navigation.save'), $data)->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->get(route('home'))->assertOk()
+            ->assertSeeInOrder(['class="desktop-nav"', 'Pilih Abaya', 'Khusus Desktop', 'class="mobile-nav-links"', 'Khusus HP'], false)
+            ->assertSeeInOrder(['class="col-lg-3 footer-connect"', 'Panduan pesanan'], false)
+            ->assertSee(route('page', $page->slug), false)
+            ->assertDontSee('Menu tersembunyi')->assertDontSee('id="newsletter-email"', false);
+        $this->withSession(['locale' => 'en'])->get(route('home'))->assertOk()
+            ->assertSee('Shop Abaya')->assertSee('Mobile shortcut')->assertSee('Order guide');
+        $page->update(['active' => false]);
+        $this->get(route('home'))->assertOk()->assertDontSee('Order guide');
     }
 }

@@ -40,9 +40,14 @@ use App\Services\Audit;
 use App\Services\CheckoutService;
 use App\Services\CommissionPayoutService;
 use App\Services\CustomProductService;
+use App\Services\EditorialWorkflow;
 use App\Services\OrderWorkflow;
 use App\Services\SystemHealthService;
+use App\Support\HomeLayout;
+use App\Support\StorefrontNavigation;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
@@ -554,7 +559,7 @@ class AdminController extends Controller
         return view('admin.form', compact('resource', 'schema', 'record', 'coverAssets'));
     }
 
-    public function save(Request $r, string $resource, ?int $id = null)
+    public function save(Request $r, EditorialWorkflow $workflow, string $resource, ?int $id = null)
     {
         $schema = $this->resource($resource);
         $record = $id ? $schema['model']::findOrFail($id) : new $schema['model'];
@@ -626,26 +631,8 @@ class AdminController extends Controller
         }
         if (in_array($resource, ['pages', 'content'], true)) {
             $data['blocks'] = $this->validatedContentBlocks($data['blocks'] ?? null, $data['type'] ?? null);
-            $status = $data['editorial_status'];
-            if ($status === 'approved' && ! $r->user()->allowed('content.approve')) {
-                throw ValidationException::withMessages(['editorial_status' => 'Akun Anda dapat menulis dan mengajukan konten, tetapi tidak dapat menyetujuinya.']);
-            }
-            if ($status === 'draft') {
-                $data += ['submitted_by' => null, 'submitted_at' => null, 'reviewed_by' => null, 'reviewed_at' => null];
-            } elseif ($status === 'review') {
-                $data += [
-                    'submitted_by' => $record->editorial_status === 'review' ? $record->submitted_by : $r->user()->id,
-                    'submitted_at' => $record->editorial_status === 'review' ? $record->submitted_at : now(),
-                    'reviewed_by' => null,
-                    'reviewed_at' => null,
-                ];
-            } else {
-                $data += [
-                    'submitted_by' => $record->submitted_by ?: $r->user()->id,
-                    'submitted_at' => $record->submitted_at ?: now(),
-                    'reviewed_by' => $r->user()->id,
-                    'reviewed_at' => now(),
-                ];
+            if ($data['editorial_status'] === 'approved' && ! $r->user()->allowed('content.approve')) {
+                throw ValidationException::withMessages(['editorial_status' => EditorialWorkflow::APPROVAL_REQUIRED]);
             }
         }
         if ($resource === 'measurement-templates') {
@@ -757,23 +744,16 @@ class AdminController extends Controller
         } else {
             unset($data['image']);
         }
-        DB::transaction(function () use ($record, $data, $resource) {
+        DB::transaction(function () use ($r, $record, $data, $resource, $workflow) {
             $editorial = in_array($resource, ['pages', 'content'], true);
             if ($editorial && $record->exists) {
                 $record->setRawAttributes($record->newQuery()->lockForUpdate()->findOrFail($record->id)->getAttributes(), true);
             }
             $before = $record->exists ? $record->getAttributes() : null;
-            if ($editorial && $before) {
-                ContentRevision::create(['content_type' => $resource, 'content_id' => $record->id, 'user_id' => auth()->id(), 'snapshot' => $before]);
-            }
-            if ($editorial && $record->active && $record->editorial_status === 'approved' && $data['editorial_status'] !== 'approved') {
-                $record->update(['editorial_draft' => array_replace($record->editorial_draft ?? [], $data)]);
+            if ($editorial) {
+                $workflow->save($record, $data, $r->user());
             } else {
-                $record->fill($data);
-                if ($editorial) {
-                    $record->editorial_draft = null;
-                }
-                $record->save();
+                $record->fill($data)->save();
             }
             Audit::record($resource.'.saved', $resource.':'.$record->id, $before, $record->toArray());
         });
@@ -1140,7 +1120,7 @@ class AdminController extends Controller
 
     public function homeLayout()
     {
-        $keys = ['home_section_order', 'home_section_hidden', 'home_visual_cards', 'home_editorial_sections'];
+        $keys = ['home_section_order', 'home_section_hidden', 'home_visual_cards', 'home_editorial_sections', 'home_campaign_products'];
         $layout = Setting::get('home_layout_draft', []) + Setting::whereIn('key', $keys)->pluck('value', 'key')->all();
 
         return view('admin.home-layout', [
@@ -1148,6 +1128,7 @@ class AdminController extends Controller
             'sections' => config('storefront.home_sections'),
             'assets' => MediaAsset::where('active', true)->orderBy('name')->get(),
             'editorialSections' => ContentEntry::where('type', 'home_section')->orderBy('sort_order')->get(['id', 'title']),
+            'closingProducts' => Series::orderBy('name')->get(['id', 'name', 'active']),
         ]);
     }
 
@@ -1167,8 +1148,13 @@ class AdminController extends Controller
             'home_visual_cards.*.focal_y' => 'nullable|integer|between:0,100',
             'home_editorial_sections' => 'nullable|array|max:6',
             'home_editorial_sections.*' => 'distinct|integer|exists:content_entries,id',
+            'campaign_products' => 'nullable|array:title_id,title_en,url,products',
+            'campaign_products.title_id' => 'nullable|string|max:100',
+            'campaign_products.title_en' => 'nullable|string|max:100',
+            'campaign_products.url' => 'nullable|string|max:400',
+            'campaign_products.products' => 'nullable|array|max:'.HomeLayout::CLOSING_PRODUCT_LIMIT,
+            'campaign_products.products.*' => 'nullable|integer|distinct|exists:series,id',
         ]);
-        $order = collect(explode(',', $data['section_order']))->intersect($allowed)->unique();
         $cards = collect($data['home_visual_cards'] ?? [])->filter(fn ($card) => collect($card)->only(['label', 'url', 'desktop_id', 'mobile_id'])->filter()->isNotEmpty());
         foreach ($cards as $index => $card) {
             if (blank($card['label'] ?? null) || blank($card['url'] ?? null) || ! $this->safeContentUrl($card['url']) || empty($card['desktop_id'])) {
@@ -1179,12 +1165,19 @@ class AdminController extends Controller
         if (ContentEntry::where('type', 'home_section')->whereIn('id', $editorial)->count() !== count($editorial)) {
             throw ValidationException::withMessages(['home_editorial_sections' => 'Pilih konten bertipe Section beranda.']);
         }
+        $closing = $data['campaign_products'] ?? [];
+        if (! empty($closing['url']) && ! $this->safeContentUrl($closing['url'])) {
+            throw ValidationException::withMessages(['campaign_products.url' => 'Isi path internal atau URL HTTPS yang valid.']);
+        }
+        $closing['products'] = collect($closing['products'] ?? [])->filter()->map(fn ($id) => (int) $id)->values()->all();
+
         $draft = [
             'revision' => (string) Str::uuid(),
-            'home_section_order' => $order->concat(collect($allowed)->diff($order))->values()->all(),
+            'home_section_order' => HomeLayout::order($data['section_order']),
             'home_section_hidden' => array_values($data['home_section_hidden'] ?? []),
             'home_visual_cards' => $cards->values()->all(),
             'home_editorial_sections' => $editorial,
+            'home_campaign_products' => $closing,
         ];
         Setting::put('home_layout_draft', $draft);
 
@@ -1212,6 +1205,67 @@ class AdminController extends Controller
         return back()->with('success', 'Tata letak beranda diterbitkan.');
     }
 
+    public function storefrontNavigation(): View
+    {
+        return view('admin.navigation', [
+            'navigation' => StorefrontNavigation::configuration(Setting::get('storefront_navigation', []), Page::published()->orderBy('title')->get()),
+            'pages' => Page::orderBy('title')->get(['id', 'title']),
+        ]);
+    }
+
+    public function saveStorefrontNavigation(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'header' => 'nullable|array|max:18',
+            'header.*' => 'array:kind,placement,label_id,label_en,url,enabled',
+            'header.*.kind' => ['required', Rule::in(array_keys(StorefrontNavigation::HEADER_TYPES))],
+            'header.*.placement' => 'required|in:both,desktop,mobile',
+            'footer' => 'nullable|array|max:64',
+            'footer.*' => 'array:kind,group,page_id,label_id,label_en,url,enabled',
+            'footer.*.kind' => ['required', Rule::in(array_keys(StorefrontNavigation::FOOTER_TYPES))],
+            'footer.*.group' => ['required', Rule::in(array_keys(StorefrontNavigation::FOOTER_GROUPS))],
+            'footer.*.page_id' => 'nullable|integer|exists:pages,id',
+            'footer_order' => 'required|array|size:4',
+            'footer_order.*' => ['required', 'distinct', Rule::in(array_keys(StorefrontNavigation::FOOTER_SECTIONS))],
+            'newsletter_enabled' => 'required|boolean',
+            ...collect(['header', 'footer'])->flatMap(fn (string $area) => [
+                $area.'.*.label_id' => 'nullable|string|max:65',
+                $area.'.*.label_en' => 'nullable|string|max:65',
+                $area.'.*.url' => 'nullable|string|max:400',
+                $area.'.*.enabled' => 'required|boolean',
+            ])->all(),
+        ]);
+
+        $header = collect($data['header'] ?? []);
+        foreach (['desktop', 'mobile'] as $device) {
+            foreach (['shop', 'collections', 'cms'] as $kind) {
+                if ($header->where('kind', $kind)->where('enabled', true)->whereIn('placement', ['both', $device])->count() > 1) {
+                    throw ValidationException::withMessages(['header' => 'Gunakan satu menu '.StorefrontNavigation::HEADER_TYPES[$kind].' untuk setiap perangkat.']);
+                }
+            }
+        }
+
+        foreach (['header', 'footer'] as $area) {
+            foreach ($data[$area] ?? [] as $index => $link) {
+                if ($link['kind'] === 'link' && (blank($link['label_id'] ?? null) || ! $this->safeContentUrl($link['url'] ?? ''))) {
+                    throw ValidationException::withMessages([$area.'.'.$index.'.url' => 'Tautan kustom memerlukan label Indonesia dan URL yang valid.']);
+                }
+                if ($link['kind'] === 'page' && empty($link['page_id'])) {
+                    throw ValidationException::withMessages([$area.'.'.$index.'.page_id' => 'Pilih halaman informasi.']);
+                }
+            }
+            $data[$area] = array_values($data[$area] ?? []);
+        }
+        $data['newsletter_enabled'] = (bool) $data['newsletter_enabled'];
+        DB::transaction(function () use ($data) {
+            $previous = Setting::get('storefront_navigation');
+            Setting::put('storefront_navigation', $data);
+            Audit::record('setting.updated', 'storefront_navigation', $previous, $data);
+        });
+
+        return back()->with('success', 'Navigasi dan footer disimpan.');
+    }
+
     public function settings()
     {
         return view('admin.settings', [
@@ -1220,6 +1274,7 @@ class AdminController extends Controller
             'heroCampaigns' => ContentEntry::published()->where('type', 'campaign')->orderBy('sort_order')->orderBy('id')
                 ->get(['id', 'title', 'slug', 'blocks'])->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty()),
             'savedHeroCampaignExists' => ContentEntry::where('type', 'campaign')->whereKey(Setting::get('hero_campaign_id'))->exists(),
+            'popupCoupons' => Coupon::orderBy('code')->get(['id', 'code', 'active', 'starts_at', 'ends_at', 'used', 'usage_limit']),
         ]);
     }
 
@@ -1257,18 +1312,18 @@ class AdminController extends Controller
             'whatsapp' => ['nullable', 'regex:/^62[0-9]{8,13}$/'], 'instagram_url' => 'nullable|url|max:500', 'tiktok_url' => 'nullable|url|max:500', 'facebook_url' => 'nullable|url|max:500',
             'default_seo_title' => 'nullable|string|max:200', 'default_seo_description' => 'nullable|string|max:300',
             'home_new_slugs' => 'nullable|string|max:2000', 'home_best_slugs' => 'nullable|string|max:2000', 'home_sale_slugs' => 'nullable|string|max:2000',
-            'announcement_lines' => 'nullable|string|max:2000', 'announcement_interval_seconds' => 'sometimes|required|numeric|between:2,20', 'welcome_voucher_title' => 'nullable|string|max:150', 'welcome_voucher_text' => 'nullable|string|max:500', 'welcome_voucher_code' => 'nullable|string|max:40',
+            'announcement_lines' => 'nullable|string|max:2000', 'announcement_interval_seconds' => 'sometimes|required|numeric|between:2,20', 'welcome_voucher_title' => 'nullable|string|max:150', 'welcome_voucher_text' => 'nullable|string|max:500',
+            'welcome_voucher_coupon_id' => 'sometimes|nullable|integer|exists:coupons,id',
             'welcome_voucher_cta_label' => 'nullable|string|max:80', 'welcome_voucher_cta_url' => 'nullable|string|max:500', 'welcome_voucher_start' => 'nullable|date', 'welcome_voucher_end' => 'nullable|date', 'welcome_voucher_delay_seconds' => 'sometimes|required|integer|between:0,60', 'welcome_voucher_frequency_days' => 'sometimes|required|integer|between:0,365',
             'welcome_voucher_campaign' => ['nullable', 'integer', Rule::exists('content_entries', 'id')->where('type', 'campaign')],
             'theme_palette_base' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_palette_surface' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_palette_structure' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_palette_accent' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_text_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'theme_sage_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_sand_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_taupe_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_gold_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_cream_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'theme_primary_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_accent_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_background_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'], 'theme_surface_color' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'theme_font' => 'required|in:poppins,classic,modern,system', 'theme_container_width' => 'required|integer|between:960,1800', 'theme_radius' => 'required|integer|between:0,32', 'theme_header_style' => 'required|in:standard,compact,centered',
-            'hero_height_desktop' => 'sometimes|required|integer|between:520,800', 'hero_autoplay_seconds' => 'sometimes|required|numeric|between:2.5,20', 'storefront_animation_speed' => 'sometimes|required|integer|between:150,1200', 'product_grid_columns' => 'sometimes|required|integer|in:3,4',
+            'hero_height_desktop' => 'sometimes|required|integer|between:520,800', 'hero_height_mode' => 'sometimes|required|in:auto,fixed', 'hero_autoplay_seconds' => 'sometimes|required|numeric|between:2.5,20', 'storefront_animation_speed' => 'sometimes|required|integer|between:150,1200', 'product_grid_columns' => 'sometimes|required|integer|in:3,4',
             'hero_content_style' => 'sometimes|required|in:editorial,compact,image_only', 'social_proof_interval' => 'sometimes|required|integer|between:10,120', 'social_proof_cities' => 'nullable|string|max:1000',
             'footer_copyright' => 'nullable|string|max:200',
             'home_featured_slug' => 'nullable|alpha_dash|max:150', 'home_category_slugs' => 'nullable|string|max:2000',
-            'home_section_order' => 'sometimes|required|string|max:500',
             'storefront_copy_id' => 'sometimes|required|array', 'storefront_copy_id.*' => 'nullable|string|max:500',
             'storefront_copy_en' => 'sometimes|required|array', 'storefront_copy_en.*' => 'nullable|string|max:500',
             'shipping_mode' => 'required|in:manual,api', 'shipping_provider' => 'required|string|max:80', 'shipping_api_url' => 'nullable|url|max:500', 'shipping_api_token_new' => 'nullable|string|max:2000',
@@ -1287,6 +1342,9 @@ class AdminController extends Controller
             'hero_campaign_id' => ['sometimes', 'nullable', 'integer', Rule::exists('content_entries', 'id')->where('type', 'campaign')],
         ];
         $data = $r->validate($rules);
+        if (array_key_exists('welcome_voucher_coupon_id', $data)) {
+            $data['welcome_voucher_coupon_id'] = (int) $data['welcome_voucher_coupon_id'];
+        }
         if (! empty($data['welcome_voucher_cta_url']) && ! $this->safeContentUrl($data['welcome_voucher_cta_url'])) {
             throw ValidationException::withMessages(['welcome_voucher_cta_url' => 'URL CTA popup harus berupa URL HTTPS atau path internal.']);
         }
@@ -1300,14 +1358,8 @@ class AdminController extends Controller
                 $data[$input] = collect($data[$input])->only($copyKeys)->map(fn ($value) => trim((string) $value))->all();
             }
         }
-        if (array_key_exists('home_section_order', $data)) {
-            $allowedSections = array_keys(config('storefront.home_sections'));
-            $requestedOrder = collect(preg_split('/[,\r\n]+/', $data['home_section_order']))->map(fn ($value) => trim($value))->filter()->unique()
-                ->diff(['featured', 'look', 'sale', 'editorial', 'story'])->values();
-            if ($requestedOrder->diff($allowedSections)->isNotEmpty()) {
-                throw ValidationException::withMessages(['home_section_order' => 'Urutan beranda berisi section yang tidak dikenal.']);
-            }
-            $data['home_section_order'] = $requestedOrder->concat(collect($allowedSections)->diff($requestedOrder))->values()->all();
+        if (count(preg_split('/[\s,]+/', $data['home_new_slugs'] ?? '', -1, PREG_SPLIT_NO_EMPTY)) > HomeLayout::NEW_IN_LIMIT) {
+            throw ValidationException::withMessages(['home_new_slugs' => 'Kurasi New In menerima maksimal '.HomeLayout::NEW_IN_LIMIT.' produk.']);
         }
         $banks = [];
         foreach (explode("\n", $data['bank_text'] ?? '') as $line) {

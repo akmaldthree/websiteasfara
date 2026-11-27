@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\ContentEntry;
+use App\Models\Coupon;
 use App\Models\CuratedLink;
 use App\Models\NewsletterSubscriber;
 use App\Models\Series;
@@ -330,9 +331,15 @@ class StorefrontEditorialTest extends TestCase
         $this->get(route('home'))->assertOk()->assertDontSee('id="welcome-voucher"', false);
         $campaign = ContentEntry::create(['type' => 'campaign', 'title' => 'Promo Asfara', 'slug' => 'promo-asfara', 'editorial_status' => 'approved', 'active' => true]);
         Setting::put('welcome_voucher_campaign', $campaign->id);
+        $this->get(route('home'))->assertOk()->assertDontSee('id="welcome-voucher"', false);
+        $coupon = Coupon::create(['code' => 'WELCOME10', 'active' => true, 'type' => 'percent', 'value' => 10, 'usage_limit' => 2,
+            'starts_at' => now()->subDay(), 'ends_at' => now()->addDay()]);
+        Setting::put('campaign_coupon_'.$campaign->id, $coupon->id);
 
         $this->get(route('home'))->assertOk()
             ->assertSee('class="welcome-voucher has-image"', false)
+            ->assertSee('data-copy-voucher="WELCOME10"', false)
+            ->assertDontSee('ASAFIRST')
             ->assertSee('data-delay="3"', false)
             ->assertSee('data-frequency-days="7"', false)
             ->assertSee('branding/welcome.webp', false)
@@ -340,6 +347,11 @@ class StorefrontEditorialTest extends TestCase
             ->assertSee('LIHAT KOLEKSI');
         $this->get(route('catalog'))->assertOk()->assertDontSee('id="welcome-voucher"', false);
 
+        $coupon->update(['used' => 2]);
+        $this->get(route('home'))->assertOk()->assertDontSee('id="welcome-voucher"', false);
+        $coupon->update(['used' => 0, 'ends_at' => now()->subMinute()]);
+        $this->get(route('home'))->assertOk()->assertDontSee('id="welcome-voucher"', false);
+        $coupon->update(['ends_at' => now()->addDay()]);
         $campaign->update(['active' => false]);
         $this->get(route('home'))->assertOk()->assertDontSee('id="welcome-voucher"', false);
     }

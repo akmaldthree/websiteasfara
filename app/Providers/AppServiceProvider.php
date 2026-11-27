@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Models\Category;
 use App\Models\ContentEntry;
+use App\Models\Coupon;
+use App\Models\CouponRedemption;
 use App\Models\CuratedLink;
 use App\Models\Setting;
 use App\Models\StoreLocation;
@@ -24,6 +26,32 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
+    private function popupCoupon(ContentEntry $campaign): ?Coupon
+    {
+        $selected = Setting::get('welcome_voucher_coupon_id');
+        $couponId = $selected ?: Setting::get('campaign_coupon_'.$campaign->id);
+        $coupon = $couponId ? Coupon::find($couponId) : null;
+        if ($selected === null && ! $couponId) {
+            $code = strtoupper(trim((string) Setting::get('welcome_voucher_code', '')));
+            $coupon = $code === '' ? null : Coupon::where('code', $code)->first();
+        }
+        if (! $coupon?->isAvailableAt(now())) {
+            return null;
+        }
+
+        $user = request()->user();
+        $groupId = app(PricingService::class)->groupFor($user)?->id;
+        if (! $coupon->appliesToAudience($user !== null, $groupId)) {
+            return null;
+        }
+        if ($coupon->per_user_limit && (! $user || CouponRedemption::where('coupon_id', $coupon->id)
+            ->where('user_id', $user->id)->count() >= $coupon->per_user_limit)) {
+            return null;
+        }
+
+        return $coupon;
+    }
+
     /**
      * Bootstrap any application services.
      */
@@ -36,10 +64,12 @@ class AppServiceProvider extends ServiceProvider
                 ->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty())
                 ->groupBy(fn (ContentEntry $campaign) => $campaign->campaignGroup());
             $view->with('campaignMenu', $campaignMenu);
-            $popupCampaignId = Setting::get('welcome_voucher_campaign');
-            $view->with('popupCampaign', $popupCampaignId
+            $popupCampaignId = Setting::get('welcome_voucher_enabled', false) ? Setting::get('welcome_voucher_campaign') : null;
+            $popupCampaign = $popupCampaignId
                 ? ContentEntry::published()->where('type', 'campaign')->find($popupCampaignId)
-                : null);
+                : null;
+            $view->with('popupCampaign', $popupCampaign);
+            $view->with('popupCoupon', $popupCampaign ? $this->popupCoupon($popupCampaign) : null);
         });
         View::composer(['layouts.store', 'store.*'], function ($view) {
             if (request()->hasSession()) {

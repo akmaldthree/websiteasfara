@@ -91,6 +91,61 @@ class StorefrontCmsWorkflowTest extends TestCase
         $this->actingAs($admin)->get(route('admin.products.preview', $old->slug))->assertOk()->assertSee('Pembelian dinonaktifkan');
     }
 
+    public function test_curated_new_in_displays_all_twelve_selected_products(): void
+    {
+        $category = Category::create(['name' => 'Abaya Kurasi', 'slug' => 'abaya-kurasi', 'active' => true]);
+        $slugs = collect(range(1, 12))->map(function (int $number) use ($category): string {
+            return Series::create([
+                'name' => 'Kurasi beranda produk nomor '.$number,
+                'slug' => 'kurasi-beranda-'.$number,
+                'category_id' => $category->id,
+                'active' => true,
+            ])->slug;
+        });
+        Setting::put('home_new_slugs', $slugs->implode(', '));
+
+        $page = $this->get(route('home'))->assertOk();
+
+        $page->assertSeeInOrder(['id="new-in"', 'Kurasi beranda produk nomor 9', 'Kurasi beranda produk nomor 10', 'Kurasi beranda produk nomor 11', 'Kurasi beranda produk nomor 12'], false);
+    }
+
+    public function test_closing_products_have_their_own_selection_order_and_visibility_in_the_home_draft(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = Category::create(['name' => 'Abaya Pilihan', 'slug' => 'abaya-pilihan', 'active' => true]);
+        $first = Series::create(['name' => 'Abaya Awal', 'slug' => 'abaya-awal', 'category_id' => $category->id, 'active' => true]);
+        $second = Series::create(['name' => 'Abaya Penutup', 'slug' => 'abaya-penutup', 'category_id' => $category->id, 'active' => true]);
+        foreach ([$first, $second] as $product) {
+            Variant::create(['series_id' => $product->id, 'sku' => strtoupper($product->slug), 'color' => 'Hitam', 'size' => 'M', 'price' => 299000, 'stock' => 5, 'weight' => 600]);
+        }
+        $data = [
+            'section_order' => 'hero,campaign_products,new_in',
+            'home_section_hidden' => ['campaign'],
+            'campaign_products' => [
+                'title_id' => 'Pilihan butik Asfara',
+                'title_en' => 'Asfara boutique picks',
+                'url' => '/koleksi?category=abaya-pilihan',
+                'products' => [$second->id, null, $first->id, null],
+            ],
+        ];
+
+        $this->actingAs($admin)->post(route('admin.home-layout.save'), $data)->assertSessionHasNoErrors();
+        $this->get(route('home'))->assertOk()->assertDontSee('Pilihan butik Asfara');
+        $this->get(route('admin.home-layout.preview'))->assertOk()
+            ->assertSeeInOrder(['Pilihan butik Asfara', 'direct-add-home-campaign-'.$second->id, 'direct-add-home-campaign-'.$first->id, 'id="new-in"'], false)
+            ->assertSee('href="/koleksi?category=abaya-pilihan"', false);
+
+        $this->post(route('admin.home-layout.publish'), ['revision' => Setting::get('home_layout_draft')['revision']])->assertSessionHasNoErrors();
+        $this->withSession(['locale' => 'en'])->get(route('home'))->assertOk()->assertSee('Asfara boutique picks');
+        $first->update(['active' => false]);
+        $this->get(route('home'))->assertOk()->assertDontSee('direct-add-home-campaign-'.$first->id, false);
+
+        $data['home_section_hidden'] = ['campaign_products'];
+        $this->post(route('admin.home-layout.save'), $data)->assertSessionHasNoErrors();
+        $this->get(route('admin.home-layout.preview'))->assertOk()->assertDontSee('id="home-campaign-products"', false);
+        $this->get(route('home'))->assertOk()->assertSee('id="home-campaign-products"', false);
+    }
+
     public function test_media_used_as_a_direct_cover_cannot_be_deleted(): void
     {
         Storage::fake('public');
