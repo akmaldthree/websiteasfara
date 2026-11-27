@@ -127,7 +127,7 @@
     </nav>
 </header>
 <dialog class="search-drawer" id="search-drawer" aria-labelledby="search-drawer-title">
-    <button type="button" id="close-search" aria-label="Tutup pencarian">×</button>
+    <div class="store-dialog-dismiss"><button type="button" id="close-search" aria-label="Tutup pencarian">×</button></div>
     <form action="{{ route('catalog') }}" method="get">
         <label id="search-drawer-title" for="global-search">{{ $storeCopy['search_title'] }}</label>
         <div><input id="global-search" name="q" inputmode="search" enterkeyhint="search" maxlength="100" placeholder="{{ $storeCopy['search_placeholder'] }}" autocomplete="off" aria-describedby="search-hint" aria-controls="predictive-search"><button type="submit" aria-label="Mulai mencari">→</button></div>
@@ -149,7 +149,7 @@
     </div>
 </dialog>
 <dialog class="quick-product-dialog" id="quick-product-dialog" aria-labelledby="quick-product-name">
-    <button type="button" class="drawer-close" data-quick-close aria-label="Tutup pilihan produk">×</button>
+    <div class="store-dialog-dismiss"><button type="button" class="drawer-close" data-quick-close aria-label="Tutup pilihan produk">×</button></div>
     <div class="quick-product-layout">
         <figure class="quick-product-media" data-quick-gallery aria-label="{{ __('store.photo_gallery') }}">
             <img id="quick-product-image" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="800" height="800" draggable="false" decoding="async">
