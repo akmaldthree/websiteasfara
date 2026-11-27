@@ -15,4 +15,5 @@ return [
         'empty' => 'No products or collections found.', 'error' => 'Search could not load.',
     ],
     'photo_gallery' => 'Product photo gallery', 'photo_previous' => 'Previous photo', 'photo_next' => 'Next photo',
+    'campaign_cta' => 'Explore the campaign', 'campaign_products' => 'From this collection',
 ];

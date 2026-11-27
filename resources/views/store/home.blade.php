@@ -56,7 +56,6 @@
     $videoEnabled = $shop['hero_video_enabled'] ?? false;
     $heroContentStyle = $shop['hero_content_style'] ?? 'editorial';
     $homeBanners = $contentEntries->where('type', 'banner');
-    $campaign = $homeBanners->first(fn ($entry) => $entry->image_url);
     $heroCampaign = ($shop['hero_campaign_enabled'] ?? true) && $heroContentStyle === 'editorial'
         ? ($campaignEdits->flatMap(fn ($edits) => $edits->values())->firstWhere('id', $heroCampaignId)
             ?? $campaignEdits->get('main', collect())->first())
@@ -164,6 +163,16 @@
             </div>
         </a>
     </section>
+    @if($bannerProducts->isNotEmpty())
+        <section class="home-product-section container-xxl" id="home-campaign-products" aria-labelledby="home-campaign-products-title">
+            <h2 id="home-campaign-products-title" class="home-product-title">{{ __('store.campaign_products') }}</h2>
+            @include('partials.home-product-carousel', [
+                'items' => $bannerProducts,
+                'cardContext' => 'home-campaign-',
+                'viewAllUrl' => $campaign->link_url ?: route('catalog'),
+            ])
+        </section>
+    @endif
     @endsection
 @endif
 @if(($shop['home_categories_enabled'] ?? true) && $categoryTiles->isNotEmpty())
@@ -176,7 +185,7 @@
                         @if($tile['mobile_image'])<source media="(max-width: 767px)" srcset="{{ $tile['mobile_image'] }}">@endif
                         <img src="{{ $tile['image'] }}" style="object-position:{{ $tile['focal_x'] ?? 50 }}% {{ $tile['focal_y'] ?? 50 }}%" alt="" width="760" height="950" loading="lazy" decoding="async">
                     </picture>
-                    <span>{{ $tile['label'] }}</span>
+                    <span class="home-category-label">{{ $tile['label'] }}</span>
                 </a>
             @endforeach
         </div>
@@ -186,9 +195,13 @@
 
 @if($shop['home_collections_enabled'] ?? true)
 @section('home-new_in')
-<section class="commerce-section home-new-in container-xxl reveal" id="new-in">
-    <div class="commerce-heading"><h2>New In</h2><a href="{{ route('catalog',['sort'=>'new']) }}">{{ $storeCopy['view_all'] }}</a></div>
-    <div class="reference-carousel"><button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button><div class="product-carousel" data-drag-scroll>@forelse($newCollections as $collection)<div class="product-carousel-item">@include('partials.product-card')</div>@empty<div class="empty-state"><h3>Koleksi sedang disiapkan.</h3></div>@endforelse</div><button type="button" data-carousel-next aria-label="Produk berikutnya">›</button></div>
+<section class="home-product-section container-xxl" id="new-in" aria-labelledby="home-new-in-title">
+    <h2 class="home-product-title" id="home-new-in-title">New In</h2>
+    @include('partials.home-product-carousel', [
+        'items' => $newCollections,
+        'cardContext' => 'home-new-',
+        'viewAllUrl' => route('catalog', ['sort' => 'new']),
+    ])
 </section>
 @endsection
 
@@ -196,6 +209,8 @@
     @php($edits = $campaignEdits->get($group, collect()))
     @continue($edits->isEmpty())
     @php($sectionKey = $group === 'main' ? 'collections' : $group)
+    @php($groupLabel = $group === 'main' ? $storeCopy['featured_collection'] : $groupTitle)
+    @php($hasTabs = $edits->count() > 1)
     @php($banner = $group === 'main' ? null : $edits->firstWhere('image', '!=', null))
     @if($banner)
         @section('home-'.$group.'_banner')
@@ -205,33 +220,34 @@
                     @if($banner['mobile_image'])<source media="(max-width: 767px)" srcset="{{ $banner['mobile_image'] }}">@endif
                     <img src="{{ $banner['image'] }}" alt="" width="1600" height="800" loading="lazy" decoding="async">
                 </picture>
-                <span>{{ $banner['label'] }}</span>
+                <div class="home-campaign-caption">
+                    <h2>{{ $banner['label'] }}</h2>
+                    <span>{{ __('store.campaign_cta') }} →</span>
+                </div>
             </a>
         </section>
         @endsection
     @endif
     @section('home-'.$sectionKey)
-    <section class="commerce-section latest-collection container-xxl reveal" data-campaign-tabs="{{ $group }}" aria-labelledby="campaign-title-{{ $group }}">
-        <div class="commerce-heading">
-            <h2 id="campaign-title-{{ $group }}">{{ $group === 'main' ? $storeCopy['featured_collection'] : $groupTitle }}</h2>
-        </div>
-        <div class="collection-tabs" role="tablist" aria-label="{{ $groupTitle }}">
-            @foreach($edits as $key => $edit)
-                <button @class(['is-active' => $loop->first]) type="button" role="tab" id="tab-{{ $group }}-{{ $key }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}" tabindex="{{ $loop->first ? 0 : -1 }}" aria-controls="pane-{{ $group }}-{{ $key }}" data-collection-tab="{{ $key }}">{{ $edit['label'] }}</button>
-            @endforeach
-        </div>
+    <section class="home-product-section container-xxl" data-campaign-tabs="{{ $group }}" aria-labelledby="campaign-title-{{ $group }}">
+        @if($hasTabs)
+            <h2 class="home-product-label" id="campaign-title-{{ $group }}">{{ $groupLabel }}</h2>
+            <div class="collection-tabs home-collection-tabs" role="tablist" aria-labelledby="campaign-title-{{ $group }}">
+                @foreach($edits as $key => $edit)
+                    <button @class(['is-active' => $loop->first]) type="button" role="tab" id="tab-{{ $group }}-{{ $key }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}" tabindex="{{ $loop->first ? 0 : -1 }}" aria-controls="pane-{{ $group }}-{{ $key }}" data-collection-tab="{{ $key }}">{{ $edit['label'] }}</button>
+                @endforeach
+            </div>
+        @else
+            <p class="home-product-label">{{ $groupLabel }}</p>
+            <h2 class="home-product-title" id="campaign-title-{{ $group }}">{{ $edits->first()['label'] }}</h2>
+        @endif
         @foreach($edits as $key => $edit)
-            <div @class(['collection-pane', 'is-active' => $loop->first]) id="pane-{{ $group }}-{{ $key }}" role="tabpanel" aria-labelledby="tab-{{ $group }}-{{ $key }}" @if(!$loop->first) hidden @endif>
-                <div class="reference-carousel">
-                    <button type="button" data-carousel-prev aria-label="Produk sebelumnya">‹</button>
-                    <div class="product-carousel" data-drag-scroll>
-                        @foreach($edit['items'] as $collection)
-                            <div class="product-carousel-item">@include('partials.product-card', ['cardContext' => $group.'-'.$key.'-'])</div>
-                        @endforeach
-                    </div>
-                    <button type="button" data-carousel-next aria-label="Produk berikutnya">›</button>
-                </div>
-                <div class="text-center mt-4"><a class="btn btn-outline-dark" href="{{ $edit['url'] }}">{{ $storeCopy['view_all'] }}</a></div>
+            <div @class(['collection-pane', 'is-active' => $loop->first]) id="pane-{{ $group }}-{{ $key }}" @if($hasTabs) role="tabpanel" aria-labelledby="tab-{{ $group }}-{{ $key }}" @endif @if(!$loop->first) hidden @endif>
+                @include('partials.home-product-carousel', [
+                    'items' => $edit['items'],
+                    'cardContext' => $group.'-'.$key.'-',
+                    'viewAllUrl' => $edit['url'],
+                ])
             </div>
         @endforeach
     </section>

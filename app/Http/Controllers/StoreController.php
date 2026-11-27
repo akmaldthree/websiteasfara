@@ -25,6 +25,7 @@ use App\Services\CustomProductService;
 use App\Services\OrderCommunication;
 use App\Services\PricingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -70,6 +71,10 @@ class StoreController extends Controller
     {
         $setting = fn (string $key, mixed $fallback = null) => $homeOverrides[$key] ?? Setting::get($key, $fallback);
         $contentEntries = ContentEntry::published()->where('type', 'banner')->orderBy('sort_order')->get();
+        $campaign = $contentEntries->first(fn (ContentEntry $entry) => $entry->image_url);
+        $bannerProducts = $campaign && $setting('home_collections_enabled', true) && ! in_array('campaign', (array) $setting('home_section_hidden', []), true)
+            ? $this->homeBannerProducts($campaign->link_url ?: route('catalog'))
+            : collect();
         $collections = Series::published()->withStoreCard()
             ->orderByDesc('featured')->latest()->take(24)->get();
         $requested = collect(['home_category_slugs', 'home_new_slugs'])
@@ -115,7 +120,29 @@ class StoreController extends Controller
         $editorialSections = $sectionIds ? ContentEntry::published()->where('type', 'home_section')
             ->whereKey($sectionIds)->orderBy('sort_order')->get() : collect();
 
-        return view('store.home', compact('collections', 'contentEntries', 'campaignEdits', 'heroCampaignId', 'homeOverrides', 'homePreview', 'homeVisualCards', 'editorialSections'));
+        return view('store.home', compact('collections', 'contentEntries', 'campaign', 'bannerProducts', 'campaignEdits', 'heroCampaignId', 'homeOverrides', 'homePreview', 'homeVisualCards', 'editorialSections'));
+    }
+
+    private function homeBannerProducts(string $url): Collection
+    {
+        $destination = parse_url($url);
+        $catalog = parse_url(route('catalog'));
+        if (! $destination || rtrim($destination['path'] ?? '', '/') !== rtrim($catalog['path'], '/')
+            || (isset($destination['host']) && strcasecmp($destination['host'], $catalog['host']) !== 0)
+            || (isset($destination['scheme']) && ! in_array(strtolower($destination['scheme']), ['http', 'https'], true))) {
+            return collect();
+        }
+
+        parse_str($destination['query'] ?? '', $filters);
+        $categorySlug = $filters['category'] ?? '';
+        if (array_diff(array_keys($filters), ['category']) || ! is_string($categorySlug)) {
+            return collect();
+        }
+
+        return Series::published()->withStoreCard()
+            ->whereHas('variants', fn ($variants) => $variants->where('active', true))
+            ->when($categorySlug !== '', fn ($query) => $query->whereRelation('category', 'slug', $categorySlug))
+            ->orderByDesc('featured')->latest('id')->take(4)->get();
     }
 
     public function catalog(Request $r, Analytics $analytics)

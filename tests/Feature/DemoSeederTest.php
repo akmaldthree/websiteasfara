@@ -142,13 +142,13 @@ class DemoSeederTest extends TestCase
         $this->get('/')->assertOk()
             ->assertSee('<h1>Ruang Raya</h1>', false)
             ->assertSee(route('content.show', ['campaign', 'demo-seri-ruang-raya']), false)
-            ->assertSeeInOrder(['id="home-after-hero"', 'id="new-in"', 'home-category-section', 'data-campaign-tabs="main"', 'data-campaign-banner="signature"', 'data-campaign-tabs="signature"', 'data-campaign-banner="studio"', 'data-campaign-tabs="studio"', 'id="home-campaign-title"'], false)
+            ->assertSeeInOrder(['id="home-after-hero"', 'id="new-in"', 'home-category-section', 'data-campaign-tabs="main"', 'data-campaign-banner="signature"', 'data-campaign-tabs="signature"', 'data-campaign-banner="studio"', 'data-campaign-tabs="studio"', 'id="home-campaign-title"', 'id="home-campaign-products"'], false)
             ->assertSee('data-hero-play', false)
             ->assertDontSee('<button type="button" data-hero-sound', false)
             ->assertSee(route('media.demo-hero', 'desktop'), false)
             ->assertSee(route('media.demo-hero', 'mobile'), false)
             ->assertSee('id="new-in"', false)
-            ->assertSee('NEW IN')
+            ->assertSee('id="home-new-in-title">New In', false)
             ->assertSee('data-campaign-tabs="main"', false)
             ->assertSee('role="tabpanel"', false)
             ->assertSee('Ruang Raya')
@@ -157,8 +157,8 @@ class DemoSeederTest extends TestCase
             ->assertSee('Asfara Signature')
             ->assertSee('Asfara Studio')
             ->assertDontSee('home-merchandise-group', false)
-            ->assertSee('Hemat Rp')
-            ->assertSee('4.');
+            ->assertDontSee('product-tag-sale', false)
+            ->assertDontSee('product-card-details', false);
         $this->get(route('media.demo-hero', 'desktop'), ['Range' => 'bytes=0-15'])
             ->assertStatus(206)
             ->assertHeader('Content-Type', 'video/webm');

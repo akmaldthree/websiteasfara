@@ -187,12 +187,43 @@
         <div class="row footer-columns">
             <div class="col-lg-3">
                 <a class="wordmark" href="{{ route('home') }}"><strong>{{ strtoupper($shop['brand_name'] ?? 'Asfara') }}</strong><span>{{ $shop['brand_subtitle'] ?? 'MODEST WEAR' }}</span></a>
-                @if(!empty($shop['contact_email']))<a class="mt-3" href="mailto:{{ $shop['contact_email'] }}">{{ $shop['contact_email'] }}</a>@endif
-                @if($footerPages->contains('slug', 'tentang'))<a href="{{ route('page', 'tentang') }}">Tentang Asfara</a>@endif
+                <ul class="footer-link-list">
+                    @if(!empty($shop['contact_email']))<li><a href="mailto:{{ $shop['contact_email'] }}">{{ $shop['contact_email'] }}</a></li>@endif
+                    @if($footerPages->contains('slug', 'tentang'))<li><a href="{{ route('page', 'tentang') }}">Tentang Asfara</a></li>@endif
+                </ul>
             </div>
-            <details class="col-lg-2 footer-group" open><summary>{{ __('store.shop') }}</summary><a href="{{ route('catalog') }}">{{ __('store.all_collections') }}</a><a href="{{ route('content.index', 'campaign') }}">Campaign</a><a href="{{ route('content.index', 'lookbook') }}">Lookbook</a><a href="{{ route('catalog', ['sale' => 1]) }}">Special Offer</a></details>
-            <details class="col-lg-2 footer-group" open><summary>{{ __('store.help') }}</summary><a href="{{ route('account') }}">{{ __('store.account') }}</a>@if($shop['header_tracking_enabled'] ?? true)<a href="{{ route('track') }}">{{ __('store.track') }}</a>@endif @foreach($footerPages->where('slug', '!=', 'tentang') as $p)<a href="{{ route('page',$p->slug) }}">{{ $p->title }}</a>@endforeach</details>
-            <details class="col-lg-2 footer-group" id="store-locations" open><summary>{{ __('store.stores') }}</summary>@forelse($storeLocations->take(2) as $location)<div class="footer-store"><strong>{{ $location->name }}</strong><small>{{ $location->address }}@if($location->city) · {{ $location->city }}@endif</small>@if($location->map_url)<a href="{{ $location->map_url }}" target="_blank" rel="noopener">MAPS ↗</a>@endif</div>@empty<small>{{ $shop['store_location'] ?? '' }}</small>@endforelse<a href="{{ route('store.locations') }}">Lihat lokasi toko</a></details>
+            <details class="col-lg-2 footer-group" open>
+                <summary>{{ __('store.shop') }}</summary>
+                <ul class="footer-link-list">
+                    <li><a href="{{ route('catalog') }}">{{ __('store.all_collections') }}</a></li>
+                    <li><a href="{{ route('content.index', 'campaign') }}">Campaign</a></li>
+                    <li><a href="{{ route('content.index', 'lookbook') }}">Lookbook</a></li>
+                    <li><a href="{{ route('catalog', ['sale' => 1]) }}">Special Offer</a></li>
+                </ul>
+            </details>
+            <details class="col-lg-2 footer-group" open>
+                <summary>{{ __('store.help') }}</summary>
+                <ul class="footer-link-list">
+                    <li><a href="{{ route('account') }}">{{ __('store.account') }}</a></li>
+                    @if($shop['header_tracking_enabled'] ?? true)<li><a href="{{ route('track') }}">{{ __('store.track') }}</a></li>@endif
+                    @foreach($footerPages->where('slug', '!=', 'tentang') as $page)
+                        <li><a href="{{ route('page', $page->slug) }}">{{ $page->title }}</a></li>
+                    @endforeach
+                </ul>
+            </details>
+            <details class="col-lg-2 footer-group" id="store-locations" open>
+                <summary>{{ __('store.stores') }}</summary>
+                @forelse($storeLocations->take(2) as $location)
+                    <div class="footer-store">
+                        <strong>{{ $location->name }}</strong>
+                        <small>{{ $location->address }}@if($location->city) · {{ $location->city }}@endif</small>
+                        @if($location->map_url)<a href="{{ $location->map_url }}" target="_blank" rel="noopener">MAPS ↗</a>@endif
+                    </div>
+                @empty
+                    <small>{{ $shop['store_location'] ?? '' }}</small>
+                @endforelse
+                <a class="footer-locations-link" href="{{ route('store.locations') }}">Lihat lokasi toko</a>
+            </details>
             <div class="col-lg-3 footer-connect"><h2>{{ __('store.connect') }}</h2><p class="small">{{ $storeCopy['newsletter_text'] }}</p><form class="footer-newsletter" method="post" action="{{ route('newsletter.store') }}">@csrf<label class="visually-hidden" for="newsletter-email">Email</label><div><input id="newsletter-email" type="email" name="email" placeholder="{{ __('store.email') }}" required><button aria-label="Daftar newsletter">→</button></div><label><input type="checkbox" name="consent" value="1" required> {{ __('store.newsletter_consent') }}</label></form>@if($shop['footer_social_enabled'] ?? true)<div class="footer-social">@if(!empty($shop['whatsapp']))<a href="https://wa.me/{{ $shop['whatsapp'] }}" target="_blank" rel="noopener"><i>WA</i><span>WhatsApp</span></a>@endif @foreach(['instagram_url'=>['IG','Instagram'],'tiktok_url'=>['TT','TikTok'],'facebook_url'=>['FB','Facebook']] as $key=>$social)@if(!empty($shop[$key]))<a href="{{ $shop[$key] }}" target="_blank" rel="noopener"><i>{{ $social[0] }}</i><span>{{ $social[1] }}</span></a>@endif @endforeach</div>@endif<details class="footer-language language-picker"><summary>{{ app()->getLocale()==='id'?'Indonesia':'English' }}</summary><div><a href="{{ route('locale','id') }}" @class(['is-active'=>app()->getLocale()==='id'])><span>Indonesia</span><small>ID</small></a><a href="{{ route('locale','en') }}" @class(['is-active'=>app()->getLocale()==='en'])><span>English</span><small>EN</small></a></div></details></div>
         </div>
         <div class="footer-bottom">© {{ date('Y') }} {{ $shop['brand_name'] ?? 'Asfara' }} {{ $shop['footer_copyright'] ?? '' }} <span>{{ $storeCopy['footer_trust'] }}</span></div>

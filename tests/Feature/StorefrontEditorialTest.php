@@ -94,7 +94,8 @@ class StorefrontEditorialTest extends TestCase
             ->assertSee('data-campaign-tabs="signature"', false)
             ->assertDontSee('class="campaign-tab-banner"', false)
             ->assertSee($url, false)
-            ->assertSee('data-collection-tab="campaign-'.$entry->id.'"', false);
+            ->assertSee('id="pane-signature-campaign-'.$entry->id.'"', false)
+            ->assertDontSee('data-collection-tab="campaign-'.$entry->id.'"', false);
         $this->get($url)->assertOk()->assertSeeInOrder(['Aster Edition', 'Zayna Series'])
             ->assertSee('srcset="/storage/demo/hero.webp"', false)
             ->assertSee('href="#campaign-products-heading"', false);
@@ -109,7 +110,31 @@ class StorefrontEditorialTest extends TestCase
         $this->get($url)->assertOk()->assertSee('Zayna Series')->assertDontSee('Aster Edition');
         $entry->update(['starts_at' => now()->addDay()]);
         $this->get($url)->assertNotFound();
-        $this->get(route('home'))->assertOk()->assertDontSee('data-collection-tab="campaign-'.$entry->id.'"', false)->assertDontSee($url, false);
+        $this->get(route('home'))->assertOk()->assertDontSee('id="pane-signature-campaign-'.$entry->id.'"', false)->assertDontSee($url, false);
+    }
+
+    public function test_home_banner_showcases_products_from_its_catalog_category(): void
+    {
+        Setting::put('hero_video_enabled', true);
+        Setting::put('hero_video', 'demo/hero-desktop.webm');
+        $this->series->update(['compare_at_price' => 480000]);
+        $category = Category::create(['name' => 'Aksesori', 'slug' => 'aksesori', 'active' => true]);
+        $otherSeries = Series::create(['category_id' => $category->id, 'name' => 'Aksesori Asfara', 'slug' => 'aksesori-asfara', 'active' => true]);
+        Variant::create(['series_id' => $otherSeries->id, 'sku' => 'AKS-BLK', 'color' => 'Black', 'size' => 'All Size', 'price' => 125000, 'stock' => 4, 'weight' => 100, 'active' => true]);
+        $banner = ContentEntry::create([
+            'type' => 'banner', 'title' => 'Gamis Asfara', 'slug' => 'gamis-asfara', 'image' => 'demo/hero.webp',
+            'link_url' => route('catalog', ['category' => 'gamis'], false), 'editorial_status' => 'approved', 'active' => true,
+        ]);
+
+        $this->get(route('home'))->assertOk()
+            ->assertSeeInOrder(['id="home-campaign-title"', 'id="home-campaign-products"', 'id="direct-add-home-campaign-'.$this->series->id.'"', 'class="site-footer"'], false)
+            ->assertDontSee('id="direct-add-home-campaign-'.$otherSeries->id.'"', false)
+            ->assertDontSee('product-tag-sale', false);
+        $this->get(route('catalog'))->assertOk()->assertSee('Hemat Rp 72.000');
+
+        $banner->update(['link_url' => 'https://example.com'.$banner->link_url]);
+        $this->get(route('home'))->assertOk()->assertSee('id="home-campaign-title"', false)
+            ->assertDontSee('id="home-campaign-products"', false);
     }
 
     public function test_editorial_indexes_and_catalog_facets_render(): void
@@ -161,7 +186,7 @@ class StorefrontEditorialTest extends TestCase
 
         $this->get(route('home'))->assertOk()
             ->assertSee('language-picker', false)
-            ->assertSee('NEW IN')
+            ->assertSee('id="home-new-in-title">New In', false)
             ->assertSee('SPECIAL OFFER')
             ->assertSee('aria-controls="catalog-mega-menu"', false)
             ->assertSee('id="catalog-mega-menu"', false)
@@ -268,11 +293,12 @@ class StorefrontEditorialTest extends TestCase
     public function test_single_available_variant_can_be_added_directly_from_product_card(): void
     {
         $variant = $this->series->variants()->firstOrFail();
+        $formId = 'direct-add-home-new-'.$this->series->id;
 
         $this->get(route('home'))->assertOk()
-            ->assertSee('id="direct-add-'.$this->series->id.'"', false)
+            ->assertSee('id="'.$formId.'"', false)
             ->assertSee('name="variant_id" value="'.$variant->id.'"', false)
-            ->assertSee('form="direct-add-'.$this->series->id.'" class="product-quick">ADD TO CART', false);
+            ->assertSee('form="'.$formId.'" class="product-quick">ADD TO CART', false);
     }
 
     public function test_sold_out_product_has_no_quick_purchase_action(): void

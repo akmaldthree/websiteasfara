@@ -15,4 +15,5 @@ return [
         'empty' => 'Produk atau koleksi tidak ditemukan.', 'error' => 'Pencarian belum dapat dimuat.',
     ],
     'photo_gallery' => 'Galeri foto produk', 'photo_previous' => 'Foto sebelumnya', 'photo_next' => 'Foto berikutnya',
+    'campaign_cta' => 'Lihat kampanye', 'campaign_products' => 'Pilihan dari koleksi ini',
 ];
