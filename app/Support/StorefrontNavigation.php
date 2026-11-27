@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\ContentEntry;
 use App\Models\Page;
 use Illuminate\Support\Collection;
 
@@ -11,6 +12,7 @@ class StorefrontNavigation
         'new_in' => 'New In',
         'shop' => 'Shop',
         'collections' => 'Collections',
+        'editorial' => 'Lookbook & Journal',
         'locations' => 'Find Us',
         'offers' => 'Special Offer',
         'tracking' => 'Lacak pesanan',
@@ -41,11 +43,9 @@ class StorefrontNavigation
                 ['kind' => 'new_in', 'placement' => 'both'],
                 ['kind' => 'shop', 'placement' => 'both'],
                 ['kind' => 'collections', 'placement' => 'both'],
-                ['kind' => 'cms', 'placement' => 'desktop'],
-                ['kind' => 'locations', 'placement' => 'desktop'],
+                ['kind' => 'editorial', 'placement' => 'both'],
+                ['kind' => 'locations', 'placement' => 'both'],
                 ['kind' => 'offers', 'placement' => 'both'],
-                ['kind' => 'cms', 'placement' => 'mobile'],
-                ['kind' => 'locations', 'placement' => 'mobile'],
                 ['kind' => 'tracking', 'placement' => 'mobile'],
             ],
             'footer' => [
@@ -86,12 +86,52 @@ class StorefrontNavigation
         ];
     }
 
+    /** @param Collection<int, ContentEntry> $menus */
+    public static function headerItems(Collection $links, Collection $menus, bool $hasCampaigns): Collection
+    {
+        $hasEditorial = $links->contains('kind', 'editorial');
+        $archives = collect(['lookbook', 'journal'])->flatMap(fn (string $type) => [
+            route('content.index', $type), route('content.index', $type, false),
+        ])->all();
+        $editorialLinks = $menus->whereIn('link_url', $archives);
+        $extras = $menus->whereNotIn('link_url', $archives);
+        $hasCustomMenu = $links->contains('kind', 'cms');
+        $panelFor = ['shop' => 'shop', 'collections' => $hasCampaigns ? 'collections' : null];
+
+        return $links->map(function (array $link) use ($hasEditorial, $hasCustomMenu, $editorialLinks, $extras, $panelFor): ?array {
+            if ($link['kind'] === 'editorial') {
+                return $link + ['panel' => 'editorial', 'extras' => $hasCustomMenu ? collect() : $extras];
+            }
+            if ($link['kind'] !== 'cms') {
+                return $link + ['panel' => $panelFor[$link['kind']] ?? null];
+            }
+
+            if ($editorialLinks->isNotEmpty() && ! $hasEditorial) {
+                return array_replace($link, [
+                    'label' => ($link['label_'.app()->getLocale()] ?? null) ?: $editorialLinks->first()->title,
+                    'panel' => 'editorial',
+                    'extras' => $extras,
+                ]);
+            }
+            if ($extras->count() === 1) {
+                return array_replace($link, [
+                    'label' => ($link['label_'.app()->getLocale()] ?? null) ?: $extras->first()->title,
+                    'href' => $extras->first()->link_url ?: '#',
+                    'panel' => null,
+                ]);
+            }
+
+            return $extras->isEmpty() ? null : $link + ['panel' => 'custom', 'extras' => $extras];
+        })->filter()->values();
+    }
+
     private static function resolve(array $link, string $locale, Collection $pages): ?array
     {
         [$label, $href] = match ($link['kind']) {
             'new_in' => ['New In', route('catalog', ['sort' => 'newest'])],
             'shop' => ['Shop', route('catalog')],
             'collections' => ['Collections', route('catalog', ['sort' => 'featured'])],
+            'editorial' => ['Lookbook', route('content.index', 'lookbook')],
             'catalog' => [__('store.all_collections'), route('catalog')],
             'campaigns' => ['Campaign', route('content.index', 'campaign')],
             'lookbook' => ['Lookbook', route('content.index', 'lookbook')],

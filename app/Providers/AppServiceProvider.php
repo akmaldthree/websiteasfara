@@ -60,10 +60,14 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
         View::composer('layouts.store', function ($view) {
             $campaignMenu = ContentEntry::published()->where('type', 'campaign')->orderBy('sort_order')->orderBy('id')
-                ->get(['id', 'title', 'slug', 'blocks'])
+                ->get(['id', 'title', 'slug', 'blocks', 'image'])
                 ->filter(fn (ContentEntry $campaign) => $campaign->campaignProductIds()->isNotEmpty())
                 ->groupBy(fn (ContentEntry $campaign) => $campaign->campaignGroup());
             $view->with('campaignMenu', $campaignMenu);
+            $view->with('headerEditorial', collect(['lookbook', 'journal'])->mapWithKeys(fn (string $type) => [
+                $type => ContentEntry::published()->where('type', $type)
+                    ->orderBy('sort_order')->latest('id')->limit(5)->get(['title', 'slug', 'image']),
+            ]));
             $popupCampaignId = Setting::get('welcome_voucher_enabled', false) ? Setting::get('welcome_voucher_campaign') : null;
             $popupCampaign = $popupCampaignId
                 ? ContentEntry::published()->where('type', 'campaign')->find($popupCampaignId)
@@ -75,7 +79,7 @@ class AppServiceProvider extends ServiceProvider
             if (request()->hasSession()) {
                 app()->setLocale(in_array(session('locale'), ['id', 'en'], true) ? session('locale') : 'id');
             }
-            $view->with('categories', Category::where('active', true)->with(['series' => fn ($query) => $query->published()->orderBy('name')])->orderBy('name')->get());
+            $view->with('categories', Category::where('active', true)->orderBy('name')->get());
             $view->with('shop', Setting::whereNotIn('key', ['shipping_api_token', 'whatsapp_api_token', 'home_layout_draft'])->pluck('value', 'key')->all());
             $locale = app()->getLocale();
             $copyOverrides = array_filter(Setting::get('storefront_copy_'.$locale, []), fn ($value) => trim((string) $value) !== '');

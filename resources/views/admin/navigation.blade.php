@@ -18,7 +18,7 @@
     @foreach(['header' => 'Menu utama', 'footer' => 'Tautan footer'] as $area => $heading)
         <section class="panel mb-4" data-navigation-area="{{ $area }}" data-limit="{{ $area === 'header' ? 18 : 64 }}">
             <h2>{{ $heading }}</h2>
-            <p>{{ $area === 'header' ? 'Jenis Shop membuka kategori. Jenis Collections membuka kampanye. Pilih perangkat untuk setiap tautan.' : 'Tautan dikelompokkan menurut kolom footer. Urutannya mengikuti daftar di bawah.' }}</p>
+            <p>{{ $area === 'header' ? 'Shop menampilkan kategori dan kurasi, Collections menampilkan kampanye, dan Lookbook & Journal menampilkan konten editorial. Pilih perangkat untuk setiap tautan.' : 'Tautan dikelompokkan menurut kolom footer. Urutannya mengikuti daftar di bawah.' }}</p>
             <div data-navigation-rows>
                 @foreach(array_values((array) old($area, $navigation[$area])) as $index => $link)
                     @include('admin.partials.navigation-row', ['link' => (array) $link])

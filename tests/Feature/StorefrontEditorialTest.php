@@ -91,7 +91,7 @@ class StorefrontEditorialTest extends TestCase
         $this->post(route('admin.update', ['content', $entry->id]), $payload)->assertSessionHasNoErrors();
         $url = route('content.show', ['campaign', $entry->slug]);
         $this->get(route('home'))->assertOk()
-            ->assertSee('class="campaign-nav"', false)
+            ->assertSee('aria-controls="campaign-desktop-menu"', false)
             ->assertSee('data-campaign-tabs="signature"', false)
             ->assertDontSee('class="campaign-tab-banner"', false)
             ->assertSee($url, false)
@@ -179,6 +179,39 @@ class StorefrontEditorialTest extends TestCase
         $this->assertSame(1, substr_count($html, 'Desktop Only'));
     }
 
+    public function test_existing_lookbook_menu_shows_published_editorial_links_on_both_devices(): void
+    {
+        ContentEntry::create([
+            'type' => 'menu', 'title' => 'Cerita Asfara', 'slug' => 'cerita-asfara', 'placement' => 'both',
+            'link_url' => route('content.index', 'lookbook', false), 'editorial_status' => 'approved', 'active' => true,
+        ]);
+        $lookbook = ContentEntry::create([
+            'type' => 'lookbook', 'title' => 'Paduan Abaya', 'slug' => 'paduan-abaya', 'editorial_status' => 'approved', 'active' => true,
+        ]);
+        $journal = ContentEntry::create([
+            'type' => 'journal', 'title' => 'Merawat Abaya', 'slug' => 'merawat-abaya', 'editorial_status' => 'approved', 'active' => true,
+        ]);
+        ContentEntry::create([
+            'type' => 'menu', 'title' => 'Tautan jurnal ganda', 'slug' => 'tautan-jurnal-ganda', 'placement' => 'both',
+            'link_url' => route('content.show', ['journal', $journal->slug], false), 'editorial_status' => 'approved', 'active' => true,
+        ]);
+        ContentEntry::create([
+            'type' => 'journal', 'title' => 'Jurnal terjadwal', 'slug' => 'jurnal-terjadwal',
+            'starts_at' => now()->addDay(), 'editorial_status' => 'approved', 'active' => true,
+        ]);
+        Setting::put('storefront_navigation', ['header' => [['kind' => 'cms', 'placement' => 'both', 'enabled' => true]]]);
+
+        $this->get(route('home'))->assertOk()
+            ->assertSeeInOrder([
+                'aria-controls="editorial-desktop-menu"', 'Cerita Asfara',
+                route('content.show', ['lookbook', $lookbook->slug]), route('content.show', ['journal', $journal->slug]),
+                'class="mobile-nav-links"', 'Cerita Asfara',
+                route('content.show', ['lookbook', $lookbook->slug]), route('content.show', ['journal', $journal->slug]),
+            ], false)
+            ->assertDontSee('Jurnal terjadwal')
+            ->assertDontSee('Tautan jurnal ganda');
+    }
+
     public function test_storefront_keeps_language_picker_and_hides_legacy_simulated_activity(): void
     {
         Setting::put('social_proof_enabled', true);
@@ -193,7 +226,7 @@ class StorefrontEditorialTest extends TestCase
             ->assertSee('id="catalog-mega-menu"', false)
             ->assertSee('class="mobile-nav-links"', false)
             ->assertSee('id="mobile-open-search"', false)
-            ->assertSee('is-catalog-open', false)
+            ->assertSee('has-open-navigation', false)
             ->assertDontSee('id="social-proof"', false)
             ->assertSee('hero-content-compact', false);
 
@@ -272,7 +305,7 @@ class StorefrontEditorialTest extends TestCase
             'notes' => 'Ukuran dalam sentimeter.',
         ]]);
 
-        $this->get(route('home'))->assertOk()->assertSee('FIND YOUR FIT')->assertSee('OFFICE WEAR');
+        $this->get(route('home'))->assertOk()->assertSee('FIND YOUR FIT')->assertSee('Office Wear');
         $this->get(route('product', $this->series->slug))->assertOk()->assertSee('Lingkar dada')->assertSee('106 cm');
     }
 

@@ -17,4 +17,6 @@ return [
     'photo_gallery' => 'Galeri foto produk', 'photo_previous' => 'Foto sebelumnya', 'photo_next' => 'Foto berikutnya',
     'campaign_cta' => 'Lihat kampanye', 'campaign_products' => 'Pilihan dari koleksi ini',
     'view_locations' => 'Lihat lokasi toko', 'more_links' => 'Lainnya',
+    'nav_campaigns_all' => 'Lihat semua kampanye',
+    'nav_lookbook_all' => 'Semua lookbook', 'nav_journal_all' => 'Semua jurnal', 'nav_journal' => 'Jurnal',
 ];

@@ -27,9 +27,7 @@ return [
             'mega_view_all' => 'Tautan lihat semua',
             'mega_find_fit' => 'Judul Find Your Fit',
             'mega_explore' => 'Judul Explore',
-            'mega_promo_label' => 'Label kartu promosi',
-            'mega_promo_cta' => 'CTA kartu promosi',
-            'mega_fallback_title' => 'Judul promosi fallback',
+            'mega_promo_label' => 'Judul grup promosi',
         ],
         'Beranda' => [
             'featured_product' => 'Judul produk unggulan',

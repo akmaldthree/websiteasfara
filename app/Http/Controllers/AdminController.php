@@ -1238,7 +1238,7 @@ class AdminController extends Controller
 
         $header = collect($data['header'] ?? []);
         foreach (['desktop', 'mobile'] as $device) {
-            foreach (['shop', 'collections', 'cms'] as $kind) {
+            foreach (['shop', 'collections', 'editorial', 'cms'] as $kind) {
                 if ($header->where('kind', $kind)->where('enabled', true)->whereIn('placement', ['both', $device])->count() > 1) {
                     throw ValidationException::withMessages(['header' => 'Gunakan satu menu '.StorefrontNavigation::HEADER_TYPES[$kind].' untuk setiap perangkat.']);
                 }

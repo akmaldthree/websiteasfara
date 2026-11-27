@@ -17,4 +17,6 @@ return [
     'photo_gallery' => 'Product photo gallery', 'photo_previous' => 'Previous photo', 'photo_next' => 'Next photo',
     'campaign_cta' => 'Explore the campaign', 'campaign_products' => 'From this collection',
     'view_locations' => 'View store locations', 'more_links' => 'More',
+    'nav_campaigns_all' => 'View all campaigns',
+    'nav_lookbook_all' => 'All lookbooks', 'nav_journal_all' => 'All journal entries', 'nav_journal' => 'Journal',
 ];

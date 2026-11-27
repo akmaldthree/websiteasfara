@@ -1,3 +1,15 @@
+@php
+    $navigation = \App\Support\StorefrontNavigation::storefront($shop);
+    $desktopItems = \App\Support\StorefrontNavigation::headerItems($navigation['desktop'], $cmsMenus->whereIn('placement', ['both', 'desktop']), $campaignMenu->isNotEmpty());
+    $mobileItems = \App\Support\StorefrontNavigation::headerItems($navigation['mobile'], $cmsMenus->whereIn('placement', ['both', 'mobile']), $campaignMenu->isNotEmpty());
+    $panelIds = ['shop' => 'catalog-mega-menu', 'collections' => 'campaign-desktop-menu', 'editorial' => 'editorial-desktop-menu', 'custom' => 'custom-desktop-menu'];
+    $mobileOpenPanel = match (true) {
+        request()->routeIs('catalog', 'product') => 'shop',
+        request()->routeIs('content.*') && request()->route('type') === 'campaign' => 'collections',
+        request()->routeIs('content.*') && in_array(request()->route('type'), ['lookbook', 'journal'], true) => 'editorial',
+        default => null,
+    };
+@endphp
 @php($themeFonts=['poppins'=>["'Poppins',Arial,sans-serif","'Poppins',Arial,sans-serif"],'classic'=>['Arial,Helvetica,sans-serif',"Georgia,'Times New Roman',serif"],'modern'=>['Helvetica,Arial,sans-serif','Helvetica,Arial,sans-serif'],'system'=>['system-ui,-apple-system,sans-serif','system-ui,-apple-system,sans-serif']])
 @php($themeFont=$themeFonts[$shop['theme_font'] ?? 'poppins'] ?? $themeFonts['poppins'])
 @php($seoTitle=trim($__env->yieldContent('title',$shop['default_seo_title'] ?? 'Asfara — Dalam setiap cerita')))
@@ -56,33 +68,20 @@
             @if(!empty($shop['logo']))<img src="{{ asset('storage/'.$shop['logo']) }}" alt="{{ $shop['brand_name'] ?? 'Asfara' }}" width="240" height="80" decoding="async">
             @else<strong>{{ strtoupper($shop['brand_name'] ?? 'Asfara') }}</strong><span>{{ $shop['brand_subtitle'] ?? 'MODEST WEAR' }}</span>@endif
         </a>
-        @php($navigation = \App\Support\StorefrontNavigation::storefront($shop))
         <nav class="desktop-nav" aria-label="Utama">
-            @foreach($navigation['desktop'] as $link)
-                @if($link['kind'] === 'shop')
-                    <a href="{{ $link['href'] }}" class="catalog-nav-link" aria-haspopup="true" aria-expanded="false" aria-controls="catalog-mega-menu" @if(request()->routeIs('catalog', 'product')) aria-current="page" @endif>{{ $link['label'] }}</a>
-                @elseif($link['kind'] === 'collections' && $campaignMenu->isNotEmpty())
-                    <details class="campaign-nav">
-                        <summary aria-controls="campaign-desktop-menu" aria-expanded="false">{{ $link['label'] }}</summary>
-                        <div id="campaign-desktop-menu">
-                            @include('partials.campaign-navigation')
-                            <a href="{{ route('content.index', 'campaign') }}">{{ $storeCopy['view_all'] }}</a>
-                        </div>
-                    </details>
-                @elseif($link['kind'] === 'cms')
-                    @php($extra = $cmsMenus->whereIn('placement', ['both', 'desktop']))
-                    @if($extra->count() === 1)
-                        <a href="{{ $extra->first()->link_url ?: '#' }}">{{ $extra->first()->title }}</a>
-                    @elseif($extra->isNotEmpty())
-                        <details class="extra-navigation">
-                            <summary>{{ $link['label'] }}</summary>
-                            <div>
-                                @foreach($extra as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
-                            </div>
-                        </details>
-                    @endif
+            @foreach($desktopItems as $item)
+                @if($item['panel'])
+                    @php($panelId = $panelIds[$item['panel']])
+                    <div class="store-nav-entry">
+                        <button type="button" class="store-nav-button" id="nav-trigger-{{ $item['panel'] }}" data-nav-trigger aria-expanded="false" aria-controls="{{ $panelId }}">
+                            {{ $item['label'] }} <span aria-hidden="true"></span>
+                        </button>
+                        <section class="store-nav-panel" id="{{ $panelId }}" data-nav-panel aria-labelledby="nav-trigger-{{ $item['panel'] }}" aria-hidden="true" inert>
+                            @include('partials.header-menu', ['mobile' => false])
+                        </section>
+                    </div>
                 @else
-                    <a href="{{ $link['href'] }}">{{ $link['label'] }}</a>
+                    <a href="{{ $item['href'] }}">{{ $item['label'] }}</a>
                 @endif
             @endforeach
         </nav>
@@ -93,37 +92,18 @@
             <a href="{{ route('cart') }}" data-open-cart aria-label="Keranjang"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l2 14H3L5 8zM8 8V5a4 4 0 0 1 8 0v3"/></svg>@if(array_sum(session('cart',[]))>0)<span>{{ array_sum(session('cart',[])) }}</span>@endif</a>
         </div>
     </div>
-    <div class="catalog-mega-menu" id="catalog-mega-menu" aria-label="Menu katalog" aria-hidden="true" inert>
-        <div class="container-xxl"><div class="mega-category-list"><small>{{ $storeCopy['mega_shop_by_category'] }}</small>@foreach($categories as $category)<div class="mega-category"><a href="{{ route('catalog',['category'=>$category->slug]) }}">{{ strtoupper($category->name) }} <span>→</span></a><div>@foreach($category->series->take(4) as $menuSeries)<a href="{{ route('product',$menuSeries->slug) }}">{{ $menuSeries->name }}</a>@endforeach</div></div>@endforeach<a href="{{ route('catalog') }}">{{ $storeCopy['mega_view_all'] }} <span>→</span></a></div><div class="mega-fit"><small>{{ $storeCopy['mega_find_fit'] }}</small>@forelse($curatedLinks->get('fit',collect()) as $link)<a href="{{ $link->url }}">{{ strtoupper($link->title) }} <span>→</span></a>@empty<a href="{{ route('catalog') }}">DAILY WEAR <span>→</span></a>@endforelse<small>{{ $storeCopy['mega_explore'] }}</small>@foreach($cmsMenus->whereIn('placement',['both','desktop']) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ strtoupper($menu->title) }} <span>→</span></a>@endforeach</div><div class="mega-promos">@forelse($curatedLinks->get('promo',collect())->take(2) as $link)<a href="{{ $link->url }}" style="--promo-image:url('{{ $link->image_url }}')"><span>{{ strtoupper($link->eyebrow ?: $storeCopy['mega_promo_label']) }}</span><strong>{{ $link->title }}</strong><small>{{ $storeCopy['mega_promo_cta'] }} →</small></a>@empty<div class="mega-menu-feature"><span>{{ $storeCopy['mega_promo_label'] }}</span><h2>{{ $storeCopy['mega_fallback_title'] }}</h2><a class="btn btn-outline-light" href="{{ route('catalog') }}">{{ $storeCopy['mega_promo_cta'] }}</a></div>@endforelse</div></div>
-    </div>
     <button type="button" class="mobile-nav-backdrop" data-mobile-nav-backdrop aria-label="Tutup navigasi" tabindex="-1" hidden></button>
     <nav class="collapse mobile-nav" id="mobile-nav" aria-label="Navigasi mobile">
         <header><a class="wordmark" href="{{ route('home') }}"><strong>{{ strtoupper($shop['brand_name'] ?? 'Asfara') }}</strong><span>{{ $shop['brand_subtitle'] ?? 'MODEST WEAR' }}</span></a><button type="button" class="mobile-nav-close" data-bs-toggle="collapse" data-bs-target="#mobile-nav" aria-label="Tutup menu">×</button></header>
         <div class="mobile-nav-links">
-            @foreach($navigation['mobile'] as $link)
-                @if($link['kind'] === 'shop')
-                    <details name="mobile-discovery" @if(request()->routeIs('catalog', 'product')) open @endif>
-                        <summary>{{ $link['label'] }}</summary>
-                        <div class="mobile-discovery-links">
-                            <a href="{{ $link['href'] }}">{{ __('store.all_collections') }}</a>
-                            @if($shop['header_categories_enabled'] ?? true)
-                                @foreach($categories as $category)<a href="{{ route('catalog', ['category' => $category->slug]) }}" @if(request()->routeIs('catalog') && request('category') === $category->slug) aria-current="page" @endif>{{ $category->name }}</a>@endforeach
-                            @endif
-                            @foreach($curatedLinks->get('fit', collect()) as $curated)<a href="{{ $curated->url }}">{{ $curated->title }}</a>@endforeach
-                        </div>
+            @foreach($mobileItems as $item)
+                @if($item['panel'])
+                    <details name="mobile-discovery" @if($item['panel'] === $mobileOpenPanel) open @endif>
+                        <summary>{{ $item['label'] }}</summary>
+                        @include('partials.header-menu', ['mobile' => true])
                     </details>
-                @elseif($link['kind'] === 'collections')
-                    <details name="mobile-discovery" @if(request()->routeIs('content.*') && request()->route('type') === 'campaign') open @endif>
-                        <summary>{{ $link['label'] }}</summary>
-                        <div class="mobile-discovery-links">
-                            @include('partials.campaign-navigation')
-                            <a href="{{ route('content.index', 'campaign') }}">{{ $storeCopy['view_all'] }}</a>
-                        </div>
-                    </details>
-                @elseif($link['kind'] === 'cms')
-                    @foreach($cmsMenus->whereIn('placement', ['both', 'mobile']) as $menu)<a href="{{ $menu->link_url ?: '#' }}">{{ $menu->title }}</a>@endforeach
                 @else
-                    <a href="{{ $link['href'] }}">{{ $link['kind'] === 'link' ? $link['label'] : mb_strtoupper($link['label']) }}</a>
+                    <a href="{{ $item['href'] }}">{{ in_array($item['kind'], ['link', 'cms'], true) ? $item['label'] : mb_strtoupper($item['label']) }}</a>
                 @endif
             @endforeach
         </div>
@@ -389,75 +369,82 @@ const bindGallerySwipe = (stage, image, step) => {
     stage.addEventListener('lostpointercapture', () => swipe = undefined);
 };
 (()=>{const header=document.querySelector('.site-header'),floatingWhatsApp=document.querySelector('[data-floating-whatsapp]');const syncHeader=()=>{header?.classList.toggle('is-scrolled',header.classList.contains('sticky-top')&&scrollY>80);floatingWhatsApp?.classList.toggle('is-compact',scrollY>160)};syncHeader();addEventListener('scroll',syncHeader,{passive:true});
-const catalogTrigger = document.querySelector('.catalog-nav-link');
-const catalogMenu = document.querySelector('.catalog-mega-menu');
-const campaignNav = document.querySelector('.campaign-nav');
-const campaignTrigger = campaignNav?.querySelector('summary');
-const campaignMenu = campaignNav?.querySelector('#campaign-desktop-menu');
 const desktopNav = matchMedia('(min-width: 992px)');
 const hoverPointer = matchMedia('(hover: hover) and (pointer: fine)');
-const disclosures = [
-    {trigger: catalogTrigger, panel: catalogMenu, isCatalog: true},
-    {trigger: campaignTrigger, panel: campaignMenu, isCatalog: false},
-].filter(item => item.trigger && item.panel);
+const disclosures = [...header.querySelectorAll('[data-nav-trigger]')].map(trigger => ({
+    trigger,
+    panel: document.getElementById(trigger.getAttribute('aria-controls')),
+}));
 let activeMenu;
-let pinnedMenu;
+let pinned = false;
+let navOpenTimer;
 let navCloseTimer;
 
-function setMenu(next, returnFocus = false) {
+const clearMenuTimers = () => {
+    clearTimeout(navOpenTimer);
     clearTimeout(navCloseTimer);
+};
+const renderMenu = (menu, open) => {
+    menu.trigger.setAttribute('aria-expanded', String(open));
+    menu.panel.setAttribute('aria-hidden', String(!open));
+    menu.panel.inert = !open;
+    menu.panel.classList.toggle('is-open', open);
+};
+function setMenu(next, returnFocus = false) {
+    clearMenuTimers();
+    if (next === activeMenu) return;
     const previous = activeMenu;
-    if (next !== previous) pinnedMenu = undefined;
+    if (previous) renderMenu(previous, false);
     activeMenu = next;
-    disclosures.forEach(menu => {
-        const open = menu === activeMenu;
-        menu.trigger.setAttribute('aria-expanded', String(open));
-        if (menu.isCatalog) {
-            header.classList.toggle('is-catalog-open', open);
-            menu.panel.setAttribute('aria-hidden', String(!open));
-            menu.panel.inert = !open;
-        } else {
-            campaignNav.open = open;
-        }
-    });
+    pinned = false;
+    if (next) renderMenu(next, true);
+    header.classList.toggle('has-open-navigation', Boolean(next));
     if (returnFocus) previous?.trigger.focus({preventScroll: true});
 }
 const containsMenu = (menu, target) => Boolean(menu?.trigger.contains(target) || menu?.panel.contains(target));
-const scheduleMenuClose = menu => {
-    clearTimeout(navCloseTimer);
+const canHoverMenu = event => event.pointerType === 'mouse' && hoverPointer.matches && desktopNav.matches;
+const scheduleMenuClose = (menu, event) => {
+    if (!canHoverMenu(event) || containsMenu(menu, event.relatedTarget)) return;
+    clearMenuTimers();
+    if (activeMenu !== menu || pinned) return;
     navCloseTimer = setTimeout(() => {
         if (activeMenu === menu && !menu.panel.contains(document.activeElement)) setMenu();
-    }, 180);
+    }, 170);
 };
 disclosures.forEach(menu => {
-    [menu.trigger, menu.panel].forEach(element => {
-        element.addEventListener('pointerenter', event => {
-            if (event.pointerType === 'mouse' && hoverPointer.matches && desktopNav.matches) setMenu(menu);
-        });
-        element.addEventListener('pointerleave', event => {
-            if (event.pointerType === 'mouse') scheduleMenuClose(menu);
-        });
+    menu.trigger.addEventListener('pointerenter', event => {
+        if (!canHoverMenu(event)) return;
+        clearMenuTimers();
+        if (activeMenu) setMenu(menu);
+        else navOpenTimer = setTimeout(() => setMenu(menu), 60);
     });
+    menu.panel.addEventListener('pointerenter', event => {
+        if (canHoverMenu(event)) clearMenuTimers();
+    });
+    menu.panel.addEventListener('click', event => {
+        if (event.target.closest('a[href]')) setMenu();
+    });
+    [menu.trigger, menu.panel].forEach(element => element.addEventListener('pointerleave', event => scheduleMenuClose(menu, event)));
     menu.trigger.addEventListener('keydown', event => {
-        if (event.key !== 'ArrowDown' || !desktopNav.matches) return;
+        if (!['ArrowDown', 'ArrowUp'].includes(event.key) || !desktopNav.matches) return;
         event.preventDefault();
         setMenu(menu);
-        menu.panel.querySelector('a')?.focus();
+        const links = [...menu.panel.querySelectorAll('a[href]')];
+        (event.key === 'ArrowUp' ? links.at(-1) : links[0])?.focus();
     });
-    if (!menu.isCatalog) menu.trigger.addEventListener('click', event => {
-        event.preventDefault();
-        if (activeMenu === menu && (event.detail === 0 || pinnedMenu === menu)) {
+    menu.trigger.addEventListener('click', event => {
+        if (activeMenu === menu && (event.detail === 0 || pinned)) {
             setMenu();
         } else {
             setMenu(menu);
-            pinnedMenu = menu;
+            pinned = true;
         }
     });
 });
-header.querySelectorAll('.desktop-nav > a:not(.catalog-nav-link)').forEach(link => link.addEventListener('pointerenter', () => {
-    if (!activeMenu?.panel.contains(document.activeElement)) setMenu();
+header.querySelectorAll('.desktop-nav > a').forEach(link => link.addEventListener('pointerenter', event => {
+    if (canHoverMenu(event) && !activeMenu?.panel.contains(document.activeElement)) setMenu();
 }));
-document.addEventListener('pointerdown', event => { if (activeMenu && !containsMenu(activeMenu, event.target)) setMenu(); });
+document.addEventListener('pointerdown', event => { if (!containsMenu(activeMenu, event.target)) setMenu(); });
 document.addEventListener('focusin', event => { if (activeMenu && !containsMenu(activeMenu, event.target)) setMenu(); });
 desktopNav.addEventListener('change', () => setMenu());
 const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
